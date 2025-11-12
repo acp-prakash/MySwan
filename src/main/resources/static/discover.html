@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MySwan – Discover New Tickers</title>
+
+    <!-- Tabulator CSS -->
+    <link href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #f4f5f7;
+            color: #111827;
+        }
+
+        .app-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 20px 24px;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: 26px;
+        }
+
+        .sub-title {
+            margin-bottom: 16px;
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .toolbar button {
+            padding: 8px 14px;
+            border-radius: 999px;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+            background: #2563eb;
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .toolbar button.secondary {
+            background: #e5e7eb;
+            color: #111827;
+        }
+
+        #grid {
+            margin-top: 4px;
+        }
+
+        .tabulator {
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .status {
+            margin-top: 8px;
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        .status span.ok {
+            color: #16a34a;
+        }
+
+        .status span.err {
+            color: #dc2626;
+        }
+
+        .grid-info {
+            margin-top: 4px;
+            font-size: 13px;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div class="card">
+        <h1>Discover New Tickers</h1>
+        <div class="sub-title">
+            Loads all <strong>stocks</strong> (TradingView scan) and <strong>ETFs</strong> (TradingView ETF scan)
+            via your backend and shows only tickers that are <strong>not</strong> in your <code>master</code> collection.
+            Use <strong>Add</strong> per row or <strong>Add Selected / Add All</strong> for bulk insert.
+        </div>
+
+        <div class="toolbar">
+            <button id="reloadBtn">Reload</button>
+            <button id="addSelectedBtn">Add Selected</button>
+            <button id="addAllBtn">Add All</button>
+            <button id="clearFiltersBtn" class="secondary">Clear Filters</button>
+
+            <div style="flex:1;"></div>
+
+            <a href="/index.html" style="font-size:13px; text-decoration:none; color:#2563eb;">
+                ⬅ Back to main grid
+            </a>
+        </div>
+
+        <div id="grid"></div>
+        <div class="grid-info" id="gridInfoDiscover"></div>
+        <div class="status" id="statusArea"></div>
+    </div>
+</div>
+
+<!-- Tabulator JS -->
+<script src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"></script>
+
+<script>
+    // ================== CONFIG ==================
+
+    const API_BASE = "http://myswan.bounceme.net:8070/api";
+
+    const MASTER_LIST_URL = `${API_BASE}/master/list`;
+    const MASTER_ADD_URL  = `${API_BASE}/master/add`;
+
+    const THIRD_PARTY_STOCKS_URL = `${API_BASE}/external/getAllStocks`;
+    const THIRD_PARTY_ETFS_URL   = `${API_BASE}/external/getAllETFs`;
+
+    // ============================================
+
+    let table;
+    let masterTickers = new Set();
+    const statusArea = document.getElementById("statusArea");
+    const gridInfoEl = document.getElementById("gridInfoDiscover");
+
+    function setStatus(message, type = "info") {
+        if (!message) {
+            statusArea.innerHTML = "";
+            return;
+        }
+        if (type === "ok") {
+            statusArea.innerHTML = `<span class="ok">${message}</span>`;
+        } else if (type === "err") {
+            statusArea.innerHTML = `<span class="err">${message}</span>`;
+        } else {
+            statusArea.textContent = message;
+        }
+    }
+
+    function updateGridInfoDiscover() {
+        if (!table) {
+            gridInfoEl.textContent = "";
+            return;
+        }
+        const totalRows = table.getDataCount();
+        const maxPages = table.getPageMax();
+        gridInfoEl.textContent = `Rows: ${totalRows} | Pages: ${maxPages || 1}`;
+    }
+
+    // ---------- Tabulator setup ----------
+
+    const columns = [
+        {
+            title: "",
+            formatter: "rowSelection",
+            titleFormatter: "rowSelection",
+            hozAlign: "center",
+            headerHozAlign: "center",
+            width: 40,
+            headerSort: false
+        },
+        {title: "Ticker", field: "ticker", width: 110, headerFilter: "input"},
+        {title: "Name", field: "name", headerFilter: "input"},
+        {title: "Type", field: "type", width: 90, headerFilter: "input"},
+        {title: "Price", field: "addedPrice", width: 90, headerFilter: "input"},
+        {
+            title: "Action",
+            field: "action",
+            hozAlign: "center",
+            width: 110,
+            headerSort: false,
+            formatter: () => "<button class='add-btn'>Add</button>",
+            cellClick: function (e, cell) {
+                const rowData = cell.getRow().getData();
+                addToMaster(rowData, cell.getRow());
+            }
+        }
+    ];
+
+    function initTable() {
+        table = new Tabulator("#grid", {
+            layout: "fitDataStretch",
+            pagination: true,
+            paginationSize: 25,
+            paginationSizeSelector: [10, 25, 50, 100],
+            height: "600px",
+            columns: columns,
+            movableColumns: true,
+            selectable: true,
+            selectableRangeMode: "click",
+            placeholder: "No new tickers to add.",
+            pageLoaded: function () {
+                updateGridInfoDiscover();
+            },
+            dataChanged: function () {
+                updateGridInfoDiscover();
+            }
+        });
+    }
+
+    // ---------- Load master tickers ----------
+
+    async function loadMasterTickers() {
+        setStatus("Loading master tickers...");
+        const resp = await fetch(MASTER_LIST_URL);
+        if (!resp.ok) throw new Error(`Master list HTTP ${resp.status}`);
+        const masters = await resp.json();
+        masterTickers = new Set(
+            masters
+                .map(m => (m.ticker || m.id || "").toString().toUpperCase())
+                .filter(t => t)
+        );
+        setStatus(`Loaded master list (${masterTickers.size} tickers).`);
+    }
+
+    // ---------- TradingView stock scan mapping ----------
+
+    function mapTradingViewStocks(json) {
+        if (!json || !Array.isArray(json.data)) {
+            return [];
+        }
+
+        return json.data
+            .map(row => {
+                const d = row.d || [];
+                const ticker = (d[0] || "").toString().toUpperCase();
+                const name = d[1] || "";
+                const type = d[3] || "stock";
+                const addedPrice = d[11] || "";
+                return { ticker, name, addedPrice, type };
+            })
+            .filter(item => item.ticker);
+    }
+
+    // ---------- TradingView ETF scan mapping ----------
+
+    function mapTradingViewEtfs(json) {
+        if (!json || !Array.isArray(json.data)) {
+            return [];
+        }
+
+        return json.data
+            .map(row => {
+                const d = row.d || [];
+                const ticker = (d[0] || "").toString().toUpperCase();
+                const name = d[1] || "";
+                const addedPrice = d[11] || "";
+                return {
+                    ticker,
+                    name,
+                    addedPrice,
+                    type: "ETF"
+                };
+            })
+            .filter(item => item.ticker);
+    }
+
+    // ---------- Load external stocks + ETFs ----------
+
+    async function loadExternalData() {
+        setStatus("Loading external stocks & ETFs...");
+
+        const [stocksResp, etfsResp] = await Promise.all([
+            fetch(THIRD_PARTY_STOCKS_URL),
+            fetch(THIRD_PARTY_ETFS_URL)
+        ]);
+
+        if (!stocksResp.ok) {
+            throw new Error(`Stocks HTTP ${stocksResp.status}`);
+        }
+        if (!etfsResp.ok) {
+            throw new Error(`ETFs HTTP ${etfsResp.status}`);
+        }
+
+        const stocksJson = await stocksResp.json();
+        const etfsJson = await etfsResp.json();
+
+        const stocks = mapTradingViewStocks(stocksJson);
+        const etfs = mapTradingViewEtfs(etfsJson);
+
+        const combined = [...stocks, ...etfs];
+
+        const filtered = combined.filter(it => it.ticker && !masterTickers.has(it.ticker));
+
+        table.replaceData(filtered);
+        updateGridInfoDiscover();
+        setStatus(`Loaded ${filtered.length} new tickers not in master.`);
+    }
+
+    async function reloadAll() {
+        try {
+            setStatus("Refreshing data...");
+            await loadMasterTickers();
+            await loadExternalData();
+        } catch (err) {
+            console.error(err);
+            setStatus("Error loading data: " + err.message, "err");
+        }
+    }
+
+    // ---------- Add to master (single) ----------
+
+    async function addToMaster(rowData, row) {
+        const payload = {
+            id: rowData.ticker,
+            ticker: rowData.ticker,
+            name: rowData.name,
+            addedPrice: rowData.addedPrice,
+            type: rowData.type
+        };
+
+        if (!payload.ticker) {
+            console.warn("Skipping row without ticker:", rowData);
+            return;
+        }
+
+        try {
+            const resp = await fetch(MASTER_ADD_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!resp.ok) {
+                const text = await resp.text();
+                throw new Error(`Master add HTTP ${resp.status}: ${text}`);
+            }
+
+            masterTickers.add(payload.ticker.toUpperCase());
+            if (row) row.delete();
+            updateGridInfoDiscover();
+        } catch (err) {
+            console.error("Error adding to master:", err);
+            throw err;
+        }
+    }
+
+    // ---------- Bulk helpers ----------
+
+    async function addSelectedRows() {
+        const rows = table.getSelectedRows();
+        if (!rows.length) {
+            alert("No rows selected.");
+            return;
+        }
+
+        if (!confirm(`Add ${rows.length} selected ticker(s) to master?`)) {
+            return;
+        }
+
+        setStatus(`Adding ${rows.length} selected ticker(s) to master...`);
+
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const row of rows) {
+            const data = row.getData();
+            try {
+                await addToMaster(data, row);
+                successCount++;
+            } catch (e) {
+                failCount++;
+            }
+        }
+
+        setStatus(`Bulk add selected completed. Success: ${successCount}, Failed: ${failCount}`, failCount ? "err" : "ok");
+    }
+
+    async function addAllRows() {
+        const data = table.getData();
+        if (!data.length) {
+            alert("No rows available to add.");
+            return;
+        }
+
+        if (!confirm(`Add all ${data.length} ticker(s) currently in the grid to master?`)) {
+            return;
+        }
+
+        setStatus(`Adding all ${data.length} ticker(s) to master...`);
+
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const item of data) {
+            try {
+                await addToMaster(item, null);
+                successCount++;
+            } catch (e) {
+                failCount++;
+            }
+        }
+
+        await reloadAll();
+
+        setStatus(`Bulk add all completed. Success: ${successCount}, Failed: ${failCount}`, failCount ? "err" : "ok");
+    }
+
+    // ---------- Misc ----------
+
+    function clearFilters() {
+        if (table) {
+            table.clearFilter(true);
+            table.clearHeaderFilter();
+            updateGridInfoDiscover();
+        }
+    }
+
+    document.getElementById("reloadBtn").addEventListener("click", reloadAll);
+    document.getElementById("addSelectedBtn").addEventListener("click", addSelectedRows);
+    document.getElementById("addAllBtn").addEventListener("click", addAllRows);
+    document.getElementById("clearFiltersBtn").addEventListener("click", clearFilters);
+
+    window.addEventListener("DOMContentLoaded", () => {
+        initTable();
+        reloadAll();
+    });
+</script>
+</body>
+</html>

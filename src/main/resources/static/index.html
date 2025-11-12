@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MySwan – MongoDB Viewer</title>
+
+    <!-- Tabulator CSS (CDN) -->
+    <link href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css" rel="stylesheet">
+
+    <!-- Simple page styling -->
+    <style>
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #f4f5f7;
+            color: #222;
+        }
+
+        .app-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 20px 24px;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: 28px;
+        }
+
+        .sub-title {
+            margin-bottom: 16px;
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .toolbar select,
+        .toolbar input {
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid #d1d5db;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .toolbar button {
+            padding: 8px 14px;
+            border-radius: 999px;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+            background: #2563eb;
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .toolbar button.secondary {
+            background: #e5e7eb;
+            color: #111827;
+        }
+
+        .toolbar button.danger {
+            background: #dc2626;
+            color: #ffffff;
+        }
+
+        .toolbar label {
+            font-size: 13px;
+            color: #4b5563;
+        }
+
+        #grid {
+            margin-top: 4px;
+        }
+
+        .tabulator {
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .tabulator-header {
+            border-radius: 12px 12px 0 0;
+        }
+
+        .tabulator-footer {
+            border-radius: 0 0 12px 12px;
+        }
+
+        .grid-info {
+            margin-top: 6px;
+            font-size: 13px;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div class="card">
+        <h1>MySwan – MongoDB Data</h1>
+        <div class="sub-title">
+            View and filter <strong>master</strong>, <strong>stock</strong>, and <strong>stock history</strong> collections.
+            Column headers are filterable. You can delete single rows or multiple selected rows for Master & Stock.
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <label>
+                Collection:
+                <select id="collectionSelect">
+                    <option value="masters">Master</option>
+                    <option value="stocks">Stock</option>
+                    <option value="stockHistory">Stock History</option>
+                </select>
+            </label>
+
+            <label id="tickerFilterWrapper" style="display:none;">
+                Ticker:
+                <input type="text" id="historyTicker" placeholder="e.g. CONL">
+            </label>
+
+            <label id="fromDateWrapper" style="display:none;">
+                From:
+                <input type="date" id="historyFrom">
+            </label>
+
+            <label id="toDateWrapper" style="display:none;">
+                To:
+                <input type="date" id="historyTo">
+            </label>
+
+            <button id="reloadBtn">Reload</button>
+            <button id="clearFiltersBtn" class="secondary">Clear Filters</button>
+            <button id="deleteSelectedBtn" class="danger">Delete Selected</button>
+        </div>
+
+        <!-- Grid container -->
+        <div id="grid"></div>
+        <div class="grid-info" id="gridInfo"></div>
+    </div>
+</div>
+
+<!-- Tabulator JS (CDN) -->
+<script src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"></script>
+
+<script>
+    // ====== CONFIGURE YOUR API BASE URLS HERE ======
+    const API_BASE = "http://myswan.bounceme.net:8070/api";
+
+    const ENDPOINTS = {
+        masters: `${API_BASE}/master/list`,
+        stocks: `${API_BASE}/stock/list`,
+        stockHistory: (ticker, from, to) => {
+            const params = new URLSearchParams();
+            if (from) params.append("from", from);
+            if (to) params.append("to", to);
+            return `${API_BASE}/stocks/${encodeURIComponent(ticker)}/history?` + params.toString();
+        }
+    };
+
+    // Delete endpoints – adjust these to match your Spring controllers
+    function getDeleteUrl(collection, rowData) {
+        switch (collection) {
+            case "masters":
+                // e.g. DELETE /api/master/delete/{ticker}
+                return `${API_BASE}/master/delete/${encodeURIComponent(rowData.ticker)}`;
+            case "stocks":
+                // e.g. DELETE /api/stock/delete/{ticker}
+                return `${API_BASE}/stock/delete/${encodeURIComponent(rowData.ticker)}`;
+            default:
+                // stockHistory delete not supported from UI (for now)
+                return null;
+        }
+    }
+
+    let table; // Tabulator instance
+    let currentCollection = "masters";
+
+    const gridInfoEl = document.getElementById("gridInfo");
+
+    function updateGridInfo() {
+        if (!table) {
+            gridInfoEl.textContent = "";
+            return;
+        }
+        const totalRows = table.getDataCount();
+        const maxPages = table.getPageMax();
+        gridInfoEl.textContent = `Rows: ${totalRows} | Pages: ${maxPages || 1}`;
+    }
+
+    // ====== Column definitions (with selection + delete for Master & Stock) ======
+
+    const selectionColumn = {
+        title: "",
+        formatter: "rowSelection",
+        titleFormatter: "rowSelection",
+        hozAlign: "center",
+        headerHozAlign: "center",
+        width: 40,
+        headerSort: false
+    };
+
+    const deleteActionColumn = {
+        title: "Action",
+        field: "action",
+        hozAlign: "center",
+        width: 110,
+        headerSort: false,
+        formatter: () => "<button class='delete-btn'>Delete</button>",
+        cellClick: function (e, cell) {
+            const rowData = cell.getRow().getData();
+            deleteRows([rowData], [cell.getRow()]);
+        }
+    };
+
+    const columnsMaster = [
+        selectionColumn,
+        {title: "Ticker", field: "ticker", headerFilter: "input"},
+        {title: "Name", field: "name", headerFilter: "input"},
+        {title: "Type", field: "type", headerFilter: "input"},
+        {title: "Added Price", field: "addedPrice", headerFilter: "input"},
+        {title: "Added Date", field: "addedDate", headerFilter: "input"},
+        deleteActionColumn
+    ];
+
+    const columnsStock = [
+        selectionColumn,
+        {title: "Ticker", field: "ticker", headerFilter: "input"},
+        {title: "Change", field: "changePct", headerFilter: "input"},
+        {title: "Low", field: "low", headerFilter: "input"},
+        {title: "Price", field: "price", headerFilter: "input"},
+        {title: "High", field: "high", headerFilter: "input"},
+        deleteActionColumn
+    ];
+
+    const columnsStockHistory = [
+        {title: "histDate", field: "ts", headerFilter: "input"},
+        {title: "Ticker", field: "ticker", headerFilter: "input"},
+        {title: "Open", field: "open", headerFilter: "input"},
+        {title: "High", field: "high", headerFilter: "input"},
+        {title: "Low", field: "low", headerFilter: "input"},
+        {title: "Close", field: "close", headerFilter: "input"},
+        {title: "Volume", field: "volume", headerFilter: "input"},
+    ];
+
+    function createOrUpdateTable(columns) {
+        if (table) {
+            table.setColumns(columns);
+            table.clearData();
+            updateGridInfo();
+            return;
+        }
+        table = new Tabulator("#grid", {
+            layout: "fitDataStretch",
+            reactiveData: true,
+            pagination: true,
+            paginationSize: 25,
+            paginationSizeSelector: [10, 25, 50, 100],
+            columns: columns,
+            movableColumns: true,
+            height: "600px",
+            rowHover: true,
+            selectable: true,              // needed for "Delete Selected"
+            selectableRangeMode: "click",
+            placeholder: "No data loaded",
+            pageLoaded: function () {
+                updateGridInfo();
+            },
+            dataChanged: function () {
+                updateGridInfo();
+            }
+        });
+    }
+
+    async function loadData() {
+        const collection = document.getElementById("collectionSelect").value;
+        currentCollection = collection;
+
+        // Toggle extra filters
+        const historyControlsVisible = collection === "stockHistory";
+        document.getElementById("tickerFilterWrapper").style.display = historyControlsVisible ? "inline-flex" : "none";
+        document.getElementById("fromDateWrapper").style.display = historyControlsVisible ? "inline-flex" : "none";
+        document.getElementById("toDateWrapper").style.display = historyControlsVisible ? "inline-flex" : "none";
+
+        // Enable/disable deleteSelected button for stockHistory
+        document.getElementById("deleteSelectedBtn").disabled = (collection === "stockHistory");
+
+        let url;
+        let columns;
+
+        if (collection === "masters") {
+            url = ENDPOINTS.masters;
+            columns = columnsMaster;
+        } else if (collection === "stocks") {
+            url = ENDPOINTS.stocks;
+            columns = columnsStock;
+        } else {
+            const tickerInput = document.getElementById("historyTicker").value.trim();
+            const from = document.getElementById("historyFrom").value || null;
+            const to = document.getElementById("historyTo").value || null;
+
+            if (!tickerInput) {
+                alert("Please enter a ticker to load stock history.");
+                return;
+            }
+
+            url = ENDPOINTS.stockHistory(tickerInput, from, to);
+            columns = columnsStockHistory;
+        }
+
+        createOrUpdateTable(columns);
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error: ${response.status}`);
+            }
+            const data = await response.json();
+            const normalized = Array.isArray(data) ? data : [data];
+            table.replaceData(normalized);
+            updateGridInfo();
+        } catch (err) {
+            console.error(err);
+            alert("Failed to load data. Check console for details.");
+        }
+    }
+
+    function clearFilters() {
+        if (table) {
+            table.clearFilter(true);
+            table.clearHeaderFilter();
+            updateGridInfo();
+        }
+    }
+
+    // ---------- Delete helpers ----------
+
+    async function deleteRows(rowDatas, rows) {
+        if (!rowDatas.length) {
+            alert("No rows selected for delete.");
+            return;
+        }
+
+        if (currentCollection === "stockHistory") {
+            alert("Delete is not enabled for Stock History from this screen.");
+            return;
+        }
+
+        if (!confirm(`Delete ${rowDatas.length} row(s) from ${currentCollection}?`)) {
+            return;
+        }
+
+        let successCount = 0;
+        let failCount = 0;
+
+        for (let i = 0; i < rowDatas.length; i++) {
+            const data = rowDatas[i];
+            const row = rows[i];
+            const url = getDeleteUrl(currentCollection, data);
+            if (!url) {
+                console.warn("No delete URL for collection:", currentCollection);
+                failCount++;
+                continue;
+            }
+
+            try {
+                const resp = await fetch(url, { method: "DELETE" });
+                if (!resp.ok) {
+                    console.error("Failed to delete:", data, "status:", resp.status);
+                    failCount++;
+                    continue;
+                }
+
+                if (row) {
+                    row.delete();
+                }
+                successCount++;
+            } catch (e) {
+                console.error("Error deleting row:", e);
+                failCount++;
+            }
+        }
+
+        updateGridInfo();
+
+        if (failCount) {
+            alert(`Delete finished. Success: ${successCount}, Failed: ${failCount}`);
+        } else {
+            // quiet success or small toast; for now:
+            console.log(`Delete finished. Success: ${successCount}`);
+        }
+    }
+
+    async function deleteSelected() {
+        if (!table) return;
+        const rows = table.getSelectedRows();
+        if (!rows.length) {
+            alert("No rows selected.");
+            return;
+        }
+
+        const rowDatas = rows.map(r => r.getData());
+        await deleteRows(rowDatas, rows);
+    }
+
+    // ====== Event wiring ======
+    document.getElementById("reloadBtn").addEventListener("click", loadData);
+    document.getElementById("clearFiltersBtn").addEventListener("click", clearFilters);
+    document.getElementById("deleteSelectedBtn").addEventListener("click", deleteSelected);
+
+    document.getElementById("collectionSelect").addEventListener("change", () => {
+        if (table) clearFilters();
+        loadData();
+    });
+
+    // Initial load
+    window.addEventListener("DOMContentLoaded", () => {
+        loadData();
+    });
+</script>
+</body>
+</html>
