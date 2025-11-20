@@ -109,16 +109,26 @@
             <button id="addAllBtn">Add All</button>
             <button id="clearFiltersBtn" class="secondary">Clear Filters</button>
 
-            <div style="flex:1;"></div>
+            <!-- Price filter controls -->
+            <label style="margin-left:8px; font-size:13px; color:#4b5563;">
+                Price:
+                <input type="number" id="priceMin" value="1" step="0.01" min="0" style="width:80px; margin:0 4px;"/>
+                -
+                <input type="number" id="priceMax" value="1000" step="0.01" min="0" style="width:90px; margin:0 4px;"/>
+            </label>
+            <label style="margin-left:8px; font-size:13px; color:#4b5563;">
+                Volume ≥
+                <input type="number" id="volumeMin" value="100000" step="1000" min="0" style="width:110px; margin:0 4px;"/>
+            </label>
 
-            <a href="/index.html" style="font-size:13px; text-decoration:none; color:#2563eb;">
-                ⬅ Back to main grid
-            </a>
+            <div style="flex:1;"></div>
+            <a href="/index.html" style="font-size:13px; text-decoration:none; color:#2563eb;">⬅ Back to main grid</a>
         </div>
 
         <div id="grid"></div>
         <div class="grid-info" id="gridInfoDiscover"></div>
         <div class="status" id="statusArea"></div>
+        <div class="status" id="countArea" style="margin-top:6px;"></div>
     </div>
 </div>
 
@@ -128,7 +138,7 @@
 <script>
     // ================== CONFIG ==================
 
-    const API_BASE = "http://myswan.bounceme.net:8070/api";
+    const API_BASE = "http://jpmaxtricks.com:8070/api";
 
     const MASTER_LIST_URL = `${API_BASE}/master/list`;
     const MASTER_ADD_URL  = `${API_BASE}/master/add`;
@@ -137,7 +147,7 @@
     const THIRD_PARTY_ETFS_URL   = `${API_BASE}/external/getAllETFs`;
 
     // ============================================
-
+    let lastFilteredCount = 0;
     let table;
     let masterTickers = new Set();
     const statusArea = document.getElementById("statusArea");
@@ -167,6 +177,36 @@
         gridInfoEl.textContent = `Rows: ${totalRows} | Pages: ${maxPages || 1}`;
     }
 
+    // Apply or update the price and volume filters on the table
+    function applyPriceFilter() {
+        if (!table) return;
+        if (!tableReady) { pendingFilterApply = true; return; }
+        const minEl = document.getElementById('priceMin');
+        const maxEl = document.getElementById('priceMax');
+        const volEl = document.getElementById('volumeMin');
+        let min = parseFloat(minEl && minEl.value);
+        let max = parseFloat(maxEl && maxEl.value);
+        let volMin = parseFloat(volEl && volEl.value);
+
+        if (isNaN(min)) min = 1;
+        if (isNaN(max)) max = 1000;
+        if (min > max) { const t = min; min = max; max = t; }
+        if (isNaN(volMin)) volMin = 100000;
+
+        // Only apply if the Price column exists
+        try { if (!table.getColumn('addedPrice')) return; } catch (e) { return; }
+
+        const filters = [
+            { field: 'addedPrice', type: '>=', value: min },
+            { field: 'addedPrice', type: '<=', value: max }
+        ];
+
+        // Apply volume filter if the column exists
+        try { if (table.getColumn('volume')) { filters.push({ field: 'volume', type: '>=', value: volMin }); } } catch (e) {}
+
+        table.setFilter(filters);
+    }
+
     // ---------- Tabulator setup ----------
 
     const columns = [
@@ -182,7 +222,11 @@
         {title: "Ticker", field: "ticker", width: 110, headerFilter: "input"},
         {title: "Name", field: "name", headerFilter: "input"},
         {title: "Type", field: "type", width: 90, headerFilter: "input"},
-        {title: "Price", field: "addedPrice", width: 90, headerFilter: "input"},
+        {title: "Price", field: "addedPrice", width: 90, sorter: "number", headerFilter: "input"},
+        {title: "Tech Rating", field: "techRating", width: 130, headerFilter: "input"},
+        {title: "MA Rating", field: "maRating", width: 120, headerFilter: "input"},
+        {title: "Analyst Rating", field: "analystRating", width: 150, headerFilter: "input"},
+        {title: "Volume", field: "volume", width: 150, headerFilter: "input"},
         {
             title: "Action",
             field: "action",
@@ -197,6 +241,11 @@
         }
     ];
 
+    // Defer ops until table fully built
+    let tableReady = false;
+    let pendingData = null;
+    let pendingFilterApply = false;
+
     function initTable() {
         table = new Tabulator("#grid", {
             layout: "fitDataStretch",
@@ -209,13 +258,43 @@
             selectable: true,
             selectableRangeMode: "click",
             placeholder: "No new tickers to add.",
-            pageLoaded: function () {
-                updateGridInfoDiscover();
-            },
-            dataChanged: function () {
-                updateGridInfoDiscover();
+            pageLoaded: function () { updateGridInfoDiscover(); },
+            dataChanged: function () { updateGridInfoDiscover(); }
+        });
+
+        // Mark table ready and flush any queued work
+        table.on("tableBuilt", function() {
+            tableReady = true;
+            if (pendingData) {
+                table.replaceData(pendingData);
+                pendingData = null;
+            }
+            if (pendingFilterApply) {
+                pendingFilterApply = false;
+                applyPriceFilter();
             }
         });
+
+        table.on("dataFiltered", function(filters, rows){
+            lastFilteredCount = rows.length;
+            updateRowCounts();
+        });
+
+        table.on("dataLoaded", function () {
+            updateRowCounts();
+            if (tableReady) applyPriceFilter();
+        });
+
+        table.on("dataChanged", function () { updateRowCounts(); });
+        table.on("filterChanged", function () { updateRowCounts(); });
+
+        // React to input changes
+        const minEl = document.getElementById('priceMin');
+        const maxEl = document.getElementById('priceMax');
+        const volEl = document.getElementById('volumeMin');
+        if (minEl) minEl.addEventListener('input', applyPriceFilter);
+        if (maxEl) maxEl.addEventListener('input', applyPriceFilter);
+        if (volEl) volEl.addEventListener('input', applyPriceFilter);
     }
 
     // ---------- Load master tickers ----------
@@ -246,8 +325,14 @@
                 const ticker = (d[0] || "").toString().toUpperCase();
                 const name = d[1] || "";
                 const type = d[3] || "stock";
-                const addedPrice = d[11] || "";
-                return { ticker, name, addedPrice, type };
+                const p = (typeof d[4] === 'number') ? d[4] : parseFloat(d[4]);
+                const addedPrice = isNaN(p) ? null : p;
+                const techRating = d[9] || "";
+                const maRating = d[10] || "";
+                const analystRating = d[11] || "";
+                const v0 = (typeof d[28] === 'number') ? d[28] : parseFloat(d[28]);
+                const volume = isNaN(v0) ? null : v0;
+                return { ticker, name, addedPrice, type, techRating, maRating, analystRating, volume };
             })
             .filter(item => item.ticker);
     }
@@ -264,12 +349,22 @@
                 const d = row.d || [];
                 const ticker = (d[0] || "").toString().toUpperCase();
                 const name = d[1] || "";
-                const addedPrice = d[11] || "";
+                const p = (typeof d[4] === 'number') ? d[4] : parseFloat(d[4]);
+                const addedPrice = isNaN(p) ? null : p;
+                const techRating = d[9] || "";
+                const maRating = d[10] || "";
+                const analystRating = d[11] || "";
+                const v0 = (typeof d[28] === 'number') ? d[28] : parseFloat(d[28]);
+                const volume = isNaN(v0) ? null : v0;
                 return {
                     ticker,
                     name,
                     addedPrice,
-                    type: "ETF"
+                    type: "ETF",
+                    techRating,
+                    maRating,
+                    analystRating,
+                    volume
                 };
             })
             .filter(item => item.ticker);
@@ -279,32 +374,30 @@
 
     async function loadExternalData() {
         setStatus("Loading external stocks & ETFs...");
-
         const [stocksResp, etfsResp] = await Promise.all([
             fetch(THIRD_PARTY_STOCKS_URL),
             fetch(THIRD_PARTY_ETFS_URL)
         ]);
-
-        if (!stocksResp.ok) {
-            throw new Error(`Stocks HTTP ${stocksResp.status}`);
-        }
-        if (!etfsResp.ok) {
-            throw new Error(`ETFs HTTP ${etfsResp.status}`);
-        }
+        if (!stocksResp.ok) throw new Error(`Stocks HTTP ${stocksResp.status}`);
+        if (!etfsResp.ok) throw new Error(`ETFs HTTP ${etfsResp.status}`);
 
         const stocksJson = await stocksResp.json();
         const etfsJson = await etfsResp.json();
-
         const stocks = mapTradingViewStocks(stocksJson);
         const etfs = mapTradingViewEtfs(etfsJson);
-
         const combined = [...stocks, ...etfs];
-
         const filtered = combined.filter(it => it.ticker && !masterTickers.has(it.ticker));
 
-        table.replaceData(filtered);
+        if (!tableReady) {
+            pendingData = filtered;
+        } else {
+            table.replaceData(filtered);
+            applyPriceFilter();
+        }
+
         updateGridInfoDiscover();
         setStatus(`Loaded ${filtered.length} new tickers not in master.`);
+        updateRowCounts();
     }
 
     async function reloadAll() {
@@ -316,6 +409,17 @@
             console.error(err);
             setStatus("Error loading data: " + err.message, "err");
         }
+    }
+
+     const countArea = document.getElementById("countArea");
+
+    function updateRowCounts() {
+        const total = table.getData().length;
+
+        countArea.innerHTML = `
+            <strong>Filtered:</strong> ${lastFilteredCount.toLocaleString()} |
+            <strong>Total:</strong> ${total.toLocaleString()}
+        `;
     }
 
     // ---------- Add to master (single) ----------
@@ -424,6 +528,13 @@
         if (table) {
             table.clearFilter(true);
             table.clearHeaderFilter();
+            const minEl = document.getElementById('priceMin');
+            const maxEl = document.getElementById('priceMax');
+            const volEl = document.getElementById('volumeMin');
+            if (minEl) minEl.value = '1';
+            if (maxEl) maxEl.value = '1000';
+            if (volEl) volEl.value = '100000';
+            applyPriceFilter();
             updateGridInfoDiscover();
         }
     }

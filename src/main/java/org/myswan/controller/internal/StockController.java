@@ -42,10 +42,17 @@ public class StockController {
         return ResponseEntity.ok(saved);
     }
 
-    @DeleteMapping("/stock/{ticker}")
+    @DeleteMapping("/stock/{ticker:.+}")
     public ResponseEntity<Void> deleteStock(@PathVariable String ticker) {
         if (!stockService.exists(ticker)) return ResponseEntity.notFound().build();
         stockService.delete(ticker);
         return ResponseEntity.noContent().build();
+    }
+
+    // Backwards-compatible endpoint: /api/master/delete/{ticker}
+    @DeleteMapping("/stock/delete/{ticker:.+}")
+    public ResponseEntity<Void> deleteStockLegacy(@PathVariable String ticker) {
+        // Delegate to the canonical delete behavior
+        return deleteStock(ticker);
     }
 }

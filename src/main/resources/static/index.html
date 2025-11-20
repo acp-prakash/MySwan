@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>MySwan – MongoDB Viewer</title>
 
+
     <!-- Tabulator CSS (CDN) -->
     <link href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css" rel="stylesheet">
 
@@ -16,19 +17,23 @@
             color: #222;
         }
 
-        .app-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 24px;
-        }
 
-        .card {
-            background: #ffffff;
-            border-radius: 16px;
-            padding: 20px 24px;
-            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
-        }
+.app-container {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
 
+.card {
+    width: 100%;
+    margin: 0;
+    border-radius: 0;
+    padding: 20px;
+}
+
+#grid {
+    width: 100%;
+}
         h1 {
             margin: 0 0 8px;
             font-size: 28px;
@@ -83,9 +88,6 @@
             color: #4b5563;
         }
 
-        #grid {
-            margin-top: 4px;
-        }
 
         .tabulator {
             border-radius: 12px;
@@ -105,7 +107,61 @@
             font-size: 13px;
             color: #6b7280;
         }
+:root {
+    /* tighter headers: clamp to 2 lines for more rows */
+    --tv-header-lines: 2;
+    --tv-header-line-height: 1.1em;
+    --tv-header-font-size: 10px;
+    --tv-cell-font-size: 11px;
+    --tv-cell-vpad: 2px;
+    --tv-cell-hpad: 4px;
+}
+
+/* Compact grid cells to fit more columns and rows */
+.tabulator .tabulator-cell {
+    font-size: var(--tv-cell-font-size) !important;
+    padding: var(--tv-cell-vpad) var(--tv-cell-hpad) !important;
+}
+
+/* Header title wrapping: clamp to 2 lines */
+.tabulator-col-title {
+    white-space: normal !important;
+    line-height: var(--tv-header-line-height) !important;
+    height: auto !important;
+    font-size: var(--tv-header-font-size) !important;
+    padding: 2px 4px !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+}
+.tabulator-col .tabulator-col-title .tabulator-col-title-text {
+    white-space: normal !important;
+    line-height: var(--tv-header-line-height) !important;
+    height: auto !important;
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: var(--tv-header-lines) !important;
+    overflow: hidden !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+    max-height: calc(var(--tv-header-lines) * var(--tv-header-line-height));
+}
+
+/* keep header cells allowing wrap */
+.tabulator .tabulator-header .tabulator-col { white-space: normal !important; }
+
+/* Harmonize vertical long headers */
+.tabulator .tabulator-col[tabulator-field="rating.btShortRating"] .tabulator-col-title,
+.tabulator .tabulator-col[tabulator-field="rating.btLongRating"] .tabulator-col-title,
+.tabulator .tabulator-col[tabulator-field="rating.btRating"] .tabulator-col-title,
+.tabulator .tabulator-col[tabulator-field="rating.btTrend"] .tabulator-col-title,
+.tabulator .tabulator-col[tabulator-field="rating.tradingViewMARating"] .tabulator-col-title,
+.tabulator .tabulator-col[tabulator-field="rating.tradingViewTechRating"] .tabulator-col-title,
+.tabulator .tabulator-col[tabulator-field="rating.tradingViewAnalystsRating"] .tabulator-col-title {
+    font-size: var(--tv-header-font-size) !important;
+}
     </style>
+    <script src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 <div class="app-container">
@@ -145,6 +201,7 @@
             <button id="reloadBtn">Reload</button>
             <button id="clearFiltersBtn" class="secondary">Clear Filters</button>
             <button id="deleteSelectedBtn" class="danger">Delete Selected</button>
+            <button id="exportExcelBtn" class="secondary" title="Download current grid rows to Excel">Export Excel</button>
         </div>
 
         <!-- Grid container -->
@@ -154,11 +211,11 @@
 </div>
 
 <!-- Tabulator JS (CDN) -->
-<script src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"></script>
+
 
 <script>
     // ====== CONFIGURE YOUR API BASE URLS HERE ======
-    const API_BASE = "http://myswan.bounceme.net:8070/api";
+    const API_BASE = "http://jpmaxtricks.com:8070/api";
 
     const ENDPOINTS = {
         masters: `${API_BASE}/master/list`,
@@ -238,12 +295,58 @@
 
     const columnsStock = [
         selectionColumn,
-        {title: "Ticker", field: "ticker", headerFilter: "input"},
-        {title: "Change", field: "changePct", headerFilter: "input"},
-        {title: "Low", field: "low", headerFilter: "input"},
-        {title: "Price", field: "price", headerFilter: "input"},
-        {title: "High", field: "high", headerFilter: "input"},
-        deleteActionColumn
+        {title: "Ticker", field: "ticker", headerFilter: "input", width: 10,  tooltip: true, widthGrow: 0},
+        {title: "Change", field: "change", headerFilter: "input", width: 10,  tooltip: true, widthGrow: 0},
+        {title: "Low", field: "low", headerFilter: "input", width: 10, tooltip: true, widthGrow: 0},
+        {title: "Price", field: "price", headerFilter: "input", width: 10, tooltip: true, widthGrow: 0},
+        {title: "High", field: "high", headerFilter: "input", width: 10, tooltip: true, widthGrow: 0},
+        //{title: "Open", field: "open", headerFilter: "input", width: 10, tooltip: true, widthGrow: 0},
+        //{title: "PrevClose", field: "prevClose", headerFilter: "input", width: 10, tooltip: true, widthGrow: 0},
+        {title: "Barchart Short Term Rating", field: "rating.btShortRating", headerFilter: "input", width: 58, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        {title: "Barchart Long Term Rating", field: "rating.btLongRating", headerFilter: "input", width: 58, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        {title: "Barchart Rating", field: "rating.btRating", headerFilter: "input", width: 58, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        {title: "Barchart Trend", field: "rating.btTrend", headerFilter: "input", width: 58, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        {title: "TradingView MA Rating", field: "rating.tradingViewMARating", headerFilter: "input", width: 58, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        {title: "TradingView Technical Rating", field: "rating.tradingViewTechRating", headerFilter: "input", width: 58, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        {title: "TradingView Analysts Rating", field: "rating.tradingViewAnalystsRating", headerFilter: "input", width: 58, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+
+        {title: "Signal", field: "score.signal", headerFilter: "input", width: 10, tooltip: true, widthGrow: 0},
+        {title: "OverAll", field: "score.overallScore", headerFilter: "input", width: 10, tooltip: true, widthGrow: 0},
+        {title: "DT", field: "score.dayTradingScore", headerFilter: "input", width: 10, tooltip: true, widthGrow: 0},
+        {title: "DTR", field: "score.dayTradingReason", headerFilter: "input", width: 10, tooltip: true, widthGrow: 0},
+        {title: "ST", field: "score.swingTradingScore", headerFilter: "input", width: 10, tooltip: true, widthGrow: 0},
+        {title: "STR", field: "score.swingTradingReason", headerFilter: "input", width: 10, tooltip: true, widthGrow: 0},
+        {title: "Reversal", field: "score.reversalScore", headerFilter: "input", width: 10, tooltip: true, widthGrow: 0},
+        {title: "Rev R", field: "score.reversalReason", headerFilter: "input", width: 10, tooltip: true, widthGrow: 0},
+        {title: "Breakout", field: "score.breakoutScore", headerFilter: "input", width: 10, tooltip: true, widthGrow: 0},
+        {title: "Break R", field: "score.breakoutReason", headerFilter: "input", width: 10, tooltip: true, widthGrow: 0},
+        {title: "Pattern", field: "score.patternScore", headerFilter: "input", width: 10, tooltip: true, widthGrow: 0},
+        {title: "Pat R", field: "score.patternReason", headerFilter: "input", width: 10, tooltip: true, widthGrow: 0},
+
+        //{title: "priceChg5D", field: "priceChg5D", headerFilter: "input", width: 70, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        //{title: "priceChg10D", field: "priceChg10D", headerFilter: "input", width: 70, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        //{title: "priceChg20", field: "priceChg20D", headerFilter: "input", width: 70, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        //{title: "RSI 14", field: "rsi14", headerFilter: "input", width: 70, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        //{title: "Sma9", field: "sma9", headerFilter: "input", width: 70, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        //{title: "Sma20", field: "sma20", headerFilter: "input", width: 70, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        //{title: "Sma21", field: "sma21", headerFilter: "input", width: 70, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        //{title: "Sma50", field: "sma50", headerFilter: "input", width: 70, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        //{title: "Sma100", field: "sma100", headerFilter: "input", width: 70, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        //{title: "Sma200", field: "sma200", headerFilter: "input", width: 70, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        //{title: "Ema9", field: "ema9", headerFilter: "input", width: 70, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        //{title: "Ema20", field: "ema20", headerFilter: "input", width: 70, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        //{title: "Ema21", field: "ema21", headerFilter: "input", width: 70, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        //{title: "Ema50", field: "ema50", headerFilter: "input", width: 70, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        //{title: "Ema100", field: "ema100", headerFilter: "input", width: 70, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        //{title: "Ema200", field: "ema200", headerFilter: "input", width: 70, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        //{title: "MACD", field: "macd1226", headerFilter: "input", width: 70, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        //{title: "ATR 14", field: "atr14", headerFilter: "input", width: 70, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        //{title: "Momentum", field: "momentum", headerFilter: "input", width: 70, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        //{title: "Volume", field: "volume", headerFilter: "input", width: 70, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        //{title: "volumeChange", field: "volumeChange", headerFilter: "input", width: 70, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        //{title: "avgVolume10D", field: "avgVolume10D", headerFilter: "input", width: 70, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        //{title: "VWAP", field: "vwap", headerFilter: "input", width: 70, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        //deleteActionColumn
     ];
 
     const columnsStockHistory = [
@@ -264,24 +367,29 @@
             return;
         }
         table = new Tabulator("#grid", {
-            layout: "fitDataStretch",
+            layout: "fitDataFill", // keep columns to content width; avoid stretching
+            rowHeight: 24,
             reactiveData: true,
             pagination: true,
             paginationSize: 25,
             paginationSizeSelector: [10, 25, 50, 100],
             columns: columns,
+            columnDefaults: {
+                minWidth: 56,
+                widthGrow: 0,
+                headerHozAlign: "center",
+                hozAlign: "center",
+            },
             movableColumns: true,
+            headerVertical: false,
+            headerWordWrap: true,
             height: "600px",
             rowHover: true,
-            selectable: true,              // needed for "Delete Selected"
+            selectable: true,
             selectableRangeMode: "click",
             placeholder: "No data loaded",
-            pageLoaded: function () {
-                updateGridInfo();
-            },
-            dataChanged: function () {
-                updateGridInfo();
-            }
+            pageLoaded: function () { updateGridInfo(); },
+            dataChanged: function () { updateGridInfo(); }
         });
     }
 
@@ -416,10 +524,55 @@
         await deleteRows(rowDatas, rows);
     }
 
+    function exportExcel() {
+        if (!table) { alert("Grid not ready yet."); return; }
+        const columnComponents = table.getColumns();
+        // Keep columns that have a field and are not the action column
+        const exportColumns = columnComponents
+            .map(c => c.getDefinition())
+            .filter(def => def.field && def.field !== 'action'); // selection column has no field
+
+        if (!exportColumns.length) { alert("No exportable columns."); return; }
+
+        // Helper to resolve nested dot paths like rating.btShortRating
+        function resolveField(obj, path) {
+            if (!obj) return null;
+            if (!path) return null;
+            if (Object.prototype.hasOwnProperty.call(obj, path)) {
+                // direct property (rare) - return
+                return obj[path];
+            }
+            const parts = path.split('.');
+            let cur = obj;
+            for (const p of parts) {
+                if (cur == null) return null;
+                cur = cur[p];
+            }
+            return cur == null ? null : cur;
+        }
+
+        const headers = exportColumns.map(def => (def.title || def.field));
+        const rawData = table.getData(); // already filtered/sorted data
+        if (!rawData.length) { alert("No data to export."); return; }
+
+        // Build AOA (Array Of Arrays): first row headers, then row values
+        const rows = rawData.map(row => exportColumns.map(def => resolveField(row, def.field)));
+        const aoa = [headers, ...rows];
+
+        const ts = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+        const filename = `myswan-${currentCollection}-${ts}.xlsx`;
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        XLSX.utils.book_append_sheet(wb, ws, currentCollection.substring(0,31));
+        XLSX.writeFile(wb, filename);
+    }
+
     // ====== Event wiring ======
     document.getElementById("reloadBtn").addEventListener("click", loadData);
     document.getElementById("clearFiltersBtn").addEventListener("click", clearFilters);
     document.getElementById("deleteSelectedBtn").addEventListener("click", deleteSelected);
+    document.getElementById("exportExcelBtn").addEventListener("click", exportExcel);
 
     document.getElementById("collectionSelect").addEventListener("change", () => {
         if (table) clearFilters();

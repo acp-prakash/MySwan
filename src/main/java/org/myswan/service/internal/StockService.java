@@ -2,8 +2,10 @@ package org.myswan.service.internal;
 
 import org.myswan.model.Stock;
 import org.myswan.repository.StockRepository;
+import org.myswan.service.external.vo.TradingViewVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.data.mongodb.core.BulkOperations;
@@ -13,6 +15,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -39,16 +42,23 @@ public class StockService {
     }
 
     public Stock create(Stock stock) {
-        return repository.save(stock);
+        Stock s = repository.save(stock);
+        Stock history = new Stock();
+        BeanUtils.copyProperties(s, history);
+        history.setId(null);
+        mongoTemplate.insert(history, "stockHistory");
+        return s;
     }
 
     public Stock update(String ticker, Stock stock) {
         stock.setTicker(ticker);
         return repository.save(stock);
+
     }
 
     public void delete(String ticker) {
         repository.deleteById(ticker);
+        deleteHistoryByTicker(ticker);
     }
 
     public boolean exists(String ticker) {
@@ -67,6 +77,34 @@ public class StockService {
         return new ArrayList<>();
     }
 
+    public void deleteHistoryByDate(LocalDate histDate) {
+        Query query = Query.query(Criteria.where("histDate").is(histDate));
+        mongoTemplate.remove(query, "stockHistory");
+    }
+
+    public void deleteHistoryByTicker(String ticker) {
+        Query query = Query.query(Criteria.where("ticker").is(ticker));
+        mongoTemplate.remove(query, "stockHistory");
+    }
+
+    public void deleteHistoryByTickerAndHistDate(String ticker, LocalDate histDate) {
+            Query query = Query.query(
+                    Criteria.where("ticker").is(ticker)
+                            .and("histDate").is(histDate)
+            );
+        mongoTemplate.remove(query, "stockHistory");
+    }
+
+    public void syncStockHistory() {
+        List<Stock> stocks = list();
+        if(stocks != null && !stocks.isEmpty()) {
+            deleteHistoryByDate(stocks.get(0).getHistDate());
+            stocks.forEach(stock -> {
+                stock.setId(null);
+            });
+            mongoTemplate.insert(stocks, "stockHistory");
+        }
+    }
     public void bulkPatch(List<Stock> stocks, Set<String> fields) {
         if (stocks == null || stocks.isEmpty() || fields == null || fields.isEmpty()) return;
 
@@ -88,5 +126,56 @@ public class StockService {
         }
 
         ops.execute();
+
+        syncStockHistory();
+    }
+
+    public void updateTradingView(List<TradingViewVO> tvList) {
+        if (tvList == null || tvList.isEmpty()) {
+            log.info("TradingView update skipped: empty list");
+            return;
+        }
+        LocalDate today = LocalDate.now();
+        List<Stock> toSave = new ArrayList<>(tvList.size());
+        for (TradingViewVO vo : tvList) {
+            if (vo.getTicker() == null || vo.getTicker().isBlank()) continue;
+            // Try existing
+            Stock existing = repository.findById(vo.getTicker()).orElse(null);
+            if(existing == null || existing.getTicker() == null || existing.getTicker().isBlank())
+                continue;
+            existing.setPrice(vo.getPrice());
+            existing.setType(vo.getType());
+            existing.setOpen(vo.getOpen());
+            existing.setHigh(vo.getHigh());
+            existing.setLow(vo.getLow());
+            existing.setChange(vo.getChange());
+            existing.setSma9(vo.getSma9());
+            existing.setSma20(vo.getSma20());
+            existing.setSma21(vo.getSma20());
+            existing.setSma50(vo.getSma50());
+            existing.setSma100(vo.getSma100());
+            existing.setSma200(vo.getSma200());
+            existing.setEma9(vo.getEma9());
+            existing.setEma20(vo.getEma20());
+            existing.setEma21(vo.getEma21());
+            existing.setEma50(vo.getEma50());
+            existing.setEma100(vo.getEma100());
+            existing.setEma200(vo.getEma200());
+            existing.setMacd1226(vo.getMacd1226());
+            existing.setRsi14(vo.getRsi14());
+            existing.setAtr14(vo.getAtr14());
+            existing.setMomentum(vo.getMomentum());
+            existing.setVolume(vo.getVolume());
+            existing.setVolumeChange(vo.getVolumeChange());
+            existing.setAvgVolume10D(vo.getAvgVolume10D());
+            existing.setVwap(vo.getVwap());
+            existing.getRating().setTradingViewMARating(vo.getMaRating());
+            existing.getRating().setTradingViewTechRating(vo.getTechRating());
+            existing.getRating().setTradingViewAnalystsRating(vo.getAnalystsRating());
+            toSave.add(existing);
+        }
+        repository.saveAll(toSave);
+        syncStockHistory();
+        log.info("TradingView update completed. Saved {} stocks", toSave.size());
     }
 }

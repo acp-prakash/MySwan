@@ -74,19 +74,43 @@ public class BarchartClient {
             return List.of();
         }
 
-        String symbols = masters.stream()
+        List<String> tickers = masters.stream()
                 .map(Master::getTicker)
                 .filter(t -> t != null && !t.isEmpty())
-                .collect(Collectors.joining(","));
+                .toList();
 
-        if (symbols.isEmpty()) {
+        if (tickers.isEmpty()) {
             log.info("No valid tickers found in masters - returning empty list");
             return List.of();
         }
 
+        // Batch tickers into groups of 500
+        int batchSize = 500;
+        List<BarchartVO> allResults = new ArrayList<>();
+
+        for (int i = 0; i < tickers.size(); i += batchSize) {
+            int end = Math.min(i + batchSize, tickers.size());
+            List<String> batch = tickers.subList(i, end);
+            String symbols = String.join(",", batch);
+
+            log.info("Fetching Barchart quotes for batch {}/{} ({} symbols)",
+                     (i / batchSize) + 1,
+                     (tickers.size() + batchSize - 1) / batchSize,
+                     batch.size());
+
+            List<BarchartVO> batchResults = fetchBatch(symbols, suffix);
+            allResults.addAll(batchResults);
+        }
+
+        log.info("Total Barchart quotes fetched: {}", allResults.size());
+        updateStockQuotes(allResults);
+        return allResults;
+    }
+
+    private List<BarchartVO> fetchBatch(String symbols, String suffix) throws IOException, InterruptedException {
         // Build URL: keep suffix separate; many barchart endpoints accept POST with body symbols
-        String url = apiBase + symbols + suffix; // do not append symbols to URL here if POST body is used
-        log.info("Requesting Barchart URL {}", url);
+        String url = apiBase + symbols + suffix;
+        log.debug("Requesting Barchart URL {}", url);
 
         HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -132,7 +156,6 @@ public class BarchartClient {
                         log.warn("Failed to map item to BarchartVO, skipping: {}", item.toString());
                     }
                 }
-                updateStockQuotes(out);
                 return out;
             } else {
                 JsonNode src = dataNode.has("raw") && dataNode.get("raw") != null && !dataNode.get("raw").isNull() ? dataNode.get("raw") : dataNode;
@@ -158,6 +181,9 @@ public class BarchartClient {
                         "volume", "prevClose", "priceChg5D", "priceChg10D", "priceChg20D",
                         "earningsDate", "rating.btAnalysts","rating.btAnalystRating","rating.btShortRating",
                         "rating.btLongRating","rating.btRating","rating.btTrend"));
+
+        //stockService.syncStockHistory();
+
     }
 
     private Stock applyQuoteToStock(BarchartVO vo) {

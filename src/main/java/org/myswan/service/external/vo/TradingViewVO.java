@@ -15,81 +15,34 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TradingViewVO {
-
-    @JsonProperty("symbol")
-    private String symbol;
-
-    @JsonProperty("dailyLastPrice") @JsonAlias("lastPrice")
+    private String type;
+    private String ticker;
     private double price;
-
-    @JsonProperty("dailyOpenPrice") @JsonAlias("openPrice")
     private double open;
-
-    @JsonProperty("dailyHighPrice") @JsonAlias("highPrice")
     private double high;
-
-    @JsonProperty("dailyLowPrice") @JsonAlias("lowPrice")
     private double low;
-
-    @JsonProperty("dailyPriceChange") @JsonAlias("priceChange")
     private double change;
-
-    @JsonProperty("dailyVolume") @JsonAlias("volume")
-    private long volume;
-
-    @JsonProperty("epsDate")
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private LocalDate epsDate;
-
-    @JsonProperty("nextEarningsDate")
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private LocalDate nextEarningsDate;
-
-    @JsonProperty("averageRecommendation")
-    private double averageRecommendation;
-
-    @JsonProperty("totalRecommendations")
-    private int totalRecommendations;
-
-    @JsonProperty("symbolName")
-    private String symbolName;
-
-    @JsonProperty("dailyOpinionShortTerm") @JsonAlias("opinionShortTerm")
-    private String opinionShortTerm;   // 50
-
-    @JsonProperty("dailyOpinionLongTerm") @JsonAlias("opinionLongTerm")
-    private String opinionLongTerm;    // 100
-
-    @JsonProperty("symbolCode")
-    private String symbolCode;           // "STK"
-
-    @JsonProperty("symbolType")
-    private int symbolType;
-
-    @JsonProperty("dailyOpinion") @JsonAlias("opinion")
-    private String opinion;            // 80
-
-    @JsonProperty("dailyPreviousPrice") @JsonAlias("previousPrice")
-    private double previousPrice;
-
-    @JsonProperty("dailyPriceChange5d") @JsonAlias("priceChange5d")
-    private double priceChange5d;
-
-    @JsonProperty("dailyPriceChange10d") @JsonAlias("priceChange10d")
-    private double priceChange10d;
-
-    @JsonProperty("dailyPriceChange20d") @JsonAlias("priceChange20d")
-    private double priceChange20d;
-
-    @JsonProperty("dailyHighPrice5d") @JsonAlias("highPrice5d")
-    private double highPrice5d;
-
-    @JsonProperty("dailyLowPrice5d") @JsonAlias("lowPrice5d")
-    private double lowPrice5d;
-
-    @JsonProperty("dailyTrendSpotterSignal") @JsonAlias("trendSpotterSignal")
-    private String trendSpotterSignal;
-
-    @JsonProperty("lastPrice")
-    private double lastPrice;
+    private String techRating;
+    private String maRating;
+    private String analystsRating;
+    private double sma9;
+    private double sma20;
+    private double sma21;
+    private double sma50;
+    private double sma100;
+    private double sma200;
+    private double ema9;
+    private double ema20;
+    private double ema21;
+    private double ema50;
+    private double ema100;
+    private double ema200;
+    private double macd1226;
+    private double rsi14;
+    private double atr14;
+    private double momentum;
+    private double volume;
+    private double volumeChange;
+    private double avgVolume10D;
+    private double vwap;
 }

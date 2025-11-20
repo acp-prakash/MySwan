@@ -1,0 +1,102 @@
+package org.myswan.helpers.scoring;
+
+import org.myswan.model.Score;
+import org.myswan.model.Stock;
+import org.springframework.stereotype.Component;
+
+@Component
+public class Pattern {
+
+    public Pattern() {
+        super();
+    }
+
+    public void calculateScore(Stock stock) {
+
+        double score = 0.0;
+        StringBuilder reason = new StringBuilder();
+
+        // 1. Momentum strength
+        if (stock.getMomentum() > 0) {
+            double s = stock.getMomentum() * 2;
+            score += s;
+            reason.append("Momentum increasing (+")
+                    .append(String.format("%.2f", s))
+                    .append("); ");
+        }
+
+        // 2. Price above EMA21 = pattern confirmation
+        if (stock.getPrice() > stock.getEma21()) {
+            score += 10;
+            reason.append("Price above EMA21 (pattern confirmation) (+10); ");
+        }
+
+        // 3. RSI in breakout zone (45 - 60)
+        if (stock.getRsi14() >= 45 && stock.getRsi14() <= 60) {
+            score += 10;
+            reason.append("RSI in ideal pattern zone (45–60) (+10); ");
+        }
+
+        // No signals?
+        if (reason.isEmpty()) {
+            reason.append("Weak pattern setup");
+        }
+
+        if(stock.getScore() == null)
+            stock.setScore(new Score());
+
+        stock.getScore().setPatternScore((int) score);
+        stock.getScore().setPatternReason(reason.toString());
+    }
+
+    public void calculateScoreETF(Stock stock) {
+
+        double score = 0.0;
+        StringBuilder reason = new StringBuilder();
+
+        // 1. Momentum scoring
+        if (stock.getMomentum() > 0) {
+            double s = stock.getMomentum() * 2;
+            score += s;
+            reason.append("Positive momentum (+").append(s).append("); ");
+        }
+
+        // 2. Volume Surge Scoring
+        if (stock.getAvgVolume10D() > 0) {
+            double volPct = ((stock.getVolume() - stock.getAvgVolume10D())
+                    / stock.getAvgVolume10D()) * 100;
+
+            if (volPct > 0) {
+                double s = Math.min(volPct, 50.0);
+                score += s;
+                reason.append("Volume surge ").append(String.format("%.1f", volPct))
+                        .append("% (+").append((int) s).append("); ");
+            }
+        }
+
+        // 3. Price above VWAP
+        if (stock.getPrice() > stock.getVwap()) {
+            score += 10;
+            reason.append("Price above VWAP (+10); ");
+        }
+
+        // 4. MACD scoring
+        if (stock.getMacd1226() > 0) {
+            double s = stock.getMacd1226() * 3;
+            score += s;
+            reason.append("MACD rising (+").append(String.format("%.2f", s)).append("); ");
+        }
+
+        // If no reasoning found
+        if (reason.isEmpty()) {
+            reason.append("No strong intraday signals");
+        }
+
+        if(stock.getScore() == null)
+            stock.setScore(new Score());
+
+        stock.getScore().setDayTradingScore((int) score);
+        stock.getScore().setDayTradingReason(reason.toString());
+
+    }
+}

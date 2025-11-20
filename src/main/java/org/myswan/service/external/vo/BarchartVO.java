@@ -19,22 +19,23 @@ public class BarchartVO {
     @JsonProperty("symbol")
     private String symbol;
 
-    @JsonProperty("dailyLastPrice") @JsonAlias("lastPrice")
+    @JsonAlias({"lastPrice", "dailyLastPrice"})
     private double price;
 
-    @JsonProperty("dailyOpenPrice") @JsonAlias("openPrice")
+    @JsonAlias({"dailyOpenPrice", "openPrice"})
     private double open;
 
-    @JsonProperty("dailyHighPrice") @JsonAlias("highPrice")
+    @JsonAlias({"dailyHighPrice", "highPrice"})
     private double high;
 
-    @JsonProperty("dailyLowPrice") @JsonAlias("lowPrice")
+    @JsonAlias({"dailyLowPrice", "lowPrice"})
     private double low;
 
-    @JsonProperty("dailyPriceChange") @JsonAlias("priceChange")
+    @JsonAlias({"dailyPriceChange", "priceChange"})
     private double change;
 
-    @JsonProperty("dailyVolume") @JsonAlias("volume")
+
+    @JsonAlias({"dailyVolume", "volume"})
     private long volume;
 
     @JsonProperty("epsDate")
@@ -54,10 +55,10 @@ public class BarchartVO {
     @JsonProperty("symbolName")
     private String symbolName;
 
-    @JsonProperty("dailyOpinionShortTerm") @JsonAlias("opinionShortTerm")
+    @JsonAlias({"dailyOpinionShortTerm", "opinionShortTerm"})
     private String opinionShortTerm;   // 50
 
-    @JsonProperty("dailyOpinionLongTerm") @JsonAlias("opinionLongTerm")
+    @JsonAlias({"dailyOpinionLongTerm", "opinionLongTerm"})
     private String opinionLongTerm;    // 100
 
     @JsonProperty("symbolCode")
@@ -66,30 +67,27 @@ public class BarchartVO {
     @JsonProperty("symbolType")
     private int symbolType;
 
-    @JsonProperty("dailyOpinion") @JsonAlias("opinion")
+    @JsonAlias({"dailyOpinion", "opinion"})
     private String opinion;            // 80
 
-    @JsonProperty("dailyPreviousPrice") @JsonAlias("previousPrice")
+    @JsonAlias({"dailyPreviousPrice", "previousPrice"})
     private double previousPrice;
 
-    @JsonProperty("dailyPriceChange5d") @JsonAlias("priceChange5d")
+    @JsonAlias({"dailyPriceChange5d", "priceChange5d"})
     private double priceChange5d;
 
-    @JsonProperty("dailyPriceChange10d") @JsonAlias("priceChange10d")
+    @JsonAlias({"dailyPriceChange10d", "priceChange10d"})
     private double priceChange10d;
 
-    @JsonProperty("dailyPriceChange20d") @JsonAlias("priceChange20d")
+    @JsonAlias({"dailyPriceChange20d", "priceChange20d"})
     private double priceChange20d;
 
-    @JsonProperty("dailyHighPrice5d") @JsonAlias("highPrice5d")
+    @JsonAlias({"dailyHighPrice5d", "highPrice5d"})
     private double highPrice5d;
 
-    @JsonProperty("dailyLowPrice5d") @JsonAlias("lowPrice5d")
+    @JsonAlias({"dailyLowPrice5d", "lowPrice5d"})
     private double lowPrice5d;
 
-    @JsonProperty("dailyTrendSpotterSignal") @JsonAlias("trendSpotterSignal")
+    @JsonAlias({"dailyTrendSpotterSignal", "trendSpotterSignal"})
     private String trendSpotterSignal;
-
-    @JsonProperty("lastPrice")
-    private double lastPrice;
 }
