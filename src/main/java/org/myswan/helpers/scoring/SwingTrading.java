@@ -1,6 +1,6 @@
 package org.myswan.helpers.scoring;
 
-import org.myswan.model.Score;
+import org.myswan.model.compute.Score;
 import org.myswan.model.Stock;
 import org.springframework.stereotype.Component;
 

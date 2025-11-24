@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Futures History – MySwan</title>
+  <link href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css" rel="stylesheet" />
+  <style>
+    body { margin:0; font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:#f4f5f7; }
+    .wrap { padding:20px; }
+    h1 { margin:0 0 4px; font-size:24px; }
+    .sub { color:#555; margin-bottom:16px; font-size:13px; }
+    #grid { margin-top:10px; }
+    .toolbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px; }
+    .toolbar input { padding:6px 10px; border:1px solid #ccc; border-radius:6px; }
+    .toolbar button { padding:6px 14px; border:none; background:#2563eb; color:#fff; border-radius:6px; cursor:pointer; font-size:14px; }
+    .toolbar button.secondary { background:#e5e7eb; color:#111; }
+    .back-link { display:inline-block; margin-top:10px; font-size:13px; }
+    .info { font-size:12px; color:#666; margin-top:6px; }
+
+    :root {
+      --hist-header-font-size: 10px;
+      --hist-cell-font-size: 10px;
+      --hist-header-line-height: 1.05em;
+      --hist-header-lines: 2;
+      --hist-cell-vpad: 2px;
+      --hist-cell-hpad: 3px;
+    }
+    .tabulator { font-size: var(--hist-cell-font-size); }
+    .tabulator .tabulator-cell { padding: var(--hist-cell-vpad) var(--hist-cell-hpad) !important; }
+    .tabulator .tabulator-header .tabulator-col { white-space: normal !important; }
+    .tabulator-col-title { line-height: var(--hist-header-line-height) !important; font-size: var(--hist-header-font-size) !important; padding:2px 3px !important; }
+    .tabulator-col-title .tabulator-col-title-text { display:-webkit-box !important; -webkit-box-orient:vertical; -webkit-line-clamp: var(--hist-header-lines); overflow:hidden; }
+    .tabulator-row:nth-child(even) { background:#fafafa; }
+    body { overflow-x:hidden; }
+    #grid { max-width:100%; }
+  </style>
+  <script src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <h1>Futures History</h1>
+  <div class="sub">Historical snapshots for a single futures ticker from the <code>futuresHistory</code> collection.</div>
+  <div class="toolbar">
+    <label>From <input type="date" id="fromDate" /></label>
+    <label>To <input type="date" id="toDate" /></label>
+    <button id="reloadBtn">Reload</button>
+    <button id="clearBtn" class="secondary">Clear Dates</button>
+  </div>
+  <div id="grid"></div>
+  <div class="info" id="info"></div>
+  <a class="back-link" href="futures.html">&larr; Back to futures</a>
+</div>
+<script>
+  const API_BASE = "http://jpmaxtricks.com:8070/api";
+
+  function getTicker() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("ticker");
+  }
+
+  let table;
+
+  function buildTable() {
+    if (table) return;
+
+    const fmt2 = function(cell){ let v = cell.getValue(); if(v === null || v === undefined || v=== '') return ''; let n=Number(v); if(isNaN(n)) return v; return n.toFixed(2); };
+    const fmtInt = function(cell){ let v = cell.getValue(); if(v==null) return ''; let n=Number(v); if(isNaN(n)) return v; return Math.round(n); };
+    const fmtVol = function(cell){ let v = cell.getValue(); if(v==null) return ''; let n=Number(v); if(isNaN(n)) return v; if(n>=1_000_000_000) return (n/1_000_000_000).toFixed(1)+'B'; if(n>=1_000_000) return (n/1_000_000).toFixed(1)+'M'; if(n>=1_000) return (n/1_000).toFixed(1)+'K'; return n.toString(); };
+
+    table = new Tabulator('#grid', {
+      layout: 'fitColumns',
+      rowHeight: 22,
+      pagination: true,
+      paginationSize: 50,
+      paginationSizeSelector: [25,50,100,250],
+      columnDefaults:{ headerHozAlign:'center', hozAlign:'center', widthGrow:1, minWidth:55 },
+      columns: [
+        {title:'Date', field:'histDate', headerFilter:'input', width:80},
+        {title:'Ticker', field:'ticker', headerFilter:'input', width:70},
+        {title:'Type', field:'type', headerFilter:'input', width:70},
+        {title:'Price', field:'price', headerFilter:'input', formatter:fmt2, width:65},
+        {title:'Change', field:'change', headerFilter:'input', formatter:fmt2, width:65},
+        {title:'High', field:'high', headerFilter:'input', formatter:fmt2, width:65},
+        {title:'Low', field:'low', headerFilter:'input', formatter:fmt2, width:65},
+        {title:'Open', field:'open', headerFilter:'input', formatter:fmt2, width:65},
+        {title:'Vol', field:'volume', headerFilter:'input', formatter:fmtVol, width:70},
+        {title:'Open Int', field:'openInterest', headerFilter:'input', formatter:fmtVol, width:80},
+        {title:'Expiry Date', field:'expiryDate', headerFilter:'input', width:90},
+        {title:'Expiry Days', field:'expiryDays', headerFilter:'input', formatter:fmtInt, width:90},
+        {title:'Prev Close', field:'prevClose', headerFilter:'input', formatter:fmt2, width:80},
+        {title:'Up High', field:'upHigh', headerFilter:'input', formatter:fmt2, width:70},
+        {title:'Down Low', field:'downLow', headerFilter:'input', formatter:fmt2, width:70},
+        {title:'BT Short', field:'rating.btShortRating', headerFilter:'input', width:70},
+        {title:'BT Long', field:'rating.btLongRating', headerFilter:'input', width:70},
+        {title:'BT Rating', field:'rating.btRating', headerFilter:'input', width:70},
+        {title:'BT Trend', field:'rating.btTrend', headerFilter:'input', width:70},
+      ],
+      placeholder: 'No history loaded',
+      dataChanged: updateInfo,
+      pageLoaded: updateInfo,
+    });
+  }
+
+  function updateInfo() {
+    if (!table) return;
+    const info = document.getElementById('info');
+    info.textContent = `Rows: ${table.getDataCount()} | Pages: ${table.getPageMax() || 1}`;
+  }
+
+  async function loadHistory() {
+    const ticker = getTicker();
+    if (!ticker) { alert('Missing ticker parameter in URL'); return; }
+    document.title = `Futures History – ${ticker}`;
+    buildTable();
+
+    const from = document.getElementById('fromDate').value || null;
+    const to = document.getElementById('toDate').value || null;
+    const params = new URLSearchParams();
+    if (from) params.append('from', from);
+    if (to) params.append('to', to);
+    const url = `${API_BASE}/futures/history/${encodeURIComponent(ticker)}${params.toString() ? '?' + params.toString() : ''}`;
+
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const data = await resp.json();
+      const normalized = Array.isArray(data) ? data : [data];
+      table.replaceData(normalized);
+    } catch (e) {
+      console.error(e);
+      alert('Failed to load history: ' + e.message);
+    }
+  }
+
+  document.getElementById('reloadBtn').addEventListener('click', loadHistory);
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    document.getElementById('fromDate').value = '';
+    document.getElementById('toDate').value = '';
+    loadHistory();
+  });
+
+  window.addEventListener('DOMContentLoaded', () => {
+    loadHistory();
+  });
+</script>
+</body>
+</html>
+

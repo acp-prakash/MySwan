@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MySwan – MongoDB Viewer</title>
+
+
+    <!-- Tabulator CSS (CDN) -->
+    <link href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css" rel="stylesheet">
+
+    <!-- Simple page styling -->
+    <style>
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #f4f5f7;
+            color: #222;
+        }
+
+
+.app-container {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.card {
+    width: 100%;
+    margin: 0;
+    border-radius: 0;
+    padding: 20px;
+}
+
+#grid {
+    width: 100%;
+}
+        h1 {
+            margin: 0 0 8px;
+            font-size: 28px;
+        }
+
+        .sub-title {
+            margin-bottom: 16px;
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .toolbar select,
+        .toolbar input {
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid #d1d5db;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .toolbar button {
+            padding: 8px 14px;
+            border-radius: 999px;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+            background: #2563eb;
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .toolbar button.secondary {
+            background: #e5e7eb;
+            color: #111827;
+        }
+
+        .toolbar button.danger {
+            background: #dc2626;
+            color: #ffffff;
+        }
+
+        .toolbar label {
+            font-size: 13px;
+            color: #4b5563;
+        }
+
+
+        .tabulator {
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .tabulator-header {
+            border-radius: 12px 12px 0 0;
+        }
+
+        .tabulator-footer {
+            border-radius: 0 0 12px 12px;
+        }
+
+        .grid-info {
+            margin-top: 6px;
+            font-size: 13px;
+            color: #6b7280;
+        }
+:root {
+    /* tighter headers: clamp to 2 lines for more rows */
+    --tv-header-lines: 2;
+    --tv-header-line-height: 1.0em;
+    --tv-header-font-size: 9px; /* smaller header font */
+    --tv-cell-font-size: 10px;
+    --tv-cell-vpad: 1px; /* tighter vertical padding */
+    --tv-cell-hpad: 2px; /* tighter horizontal padding */
+}
+
+/* Compact grid cells to fit more columns and rows */
+.tabulator .tabulator-cell {
+    font-size: var(--tv-cell-font-size) !important;
+    padding: var(--tv-cell-vpad) var(--tv-cell-hpad) !important;
+    line-height: 1.05em !important;
+}
+
+/* Header title wrapping: clamp to 2 lines */
+.tabulator-col-title {
+    white-space: normal !important;
+    line-height: var(--tv-header-line-height) !important;
+    height: auto !important;
+    font-size: var(--tv-header-font-size) !important;
+    padding: 1px 2px !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+}
+.tabulator-col .tabulator-col-title .tabulator-col-title-text {
+    white-space: normal !important;
+    line-height: var(--tv-header-line-height) !important;
+    height: auto !important;
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: var(--tv-header-lines) !important;
+    overflow: hidden !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+    max-height: calc(var(--tv-header-lines) * var(--tv-header-line-height));
+}
+
+/* keep header cells allowing wrap */
+.tabulator .tabulator-header .tabulator-col { white-space: normal !important; }
+
+/* Harmonize vertical long headers */
+.tabulator .tabulator-col[tabulator-field="rating.btShortRating"] .tabulator-col-title,
+.tabulator .tabulator-col[tabulator-field="rating.btLongRating"] .tabulator-col-title,
+.tabulator .tabulator-col[tabulator-field="rating.btRating"] .tabulator-col-title,
+.tabulator .tabulator-col[tabulator-field="rating.btTrend"] .tabulator-col-title,
+.tabulator .tabulator-col[tabulator-field="rating.tradingViewMARating"] .tabulator-col-title,
+.tabulator .tabulator-col[tabulator-field="rating.tradingViewTechRating"] .tabulator-col-title,
+.tabulator .tabulator-col[tabulator-field="rating.tradingViewAnalystsRating"] .tabulator-col-title {
+    font-size: var(--tv-header-font-size) !important;
+}
+
+/* === Enhanced header styling to prevent overlap of sort icons === */
+.tabulator .tabulator-header {
+    background: linear-gradient(180deg,#ffffff 0%,#f3f4f6 100%);
+    border-bottom: 1px solid #d1d5db;
+}
+.tabulator .tabulator-header .tabulator-col { /* remove default shadow / outline */
+    box-shadow: none !important;
+    border-right: 1px solid #e5e7eb;
+}
+.tabulator .tabulator-header .tabulator-col:last-child { border-right: none; }
+/* Reserve space on right side for sort arrow so it doesn't cover text */
+.tabulator .tabulator-header .tabulator-col.tabulator-sortable .tabulator-col-title {
+    padding-right: 14px !important; /* extra room for arrow */
+    position: relative;
+}
+/* Reposition sort arrow vertically centered, outside wrapped text flow */
+.tabulator .tabulator-header .tabulator-col .tabulator-arrow {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    margin: 0;
+    opacity: .7;
+}
+/* On hover/focus make arrow clearer */
+.tabulator .tabulator-header .tabulator-col:hover .tabulator-arrow { opacity: 1; }
+/* Compact multi-line title improvements */
+.tabulator-col-title { display:flex; align-items:center; }
+.tabulator-col-title .tabulator-col-title-text { width:100%; }
+/* Optional: subtle separator line under header text when sorted */
+.tabulator .tabulator-header .tabulator-col.tabulator-sortable.tabulator-col-sorted {
+    background: #eef2ff; /* light indigo tint */
+}
+.tabulator .tabulator-header .tabulator-col.tabulator-col-sorted .tabulator-arrow { opacity:1; color:#4f46e5; }
+/* Reduce header height jitter by fixing min-height */
+.tabulator .tabulator-header .tabulator-col { min-height: 30px !important; }
+/* Hide focus outline that can appear as shadow */
+.tabulator .tabulator-header .tabulator-col:focus { outline: none; }
+
+/* Ultra-compact mode: remove extra space from cells & headers */
+.tabulator .tabulator-header-filter input { padding: 1px 2px !important; margin: 0 !important; font-size: 9px !important; height: 16px !important; box-sizing: border-box; }
+.tabulator .tabulator-header-filter { padding: 0 1px 2px 1px !important; }
+
+/* Remove gradient & borders for tighter visual compression (optional) */
+.tabulator .tabulator-header { background: #f5f5f5; }
+
+/* Shrink selection & action columns */
+.tabulator .tabulator-cell[tabulator-field="action"],
+.tabulator .tabulator-col[tabulator-field="action"],
+.tabulator .tabulator-cell[tabulator-field="rowSelection"],
+.tabulator .tabulator-col[tabulator-field="rowSelection"] { padding:0 2px !important; }
+    </style>
+    <script src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+<div class="app-container">
+    <div class="card">
+        <h1>MySwan – MongoDB Data</h1>
+        <div class="sub-title">
+            View and filter <strong>master</strong>, <strong>stock</strong>, and <strong>stock history</strong> collections.
+            Column headers are filterable. You can delete single rows or multiple selected rows for Master & Stock.
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <label>
+                Collection:
+                <select id="collectionSelect">
+                    <option value="masters">Master</option>
+                    <option value="stocks">Stock</option>
+                    <option value="futures">Futures</option>
+<!--                    <option value="stockHistory">Stock History</option>-->
+                </select>
+            </label>
+
+            <label id="tickerFilterWrapper" style="display:none;">
+                Ticker:
+                <input type="text" id="historyTicker" placeholder="e.g. CONL">
+            </label>
+
+            <label id="fromDateWrapper" style="display:none;">
+                From:
+                <input type="date" id="historyFrom">
+            </label>
+
+            <label id="toDateWrapper" style="display:none;">
+                To:
+                <input type="date" id="historyTo">
+            </label>
+
+            <!-- Preset filters UI -->
+            <label>
+                Preset Filter:
+                <select id="presetFilterSelect">
+                    <option value="none">-- none --</option>
+                    <option value="explosive">EXPLOSIVE 4–7 DAY CANDIDATES</option>
+                    <option value="filter2">Preset Filter 2</option>
+                    <option value="filter3">Preset Filter 3</option>
+                    <option value="filter4">Preset Filter 4</option>
+                    <option value="filter5">Preset Filter 5</option>
+                    <option value="filter6">Preset Filter 6</option>
+                    <option value="filter7">Preset Filter 7</option>
+                    <option value="filter8">Preset Filter 8</option>
+                </select>
+            </label>
+            <button id="applyPresetFilterBtn" class="secondary">Apply Preset</button>
+            <button id="clearPresetFilterBtn" class="secondary">Clear Preset</button>
+
+            <button id="reloadBtn">Reload</button>
+            <button id="clearFiltersBtn" class="secondary">Clear Filters</button>
+            <!--<button id="deleteSelectedBtn" class="danger">Delete Selected</button>-->
+            <button id="exportExcelBtn" class="secondary" title="Download current grid rows to Excel">Export Excel</button>
+        </div>
+
+        <!-- Grid container -->
+        <div id="grid"></div>
+        <div class="grid-info" id="gridInfo"></div>
+    </div>
+</div>
+
+<!-- Tabulator JS (CDN) -->
+
+
+<script>
+    // ====== CONFIGURE YOUR API BASE URLS HERE ======
+    const API_BASE = "http://jpmaxtricks.com:8070/api";
+
+    const ENDPOINTS = {
+        masters: `${API_BASE}/master/list`,
+        stocks: `${API_BASE}/stock/list`,
+        futures: `${API_BASE}/futures/list`,
+        stockHistory: (ticker, from, to) => {
+            const params = new URLSearchParams();
+            if (from) params.append("from", from);
+            if (to) params.append("to", to);
+            return `${API_BASE}/stocks/${encodeURIComponent(ticker)}/history?` + params.toString();
+        }
+    };
+
+    // Delete endpoints – adjust these to match your Spring controllers
+    function getDeleteUrl(collection, rowData) {
+        switch (collection) {
+            case "masters":
+                // e.g. DELETE /api/master/delete/{ticker}
+                return `${API_BASE}/master/delete/${encodeURIComponent(rowData.ticker)}`;
+            case "stocks":
+                // e.g. DELETE /api/stock/delete/{ticker}
+                return `${API_BASE}/stock/delete/${encodeURIComponent(rowData.ticker)}`;
+            default:
+                // stockHistory delete not supported from UI (for now)
+                return null;
+        }
+    }
+
+    let table; // Tabulator instance
+    let currentCollection = "masters";
+    let loadedTotal = 0; // total rows loaded for current dataset (unfiltered)
+    let filteredTotal = 0; // current filtered row count (updated by dataFiltered event)
+    let activePresetFn = null; // store currently applied preset filter function
+
+    const gridInfoEl = document.getElementById("gridInfo");
+
+    function updateGridInfo() {
+        if (!table) {
+            gridInfoEl.textContent = "";
+            return;
+        }
+        // Determine filtered rows reliably across Tabulator versions:
+        // Use filteredTotal updated by events if available, else try to compute
+        let filteredRows = filteredTotal || 0;
+        if (!filteredRows) {
+            try {
+                if (typeof table.getData === 'function') {
+                    const active = table.getData(true);
+                    if (Array.isArray(active)) filteredRows = active.length;
+                }
+                if (!filteredRows && typeof table.getRows === 'function') {
+                    const rows = table.getRows(true);
+                    if (Array.isArray(rows)) filteredRows = rows.length;
+                }
+                if (!filteredRows && typeof table.getDataCount === 'function') {
+                    filteredRows = table.getDataCount();
+                }
+            } catch (e) {
+                filteredRows = table.getDataCount ? table.getDataCount() : 0;
+            }
+        }
+
+        const maxPages = table.getPageMax ? table.getPageMax() : 1;
+        gridInfoEl.textContent = `Filtered: ${filteredRows} / Total: ${loadedTotal} | Pages: ${maxPages || 1}`;
+    }
+
+    // ====== Column definitions (with selection + delete for Master & Stock) ======
+
+    const selectionColumn = {
+        title: "",
+        formatter: "rowSelection",
+        titleFormatter: "rowSelection",
+        hozAlign: "center",
+        headerHozAlign: "center",
+        width: 40,
+        headerSort: false
+    };
+
+    const deleteActionColumn = {
+        title: "Action",
+        field: "action",
+        hozAlign: "center",
+        width: 110,
+        headerSort: false,
+        formatter: () => "<button class='delete-btn'>Delete</button>",
+        cellClick: function (e, cell) {
+            const rowData = cell.getRow().getData();
+            deleteRows([rowData], [cell.getRow()]);
+        }
+    };
+
+    const columnsMaster = [
+        selectionColumn,
+        {title: "Ticker", field: "ticker", headerFilter: "input"},
+        {title: "Name", field: "name", headerFilter: "input"},
+        {title: "Type", field: "type", headerFilter: "input"},
+        {title: "Added Price", field: "addedPrice", headerFilter: "input"},
+        {title: "Added Date", field: "addedDate", headerFilter: "input"}
+        <!--deleteActionColumn-->
+    ];
+
+    // Numeric header filter helper: supports >, >=, <, <=, ranges (e.g. 10-20) or exact numbers
+    function numericHeaderFilter(headerValue, rowValue, rowData, filterParams){
+        if(headerValue === null || headerValue === undefined) return true;
+        const s = String(headerValue).trim();
+        if(s === '') return true;
+        // try operator form: >, >=, <, <=
+        const opMatch = s.match(/^([><]=?)\s*(-?\d+(?:\.\d+)?)$/);
+        let rv = Number(rowValue);
+        if(isNaN(rv)) rv = null;
+        if(opMatch){
+            const op = opMatch[1];
+            const num = parseFloat(opMatch[2]);
+            if(rv === null) return false;
+            switch(op){
+                case '>': return rv > num;
+                case '>=': return rv >= num;
+                case '<': return rv < num;
+                case '<=': return rv <= num;
+            }
+        }
+        // range form: low-high
+        const rangeMatch = s.match(/^(-?\d+(?:\.\d+)?)\s*-\s*(-?\d+(?:\.\d+)?)$/);
+        if(rangeMatch){
+            const low = parseFloat(rangeMatch[1]);
+            const high = parseFloat(rangeMatch[2]);
+            if(rv === null) return false;
+            return rv >= Math.min(low, high) && rv <= Math.max(low, high);
+        }
+        // direct number equality
+        const numMatch = s.match(/^-?\d+(?:\.\d+)?$/);
+        if(numMatch){
+            const num = parseFloat(numMatch[0]);
+            if(rv === null) return false;
+            return rv === num;
+        }
+        // if user entered something else (like text), do a string contains check
+        if(rowValue === null || rowValue === undefined) return false;
+        return String(rowValue).toLowerCase().indexOf(s.toLowerCase()) !== -1;
+    }
+
+    const columnsStock = [
+        {title: "Ticker", field: "ticker", headerFilter: "input", width: 60, tooltip: true, widthGrow: 0, formatter:function(cell){ const v = cell.getValue(); if(!v) return ""; return `<a href="stock-history.html?ticker=${encodeURIComponent(v)}" target="_blank">${v}</a>`; }},
+        {title: "Chg", field: "change", headerFilter: "input", headerFilterPlaceholder: ">0 or <0 or 1-10", headerFilterFunc: numericHeaderFilter, width: 60,  tooltip: true, widthGrow: 0},
+        {title: "Low", field: "low", headerFilter: "input", headerFilterFunc: numericHeaderFilter, headerFilterPlaceholder: ">=10", width: 60, tooltip: true, widthGrow: 0},
+        {title: "Price", field: "price", headerFilter: "input", headerFilterFunc: numericHeaderFilter, headerFilterPlaceholder: ">100", width: 60, tooltip: true, widthGrow: 0},
+        {title: "High", field: "high", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 60, tooltip: true, widthGrow: 0},
+
+        // BottomSignal columns
+        {title: "Bottom", field: "bottom.bottom", headerFilter: "input", width: 60, hozAlign: "center", formatter: function(cell, formatterParams){ const v = cell.getValue(); if (v === true || v === 'true') return "✅"; if (v === false || v === 'false') return ""; return v; }},
+        {title: "BottomMet", field: "bottom.conditionsMet", headerFilter: "input", headerFilterPlaceholder: ">=5", headerFilterFunc: numericHeaderFilter, width: 80, hozAlign: "center", tooltip: true, formatter: function(cell){ const v = cell.getValue(); return v == null ? "" : v.toString(); }},
+        {title: "BotStrength", field: "bottom.strength", headerFilter: "input", width: 80, hozAlign: "center", tooltip: true, formatter: function(cell){ const v = cell.getValue(); return v == null ? "" : v; }},
+        {title: "BotReasons", field: "bottom.reasons", headerFilter: "input", width: 180, hozAlign: "left", tooltip: true, formatter: function(cell){ const v = cell.getValue(); if (!v) return ""; if (Array.isArray(v)) return v.join(', '); return v; }},
+
+        // Spike columns
+        {title: "spikeLikely", field: "spike.spikeLikely", headerFilter: "input", width: 80, hozAlign: "center", tooltip: true, formatter: function(cell){ const v = cell.getValue(); return v == null ? "" : v; }},
+        {title: "spikeScore", field: "spike.spikeScore", headerFilter: "input", headerFilterPlaceholder: ">=70", headerFilterFunc: numericHeaderFilter, width: 60, hozAlign: "center", formatter: function(cell, formatterParams){ const v = cell.getValue(); if (v === true || v === 'true') return "⚡"; if (v === false || v === 'false') return ""; return v; }},
+        {title: "spikeType", field: "spike.spikeType", headerFilter: "input", width: 80, hozAlign: "center", tooltip: true, formatter: function(cell){ const v = cell.getValue(); return v == null ? "" : v.toString(); }},
+
+        // Score columns with numeric header filters
+        {title: "Signal", field: "score.signal", headerFilter: "input", width: 60, tooltip: true, widthGrow: 0},
+        {title: "OverAll", field: "score.overallScore", headerFilter: "input", headerFilterPlaceholder: ">=65", headerFilterFunc: numericHeaderFilter, width: 60, tooltip: true, widthGrow: 0},
+        {title: "DT", field: "score.dayTradingScore", headerFilter: "input", headerFilterPlaceholder: ">=20", headerFilterFunc: numericHeaderFilter, width: 60, tooltip: true, widthGrow: 0},
+        {title: "ST", field: "score.swingTradingScore", headerFilter: "input", headerFilterPlaceholder: ">=20", headerFilterFunc: numericHeaderFilter, width: 60, tooltip: true, widthGrow: 0},
+        {title: "Reversal", field: "score.reversalScore", headerFilter: "input", headerFilterPlaceholder: ">=10", headerFilterFunc: numericHeaderFilter, width: 60, tooltip: true, widthGrow: 0},
+        {title: "Breakout", field: "score.breakoutScore", headerFilter: "input", headerFilterPlaceholder: ">=60", headerFilterFunc: numericHeaderFilter, width: 60, tooltip: true, widthGrow: 0},
+        {title: "Pattern", field: "score.patternScore", headerFilter: "input", headerFilterPlaceholder: ">=10", headerFilterFunc: numericHeaderFilter, width: 60, tooltip: true, widthGrow: 0},
+
+        {title: "BTShort", field: "rating.btShortRating", headerFilter: "input", width: 90, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        {title: "BTLong", field: "rating.btLongRating", headerFilter: "input", width: 90, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        {title: "BT", field: "rating.btRating", headerFilter: "input", width: 90, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        {title: "BTTrend", field: "rating.btTrend", headerFilter: "input", width: 90, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        {title: "TVMA", field: "rating.tradingViewMARating", headerFilter: "input", width: 90, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        {title: "TVTECH", field: "rating.tradingViewTechRating", headerFilter: "input", width: 90, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        {title: "TV ANALY", field: "rating.tradingViewAnalystsRating", headerFilter: "input", width: 90, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        {title: "BotReasons", field: "bottom.reasons", headerFilter: "input", width: 180, hozAlign: "left", tooltip: true, formatter: function(cell){ const v = cell.getValue(); if (!v) return ""; if (Array.isArray(v)) return v.join(', '); return v; }},
+        {title: "SpikeReasons", field: "spike.reasons", headerFilter: "input", width: 180, hozAlign: "left", tooltip: true, formatter: function(cell){ const v = cell.getValue(); if (!v) return ""; if (Array.isArray(v)) return v.join(', '); return v; }},
+
+        {title: "DTR", field: "score.dayTradingReason", headerFilter: "input", width: 60, tooltip: true, widthGrow: 0},
+        {title: "STR", field: "score.swingTradingReason", headerFilter: "input", width: 60, tooltip: true, widthGrow: 0},
+        {title: "Rev R", field: "score.reversalReason", headerFilter: "input", width: 60, tooltip: true, widthGrow: 0},
+        {title: "Break R", field: "score.breakoutReason", headerFilter: "input", width: 60, tooltip: true, widthGrow: 0},
+
+        {title: "Pat R", field: "score.patternReason", headerFilter: "input", width: 60, tooltip: true, widthGrow: 0},
+    ];
+
+    const columnsFutures = [
+        {title: "Ticker", field: "ticker", headerFilter: "input", width: 80, tooltip: true, widthGrow: 0, formatter:function(cell){ const v = cell.getValue(); if(!v) return ""; return `<a href="futures-history.html?ticker=${encodeURIComponent(v)}" target="_blank">${v}</a>`; }},
+        {title: "Type", field: "type", headerFilter: "input", width: 80, tooltip: true, widthGrow: 0},
+        {title: "Price", field: "price", headerFilter: "input", headerFilterPlaceholder: ">100", headerFilterFunc: numericHeaderFilter, width: 80, tooltip: true, widthGrow: 0},
+        {title: "Change", field: "change", headerFilter: "input", headerFilterPlaceholder: ">0", headerFilterFunc: numericHeaderFilter, width: 80, tooltip: true, widthGrow: 0},
+        {title: "Open", field: "open", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 80, tooltip: true, widthGrow: 0},
+        {title: "High", field: "high", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 80, tooltip: true, widthGrow: 0},
+        {title: "Low", field: "low", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 80, tooltip: true, widthGrow: 0},
+        {title: "Volume", field: "volume", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 100, tooltip: true, widthGrow: 0},
+        {title: "Open Int", field: "openInterest", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 100, tooltip: true, widthGrow: 0},
+        {title: "Expiry Date", field: "expiryDate", headerFilter: "input", width: 100, tooltip: true, widthGrow: 0},
+        {title: "Expiry Days", field: "expiryDays", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 100, tooltip: true, widthGrow: 0},
+        {title: "Prev Close", field: "prevClose", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 100, tooltip: true, widthGrow: 0},
+        {title: "Up High", field: "upHigh", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 80, tooltip: true, widthGrow: 0},
+        {title: "Down Low", field: "downLow", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 80, tooltip: true, widthGrow: 0},
+        {title: "BT Short", field: "rating.btShortRating", headerFilter: "input", width: 90, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        {title: "BT Long", field: "rating.btLongRating", headerFilter: "input", width: 90, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        {title: "BT Rating", field: "rating.btRating", headerFilter: "input", width: 90, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        {title: "BT Trend", field: "rating.btTrend", headerFilter: "input", width: 90, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        {title: "Hist Date", field: "histDate", headerFilter: "input", width: 100, tooltip: true, widthGrow: 0},
+    ];
+
+    const columnsStockHistory = [
+        {title: "histDate", field: "ts", headerFilter: "input"},
+        {title: "Ticker", field: "ticker", headerFilter: "input"},
+        {title: "Open", field: "open", headerFilter: "input"},
+        {title: "High", field: "high", headerFilter: "input"},
+        {title: "Low", field: "low", headerFilter: "input"},
+        {title: "Close", field: "close", headerFilter: "input"},
+        {title: "Volume", field: "volume", headerFilter: "input"},
+    ];
+
+    function createOrUpdateTable(columns) {
+        if (table) {
+            table.setColumns(columns);
+            table.clearData();
+            loadedTotal = 0;
+            updateGridInfo();
+            return;
+        }
+        table = new Tabulator("#grid", {
+            layout: "fitDataFill",
+            rowHeight: 20, // reduced from 24
+            reactiveData: true,
+            pagination: true,
+            paginationSize: 25,
+            paginationSizeSelector: [25, 50, 100],
+            columns: columns,
+            columnDefaults: {
+                minWidth: 48, // tighter min width
+                widthGrow: 0,
+                headerHozAlign: "center",
+                hozAlign: "center",
+            },
+            movableColumns: true,
+            headerVertical: false,
+            headerWordWrap: true,
+            height: "520px", // shorter height to reduce scroll interplay
+            rowHover: true,
+            selectable: true,
+            selectableRangeMode: "click",
+            placeholder: "No data loaded",
+            pageLoaded: function () { updateGridInfo(); },
+            dataChanged: function () { updateGridInfo(); }
+        });
+
+        // Keep filtered count in sync when filters change
+        if (table && typeof table.on === 'function') {
+            try {
+                table.on('filterChanged', function(filters, rows){
+                    // update filteredTotal when filters change
+                    try {
+                        if (Array.isArray(rows)) {
+                            filteredTotal = rows.length;
+                        } else if (typeof table.getData === 'function') {
+                            const active = table.getData(true);
+                            if (Array.isArray(active)) filteredTotal = active.length;
+                        } else if (typeof table.getRows === 'function') {
+                            const activeRows = table.getRows(true);
+                            if (Array.isArray(activeRows)) filteredTotal = activeRows.length;
+                        }
+                    } catch (e) { /* ignore */ }
+                    updateGridInfo();
+                 });
+             } catch (e) { /* ignore if event not supported */ }
+
+             try {
+                 table.on('dataFiltered', function(filters, rows){
+                    // dataFiltered receives filtered row components (rows)
+                    try {
+                        if (Array.isArray(rows)) {
+                            // rows may be row components or data objects
+                            // if row components, they may have getData(); handle both
+                            if (rows.length && typeof rows[0].getData === 'function') {
+                                filteredTotal = rows.length;
+                            } else {
+                                filteredTotal = rows.length;
+                            }
+                        } else if (typeof table.getData === 'function') {
+                            const active = table.getData(true);
+                            if (Array.isArray(active)) filteredTotal = active.length;
+                        }
+                    } catch (e) { /* ignore */ }
+                    updateGridInfo();
+                 });
+             } catch (e) { /* ignore if event not supported */ }
+         }
+      }
+
+    async function loadData() {
+        const collection = document.getElementById("collectionSelect").value;
+        currentCollection = collection;
+
+        // Toggle extra filters
+        const historyControlsVisible = collection === "stockHistory";
+        document.getElementById("tickerFilterWrapper").style.display = historyControlsVisible ? "inline-flex" : "none";
+        document.getElementById("fromDateWrapper").style.display = historyControlsVisible ? "inline-flex" : "none";
+        document.getElementById("toDateWrapper").style.display = historyControlsVisible ? "inline-flex" : "none";
+
+        // Enable/disable deleteSelected button for stockHistory
+        <!--document.getElementById("deleteSelectedBtn").disabled = (collection === "stockHistory");-->
+
+        let url;
+        let columns;
+
+        if (collection === "masters") {
+            url = ENDPOINTS.masters;
+            columns = columnsMaster;
+        } else if (collection === "stocks") {
+            url = ENDPOINTS.stocks;
+            columns = columnsStock;
+        } else if (collection === "futures") {
+            url = ENDPOINTS.futures;
+            columns = columnsFutures;
+        } else {
+            const tickerInput = document.getElementById("historyTicker").value.trim();
+            const from = document.getElementById("historyFrom").value || null;
+            const to = document.getElementById("historyTo").value || null;
+
+            if (!tickerInput) {
+                alert("Please enter a ticker to load stock history.");
+                return;
+            }
+
+            url = ENDPOINTS.stockHistory(tickerInput, from, to);
+            columns = columnsStockHistory;
+        }
+
+        createOrUpdateTable(columns);
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error: ${response.status}`);
+            }
+            const data = await response.json();
+            // normalize common API response shapes to an array of rows
+            let rows;
+            if (Array.isArray(data)) {
+                rows = data;
+            } else if (data && Array.isArray(data.data)) {
+                rows = data.data;
+            } else if (data && Array.isArray(data.results)) {
+                rows = data.results;
+            } else if (data && Array.isArray(data.items)) {
+                rows = data.items;
+            } else {
+                // fallback to wrapping single object
+                rows = [data];
+            }
+
+            // store total count for later display (unfiltered total)
+            loadedTotal = rows.length || 0;
+            // replace table data and wait for Tabulator to finish
+            if (table && typeof table.replaceData === 'function') {
+                await table.replaceData(rows);
+            } else if (table) {
+                table.replaceData(rows);
+            }
+            // after loading data, reset filteredTotal to loadedTotal (no filters applied yet)
+            filteredTotal = loadedTotal;
+             updateGridInfo();
+        } catch (err) {
+            console.error(err);
+            alert("Failed to load data. Check console for details.");
+        }
+    }
+
+    function clearFilters() {
+        if (table) {
+            table.clearFilter(true);
+            table.clearHeaderFilter();
+            // reset filteredTotal when filters are cleared
+            filteredTotal = loadedTotal;
+            updateGridInfo();
+        }
+    }
+
+    // ---------- Delete helpers ----------
+
+    async function deleteRows(rowDatas, rows) {
+        if (!rowDatas.length) {
+            alert("No rows selected for delete.");
+            return;
+        }
+
+        if (currentCollection === "stockHistory") {
+            alert("Delete is not enabled for Stock History from this screen.");
+            return;
+        }
+
+        if (!confirm(`Delete ${rowDatas.length} row(s) from ${currentCollection}?`)) {
+            return;
+        }
+
+        let successCount = 0;
+        let failCount = 0;
+
+        for (let i = 0; i < rowDatas.length; i++) {
+            const data = rowDatas[i];
+            const row = rows[i];
+            const url = getDeleteUrl(currentCollection, data);
+            if (!url) {
+                console.warn("No delete URL for collection:", currentCollection);
+                failCount++;
+                continue;
+            }
+
+            try {
+                const resp = await fetch(url, { method: "DELETE" });
+                if (!resp.ok) {
+                    console.error("Failed to delete:", data, "status:", resp.status);
+                    failCount++;
+                    continue;
+                }
+
+                if (row) {
+                    row.delete();
+                }
+                successCount++;
+            } catch (e) {
+                console.error("Error deleting row:", e);
+                failCount++;
+            }
+        }
+
+        updateGridInfo();
+
+        if (failCount) {
+            alert(`Delete finished. Success: ${successCount}, Failed: ${failCount}`);
+        } else {
+            // quiet success or small toast; for now:
+            console.log(`Delete finished. Success: ${successCount}`);
+        }
+    }
+
+    async function deleteSelected() {
+        if (!table) return;
+        const rows = table.getSelectedRows();
+        if (!rows.length) {
+            alert("No rows selected.");
+            return;
+        }
+
+        const rowDatas = rows.map(r => r.getData());
+        await deleteRows(rowDatas, rows);
+    }
+
+    function exportExcel() {
+        if (!table) { alert("Grid not ready yet."); return; }
+        const columnComponents = table.getColumns();
+        // Keep columns that have a field and are not the action column
+        const exportColumns = columnComponents
+            .map(c => c.getDefinition())
+            .filter(def => def.field && def.field !== 'action'); // selection column has no field
+
+        if (!exportColumns.length) { alert("No exportable columns."); return; }
+
+        // Helper to resolve nested dot paths like rating.btShortRating
+        function resolveField(obj, path) {
+            if (!obj) return null;
+            if (!path) return null;
+            if (Object.prototype.hasOwnProperty.call(obj, path)) {
+                // direct property (rare) - return
+                return obj[path];
+            }
+            const parts = path.split('.');
+            let cur = obj;
+            for (const p of parts) {
+                if (cur == null) return null;
+                cur = cur[p];
+            }
+            return cur == null ? null : cur;
+        }
+
+        const headers = exportColumns.map(def => (def.title || def.field));
+        const rawData = table.getData(); // already filtered/sorted data
+        if (!rawData.length) { alert("No data to export."); return; }
+
+        // Build AOA (Array Of Arrays): first row headers, then row values
+        const rows = rawData.map(row => exportColumns.map(def => resolveField(row, def.field)));
+        const aoa = [headers, ...rows];
+
+        const ts = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+        const filename = `myswan-${currentCollection}-${ts}.xlsx`;
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        XLSX.utils.book_append_sheet(wb, ws, currentCollection.substring(0,31));
+        XLSX.writeFile(wb, filename);
+    }
+
+    // ====== Event wiring ======
+    document.getElementById("reloadBtn").addEventListener("click", loadData);
+    document.getElementById("clearFiltersBtn").addEventListener("click", clearFilters);
+    <!--document.getElementById("deleteSelectedBtn").addEventListener("click", deleteSelected);-->
+    document.getElementById("exportExcelBtn").addEventListener("click", exportExcel);
+
+    document.getElementById("collectionSelect").addEventListener("change", () => {
+        if (table) clearFilters();
+        loadData();
+    });
+
+    // Initial load
+    window.addEventListener("DOMContentLoaded", () => {
+        loadData();
+    });
+
+    // Helper to safely get nested values from row data
+    function getNested(row, path) {
+        if (!row || !path) return null;
+        const parts = path.split('.');
+        let cur = row;
+        for (const p of parts) {
+            if (cur == null) return null;
+            cur = cur[p];
+        }
+        return cur;
+    }
+
+    // Preset filter functions (each accepts rowData and returns boolean)
+    function filterExplosive(row) {
+        // EXPLOSIVE 4–7 DAY CANDIDATES:
+        // spikeScore >= 70
+        // bottom.conditionsMet >= 5
+        // score.breakoutScore >= 60
+        // score.overallScore >= 65
+        // score.signal == 'BUY'
+        const spikeScore = Number(getNested(row, 'spike.spikeScore')) || 0;
+        const bottomConds = Number(getNested(row, 'bottom.conditionsMet')) || 0;
+        const breakoutScore = Number(getNested(row, 'score.breakoutScore')) || 0;
+        const overallScore = Number(getNested(row, 'score.overallScore')) || 0;
+        const signal = (getNested(row, 'score.signal') || '').toString().toUpperCase();
+
+        return spikeScore >= 70 && bottomConds >= 5 && breakoutScore >= 60 && overallScore >= 65 && signal === 'BUY';
+    }
+
+    // Placeholder preset filters - implement real logic similarly
+    function filterPreset2(row) { /* TODO: implement logic */ return false; }
+    function filterPreset3(row) { /* TODO: implement logic */ return false; }
+    function filterPreset4(row) { /* TODO: implement logic */ return false; }
+    function filterPreset5(row) { /* TODO: implement logic */ return false; }
+    function filterPreset6(row) { /* TODO: implement logic */ return false; }
+    function filterPreset7(row) { /* TODO: implement logic */ return false; }
+    function filterPreset8(row) { /* TODO: implement logic */ return false; }
+
+    // Apply a preset filter by name: attaches a function filter to Tabulator
+    function applyPresetByName(name) {
+        // remove any existing preset filter first
+        clearActivePreset();
+
+        if (!table || name === 'none') return;
+
+        let fn;
+        switch (name) {
+            case 'explosive': fn = filterExplosive; break;
+            case 'filter2': fn = filterPreset2; break;
+            case 'filter3': fn = filterPreset3; break;
+            case 'filter4': fn = filterPreset4; break;
+            case 'filter5': fn = filterPreset5; break;
+            case 'filter6': fn = filterPreset6; break;
+            case 'filter7': fn = filterPreset7; break;
+            case 'filter8': fn = filterPreset8; break;
+            default: fn = null;
+        }
+
+        if (fn) {
+            // Tabulator supports adding a function filter
+            try {
+                table.addFilter(fn);
+                activePresetFn = fn;
+                // update filteredTotal immediately
+                try { filteredTotal = table.getData(true).length; } catch (e) { /* ignore */ }
+                updateGridInfo();
+            } catch (e) {
+                // fallback: use setFilter which replaces existing filters
+                try { table.setFilter(fn); activePresetFn = fn; updateGridInfo(); } catch (e2) { console.error('Failed to apply preset filter', e2); }
+            }
+        }
+    }
+
+    function clearActivePreset() {
+        if (!table) return;
+        if (activePresetFn) {
+            try { table.removeFilter(activePresetFn); } catch (e) { /* ignore if API not available */ }
+            activePresetFn = null;
+            // recompute filteredTotal from current header filters
+            try { filteredTotal = table.getData(true).length; } catch (e) { filteredTotal = table.getDataCount ? table.getDataCount() : loadedTotal; }
+            updateGridInfo();
+        }
+    }
+
+    // Wire up preset filter buttons after DOM ready
+    document.addEventListener('DOMContentLoaded', function(){
+        const applyBtn = document.getElementById('applyPresetFilterBtn');
+        const clearBtn = document.getElementById('clearPresetFilterBtn');
+        const sel = document.getElementById('presetFilterSelect');
+        if (applyBtn && sel) applyBtn.addEventListener('click', () => applyPresetByName(sel.value));
+        if (clearBtn) clearBtn.addEventListener('click', () => { if (sel) sel.value='none'; clearActivePreset(); });
+    });
+</script>
+</body>
+</html>

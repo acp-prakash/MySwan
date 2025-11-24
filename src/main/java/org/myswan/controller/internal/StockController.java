@@ -4,7 +4,9 @@ import org.myswan.model.Stock;
 import org.myswan.service.internal.StockService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.format.annotation.DateTimeFormat;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -54,5 +56,15 @@ public class StockController {
     public ResponseEntity<Void> deleteStockLegacy(@PathVariable String ticker) {
         // Delegate to the canonical delete behavior
         return deleteStock(ticker);
+    }
+
+    @GetMapping("/stock/history/{ticker:.+}")
+    public ResponseEntity<List<Stock>> getStockHistory(
+            @PathVariable String ticker,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
+    ) {
+        List<Stock> history = stockService.getStockHistory(ticker, from, to);
+        return ResponseEntity.ok(history);
     }
 }

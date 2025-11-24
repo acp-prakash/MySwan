@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MySwan – Futures</title>
+    <link href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #f4f5f7;
+            color: #222;
+        }
+        .app-container {
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        .card {
+            width: 100%;
+            margin: 0;
+            border-radius: 0;
+            padding: 20px;
+        }
+        #grid {
+            width: 100%;
+        }
+        h1 {
+            margin: 0 0 8px;
+            font-size: 28px;
+        }
+        .sub-title {
+            margin-bottom: 16px;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .toolbar select,
+        .toolbar input {
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid #d1d5db;
+            font-size: 14px;
+            outline: none;
+        }
+        .toolbar button {
+            padding: 8px 14px;
+            border-radius: 999px;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+            background: #2563eb;
+            color: #fff;
+            font-weight: 500;
+        }
+        .toolbar button.secondary {
+            background: #e5e7eb;
+            color: #111827;
+        }
+        .toolbar button.success {
+            background: #10b981;
+            color: #ffffff;
+        }
+        .toolbar label {
+            font-size: 13px;
+            color: #4b5563;
+        }
+        .tabulator {
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+        }
+        .tabulator-header {
+            border-radius: 12px 12px 0 0;
+        }
+        .tabulator-footer {
+            border-radius: 0 0 12px 12px;
+        }
+        .grid-info {
+            margin-top: 6px;
+            font-size: 13px;
+            color: #6b7280;
+        }
+        :root {
+            --tv-header-lines: 2;
+            --tv-header-line-height: 1.0em;
+            --tv-header-font-size: 9px;
+            --tv-cell-font-size: 10px;
+            --tv-cell-vpad: 1px;
+            --tv-cell-hpad: 2px;
+        }
+        .tabulator .tabulator-cell {
+            font-size: var(--tv-cell-font-size) !important;
+            padding: var(--tv-cell-vpad) var(--tv-cell-hpad) !important;
+            line-height: 1.05em !important;
+        }
+        .tabulator-col-title {
+            white-space: normal !important;
+            line-height: var(--tv-header-line-height) !important;
+            height: auto !important;
+            font-size: var(--tv-header-font-size) !important;
+            padding: 1px 2px !important;
+            word-break: break-word !important;
+            overflow-wrap: anywhere !important;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+    </style>
+    <script src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+<div class="app-container">
+    <div class="card">
+        <h1>MySwan – Futures</h1>
+        <div class="sub-title">
+            View and manage <strong>futures</strong> trading data (GC, ES, EMD, VX).
+            Click "Fetch from Barchart" to get latest data.
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <button id="fetchBarchartBtn" class="success">Fetch from Barchart</button>
+            <button id="reloadBtn">Reload</button>
+            <button id="clearFiltersBtn" class="secondary">Clear Filters</button>
+            <button id="exportExcelBtn" class="secondary" title="Download current grid rows to Excel">Export Excel</button>
+        </div>
+
+        <!-- Grid container -->
+        <div id="grid"></div>
+        <div class="grid-info" id="gridInfo"></div>
+        <a class="back-link" href="index.html">&larr; Back to main</a>
+    </div>
+</div>
+
+<script>
+    const API_BASE = "http://jpmaxtricks.com:8070/api";
+
+    let table;
+    let loadedTotal = 0;
+    let filteredTotal = 0;
+
+    const gridInfoEl = document.getElementById("gridInfo");
+
+    function updateGridInfo() {
+        if (!table) {
+            gridInfoEl.textContent = "";
+            return;
+        }
+        let filteredRows = filteredTotal || 0;
+        if (!filteredRows) {
+            try {
+                if (typeof table.getData === 'function') {
+                    const active = table.getData(true);
+                    if (Array.isArray(active)) filteredRows = active.length;
+                }
+                if (!filteredRows && typeof table.getRows === 'function') {
+                    const rows = table.getRows(true);
+                    if (Array.isArray(rows)) filteredRows = rows.length;
+                }
+                if (!filteredRows && typeof table.getDataCount === 'function') {
+                    filteredRows = table.getDataCount();
+                }
+            } catch (e) {
+                filteredRows = table.getDataCount ? table.getDataCount() : 0;
+            }
+        }
+        const maxPages = table.getPageMax ? table.getPageMax() : 1;
+        gridInfoEl.textContent = `Filtered: ${filteredRows} / Total: ${loadedTotal} | Pages: ${maxPages || 1}`;
+    }
+
+    // Numeric header filter helper
+    function numericHeaderFilter(headerValue, rowValue, rowData, filterParams){
+        if(headerValue === null || headerValue === undefined) return true;
+        const s = String(headerValue).trim();
+        if(s === '') return true;
+        const opMatch = s.match(/^([><]=?)\s*(-?\d+(?:\.\d+)?)$/);
+        let rv = Number(rowValue);
+        if(isNaN(rv)) rv = null;
+        if(opMatch){
+            const op = opMatch[1];
+            const num = parseFloat(opMatch[2]);
+            if(rv === null) return false;
+            switch(op){
+                case '>': return rv > num;
+                case '>=': return rv >= num;
+                case '<': return rv < num;
+                case '<=': return rv <= num;
+            }
+        }
+        const rangeMatch = s.match(/^(-?\d+(?:\.\d+)?)\s*-\s*(-?\d+(?:\.\d+)?)$/);
+        if(rangeMatch){
+            const low = parseFloat(rangeMatch[1]);
+            const high = parseFloat(rangeMatch[2]);
+            if(rv === null) return false;
+            return rv >= Math.min(low, high) && rv <= Math.max(low, high);
+        }
+        const numMatch = s.match(/^-?\d+(?:\.\d+)?$/);
+        if(numMatch){
+            const num = parseFloat(numMatch[0]);
+            if(rv === null) return false;
+            return rv === num;
+        }
+        if(rowValue === null || rowValue === undefined) return false;
+        return String(rowValue).toLowerCase().indexOf(s.toLowerCase()) !== -1;
+    }
+
+    const columns = [
+        {title: "Ticker", field: "ticker", headerFilter: "input", width: 80, tooltip: true, widthGrow: 0, formatter:function(cell){
+            const v = cell.getValue();
+            if(!v) return "";
+            return `<a href="futures-history.html?ticker=${encodeURIComponent(v)}" target="_blank">${v}</a>`;
+        }},
+        {title: "Type", field: "type", headerFilter: "input", width: 80, tooltip: true, widthGrow: 0},
+        {title: "Price", field: "price", headerFilter: "input", headerFilterPlaceholder: ">100", headerFilterFunc: numericHeaderFilter, width: 80, tooltip: true, widthGrow: 0},
+        {title: "Change", field: "change", headerFilter: "input", headerFilterPlaceholder: ">0", headerFilterFunc: numericHeaderFilter, width: 80, tooltip: true, widthGrow: 0},
+        {title: "Open", field: "open", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 80, tooltip: true, widthGrow: 0},
+        {title: "High", field: "high", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 80, tooltip: true, widthGrow: 0},
+        {title: "Low", field: "low", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 80, tooltip: true, widthGrow: 0},
+        {title: "Volume", field: "volume", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 100, tooltip: true, widthGrow: 0},
+        {title: "Open Interest", field: "openInterest", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 120, tooltip: true, widthGrow: 0},
+        {title: "Expiry Date", field: "expiryDate", headerFilter: "input", width: 100, tooltip: true, widthGrow: 0},
+        {title: "Expiry Days", field: "expiryDays", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 100, tooltip: true, widthGrow: 0},
+        {title: "Prev Close", field: "prevClose", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 100, tooltip: true, widthGrow: 0},
+        {title: "Up High", field: "upHigh", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 80, tooltip: true, widthGrow: 0},
+        {title: "Down Low", field: "downLow", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 80, tooltip: true, widthGrow: 0},
+        {title: "BT Short", field: "rating.btShortRating", headerFilter: "input", width: 90, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        {title: "BT Long", field: "rating.btLongRating", headerFilter: "input", width: 90, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        {title: "BT Rating", field: "rating.btRating", headerFilter: "input", width: 90, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        {title: "BT Trend", field: "rating.btTrend", headerFilter: "input", width: 90, headerHozAlign: "center", tooltip: true, widthGrow: 0},
+        {title: "Hist Date", field: "histDate", headerFilter: "input", width: 100, tooltip: true, widthGrow: 0},
+    ];
+
+    function createTable() {
+        if (table) return;
+        table = new Tabulator("#grid", {
+            layout: "fitDataFill",
+            rowHeight: 20,
+            reactiveData: true,
+            pagination: true,
+            paginationSize: 25,
+            paginationSizeSelector: [10, 25, 50, 100],
+            columns: columns,
+            columnDefaults: {
+                minWidth: 48,
+                widthGrow: 0,
+                headerHozAlign: "center",
+                hozAlign: "center",
+            },
+            movableColumns: true,
+            headerVertical: false,
+            headerWordWrap: true,
+            height: "520px",
+            rowHover: true,
+            selectable: true,
+            selectableRangeMode: "click",
+            placeholder: "No futures data loaded",
+            pageLoaded: function () { updateGridInfo(); },
+            dataChanged: function () { updateGridInfo(); }
+        });
+
+        if (table && typeof table.on === 'function') {
+            try {
+                table.on('filterChanged', function(filters, rows){
+                    try {
+                        if (Array.isArray(rows)) {
+                            filteredTotal = rows.length;
+                        } else if (typeof table.getData === 'function') {
+                            const active = table.getData(true);
+                            if (Array.isArray(active)) filteredTotal = active.length;
+                        }
+                    } catch (e) { /* ignore */ }
+                    updateGridInfo();
+                 });
+             } catch (e) { /* ignore */ }
+
+             try {
+                 table.on('dataFiltered', function(filters, rows){
+                    try {
+                        if (Array.isArray(rows)) {
+                            filteredTotal = rows.length;
+                        } else if (typeof table.getData === 'function') {
+                            const active = table.getData(true);
+                            if (Array.isArray(active)) filteredTotal = active.length;
+                        }
+                    } catch (e) { /* ignore */ }
+                    updateGridInfo();
+                 });
+             } catch (e) { /* ignore */ }
+         }
+    }
+
+    async function loadData() {
+        createTable();
+        const url = `${API_BASE}/futures/list`;
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error: ${response.status}`);
+            }
+            const data = await response.json();
+            const rows = Array.isArray(data) ? data : [data];
+            loadedTotal = rows.length || 0;
+            if (table && typeof table.replaceData === 'function') {
+                await table.replaceData(rows);
+            } else if (table) {
+                table.replaceData(rows);
+            }
+            filteredTotal = loadedTotal;
+            updateGridInfo();
+        } catch (err) {
+            console.error(err);
+            alert("Failed to load futures data. Check console for details.");
+        }
+    }
+
+    async function fetchFromBarchart() {
+        const btn = document.getElementById('fetchBarchartBtn');
+        btn.disabled = true;
+        btn.textContent = 'Fetching...';
+
+        try {
+            const response = await fetch(`${API_BASE}/futures/fetch-barchart`, {
+                method: 'POST'
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error: ${response.status}`);
+            }
+            alert('Successfully fetched futures from Barchart!');
+            await loadData(); // Reload the grid
+        } catch (err) {
+            console.error(err);
+            alert("Failed to fetch from Barchart. Check console for details.");
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Fetch from Barchart';
+        }
+    }
+
+    function clearFilters() {
+        if (table) {
+            table.clearFilter(true);
+            table.clearHeaderFilter();
+            filteredTotal = loadedTotal;
+            updateGridInfo();
+        }
+    }
+
+    function exportExcel() {
+        if (!table) { alert("Grid not ready yet."); return; }
+        const columnComponents = table.getColumns();
+        const exportColumns = columnComponents
+            .map(c => c.getDefinition())
+            .filter(def => def.field);
+
+        if (!exportColumns.length) { alert("No exportable columns."); return; }
+
+        function resolveField(obj, path) {
+            if (!obj) return null;
+            if (!path) return null;
+            if (Object.prototype.hasOwnProperty.call(obj, path)) {
+                return obj[path];
+            }
+            const parts = path.split('.');
+            let cur = obj;
+            for (const p of parts) {
+                if (cur == null) return null;
+                cur = cur[p];
+            }
+            return cur == null ? null : cur;
+        }
+
+        const headers = exportColumns.map(def => (def.title || def.field));
+        const rawData = table.getData();
+        if (!rawData.length) { alert("No data to export."); return; }
+
+        const rows = rawData.map(row => exportColumns.map(def => resolveField(row, def.field)));
+        const aoa = [headers, ...rows];
+
+        const ts = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+        const filename = `myswan-futures-${ts}.xlsx`;
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        XLSX.utils.book_append_sheet(wb, ws, 'Futures');
+        XLSX.writeFile(wb, filename);
+    }
+
+    document.getElementById("fetchBarchartBtn").addEventListener("click", fetchFromBarchart);
+    document.getElementById("reloadBtn").addEventListener("click", loadData);
+    document.getElementById("clearFiltersBtn").addEventListener("click", clearFilters);
+    document.getElementById("exportExcelBtn").addEventListener("click", exportExcel);
+
+    window.addEventListener("DOMContentLoaded", () => {
+        loadData();
+    });
+</script>
+</body>
+</html>
+

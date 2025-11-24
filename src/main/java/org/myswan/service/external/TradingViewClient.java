@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.myswan.service.external.vo.TradingViewVO;
 import org.myswan.service.internal.StockService;
+import org.myswan.service.internal.AppCacheService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,6 +32,7 @@ public class TradingViewClient {
     private final String payloadEtfJson;
     private final ObjectMapper objectMapper;
     private final StockService stockService;
+    private final AppCacheService appCacheService;
 
     public TradingViewClient(
             @Value("${tradingview.scan.stock.url}") String scanStockUrl,
@@ -38,7 +40,8 @@ public class TradingViewClient {
             @Value("${tradingview.scan.etf.url}") String scanEtfUrl,
             @Value("${tradingview.scan.etf.payload}") Resource scanEtfPayload,
             ObjectMapper objectMapper,
-            StockService stockService
+            StockService stockService,
+            AppCacheService appCacheService
     ) throws IOException {
 
         if (scanStockUrl == null || scanStockUrl.isBlank()) {
@@ -53,6 +56,7 @@ public class TradingViewClient {
         this.scanEtfUri = URI.create(scanEtfUrl);
         this.objectMapper = objectMapper;
         this.stockService = stockService;
+        this.appCacheService = appCacheService;
 
         // ----- STOCK payload -----
         String jsonStock = "{}";
@@ -78,11 +82,20 @@ public class TradingViewClient {
     }
 
     public JsonNode scanStocksOrETF(URI scanUri, String payload) throws IOException, InterruptedException {
-        HttpRequest request = HttpRequest.newBuilder()
+        HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
                 .uri(scanUri)
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(payload))
-                .build();
+                .header("Content-Type", "application/json");
+
+        // Attach TradingView token and cookie from app cache if present
+        if (appCacheService != null && appCacheService.getAppCache() != null) {
+            var cache = appCacheService.getAppCache();
+            String cookie = cache.getTradingViewCookie();
+            if (cookie != null && !cookie.isBlank()) {
+                reqBuilder.header("Cookie", cookie);
+            }
+        }
+
+        HttpRequest request = reqBuilder.POST(HttpRequest.BodyPublishers.ofString(payload)).build();
 
         HttpResponse<String> response =
                 httpClient.send(request, HttpResponse.BodyHandlers.ofString());

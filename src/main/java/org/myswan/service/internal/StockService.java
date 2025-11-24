@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.BulkOperations;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -177,5 +178,35 @@ public class StockService {
         repository.saveAll(toSave);
         syncStockHistory();
         log.info("TradingView update completed. Saved {} stocks", toSave.size());
+    }
+
+    public List<Stock> getStockHistory(String ticker, LocalDate from, LocalDate to) {
+        if (ticker == null || ticker.isBlank()) return new ArrayList<>();
+        Query query = Query.query(Criteria.where("ticker").is(ticker));
+        if (from != null) {
+            query.addCriteria(Criteria.where("histDate").gte(from));
+        }
+        if (to != null) {
+            query.addCriteria(Criteria.where("histDate").lte(to));
+        }
+        query.with(Sort.by(Sort.Direction.DESC, "histDate"));
+        try {
+            return mongoTemplate.find(query, Stock.class, "stockHistory");
+        } catch (Exception e) {
+            log.warn("Failed to load history for {}: {}", ticker, e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    public List<Stock> getHistoryByDate(LocalDate histDate) {
+        if (histDate == null) return new ArrayList<>();
+        Query query = Query.query(Criteria.where("histDate").is(histDate));
+        query.with(Sort.by(Sort.Direction.ASC, "ticker"));
+        try {
+            return mongoTemplate.find(query, Stock.class, "stockHistory");
+        } catch (Exception e) {
+            log.warn("Failed to load history for date {}: {}", histDate, e.getMessage());
+            return new ArrayList<>();
+        }
     }
 }

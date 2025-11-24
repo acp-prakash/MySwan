@@ -1,13 +1,14 @@
 package org.myswan.service.internal;
 
 import org.myswan.helpers.scoring.*;
-import org.myswan.model.Score;
+import org.myswan.model.compute.Score;
 import org.myswan.model.Stock;
 import org.myswan.repository.StockRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -21,10 +22,13 @@ public class ScoringService {
     private final Reversal reversal;
     private final Breakout breakout;
     private final Pattern pattern;
+    private final BottomDetect bottomDetect;
+    private final SpikeDetect spikeDetect;
 
     public ScoringService(StockService stockService, StockRepository repository,
                           DayTrading dayTrading,SwingTrading swingTrading,Reversal reversal,
-                          Breakout breakout,Pattern pattern) {
+                          Breakout breakout,Pattern pattern, BottomDetect bottomDetect,
+                          SpikeDetect spikeDetect) {
         this.stockService = stockService;
         this.repository = repository;
         this.dayTrading = dayTrading;
@@ -32,11 +36,29 @@ public class ScoringService {
         this.reversal = reversal;
         this.breakout = breakout;
         this.pattern = pattern;
-    }
+        this.bottomDetect = bottomDetect;
+        this.spikeDetect = spikeDetect;    }
 
     public String calculateScore() {
         try {
             List<Stock> allList = stockService.list();
+
+            // Calculate previous business day (skip weekends)
+            LocalDate previousDate = LocalDate.now().minusDays(1);
+            while (previousDate.getDayOfWeek().getValue() >= 6) { // 6=Saturday, 7=Sunday
+                previousDate = previousDate.minusDays(1);
+            }
+
+            List<Stock> historyList = stockService.getHistoryByDate(previousDate);
+            log.info("Loaded {} history records for previous business day: {}", historyList.size(), previousDate);
+
+            // Create a map of previous day history by ticker for fast lookup
+            var historyMap = new java.util.HashMap<String, Stock>();
+            for (Stock h : historyList) {
+                if (h.getTicker() != null && !h.getTicker().isBlank()) {
+                    historyMap.put(h.getTicker(), h);
+                }
+            }
 
             allList.parallelStream().forEach(dayTrading::calculateScore);
             allList.parallelStream().forEach(swingTrading::calculateScore);
@@ -45,6 +67,14 @@ public class ScoringService {
             allList.parallelStream().forEach(pattern::calculateScore);
             allList.parallelStream().forEach(this::calculateOverAllScore);
             allList.parallelStream().forEach(this::calculateSignal);
+            allList.parallelStream().forEach(stock -> {
+                Stock previousDayStock = historyMap.get(stock.getTicker());
+                bottomDetect.detectBottomSignal(stock, previousDayStock);
+            });
+            allList.parallelStream().forEach(stock -> {
+                Stock previousDayStock = historyMap.get(stock.getTicker());
+                spikeDetect.detectSpikeSignal(stock, previousDayStock);
+            });
             repository.saveAll(allList);
             stockService.syncStockHistory();
             return "Scoring calculation complete: " + allList.size() + " stocks processed";
