@@ -1,6 +1,8 @@
 package org.myswan.service.internal;
 
 import org.myswan.helpers.scoring.*;
+import org.myswan.helpers.scoring.ConsecutiveDaysCalculator;
+import org.myswan.model.compute.FilterCategory;
 import org.myswan.model.compute.Score;
 import org.myswan.model.Stock;
 import org.myswan.repository.StockRepository;
@@ -24,11 +26,18 @@ public class ScoringService {
     private final Pattern pattern;
     private final BottomDetect bottomDetect;
     private final SpikeDetect spikeDetect;
+    private final OversoldBounceDetect oversoldBounceDetect;
+    private final MomentumPopDetect momentumPopDetect;
+    private final FilterCategoryDetect filterCategoryDetect;
+    private final ConsecutiveDaysCalculator consecutiveDaysCalculator;
 
     public ScoringService(StockService stockService, StockRepository repository,
                           DayTrading dayTrading,SwingTrading swingTrading,Reversal reversal,
                           Breakout breakout,Pattern pattern, BottomDetect bottomDetect,
-                          SpikeDetect spikeDetect) {
+                          SpikeDetect spikeDetect, OversoldBounceDetect oversoldBounceDetect,
+                          MomentumPopDetect momentumPopDetect,
+                          FilterCategoryDetect filterCategoryDetect,
+                          ConsecutiveDaysCalculator consecutiveDaysCalculator) {
         this.stockService = stockService;
         this.repository = repository;
         this.dayTrading = dayTrading;
@@ -37,7 +46,12 @@ public class ScoringService {
         this.breakout = breakout;
         this.pattern = pattern;
         this.bottomDetect = bottomDetect;
-        this.spikeDetect = spikeDetect;    }
+        this.spikeDetect = spikeDetect;
+        this.oversoldBounceDetect = oversoldBounceDetect;
+        this.momentumPopDetect = momentumPopDetect;
+        this.filterCategoryDetect = filterCategoryDetect;
+        this.consecutiveDaysCalculator = consecutiveDaysCalculator;
+    }
 
     public String calculateScore() {
         try {
@@ -60,20 +74,41 @@ public class ScoringService {
                 }
             }
 
-            allList.parallelStream().forEach(dayTrading::calculateScore);
-            allList.parallelStream().forEach(swingTrading::calculateScore);
-            allList.parallelStream().forEach(reversal::calculateScore);
-            allList.parallelStream().forEach(breakout::calculateScore);
-            allList.parallelStream().forEach(pattern::calculateScore);
-            allList.parallelStream().forEach(this::calculateOverAllScore);
-            allList.parallelStream().forEach(this::calculateSignal);
+            // Calculate consecutive up/down days first (before scoring)
+            allList.parallelStream().forEach(consecutiveDaysCalculator::calculateConsecutiveDays);
+            allList.parallelStream().forEach(dayTrading::calculateScore);//DayTrading Setup
+            allList.parallelStream().forEach(swingTrading::calculateScore);//SwingTrading Setup
+            allList.parallelStream().forEach(reversal::calculateScore);// Reversal Setup
+            allList.parallelStream().forEach(breakout::calculateScore);//Breakout Setup
+            allList.parallelStream().forEach(pattern::calculateScore);//Pattern Setup
+            allList.parallelStream().forEach(this::calculateOverAllScore);//Overall Score
+            allList.parallelStream().forEach(this::calculateSignal);//Overall Signal
+            //Detecting Bottomed stocks
             allList.parallelStream().forEach(stock -> {
                 Stock previousDayStock = historyMap.get(stock.getTicker());
                 bottomDetect.detectBottomSignal(stock, previousDayStock);
             });
+            //Detecting Spike probables
             allList.parallelStream().forEach(stock -> {
                 Stock previousDayStock = historyMap.get(stock.getTicker());
                 spikeDetect.detectSpikeSignal(stock, previousDayStock);
+            });
+            //Detecting OverSOld Bounces
+            allList.parallelStream().forEach(stock -> {
+                Stock previousDayStock = historyMap.get(stock.getTicker());
+                oversoldBounceDetect.detectOversoldBounce(stock, previousDayStock);
+            });
+
+            //Detecting Momentum Pops
+            allList.parallelStream().forEach(stock -> {
+                Stock previousDayStock = historyMap.get(stock.getTicker());
+                momentumPopDetect.detectMomentumPop(stock, previousDayStock);
+            });
+
+            //Categorize and assign filter category each stock daily
+            allList.parallelStream().forEach(stock -> {
+                Stock previousDayStock = historyMap.get(stock.getTicker());
+                filterCategoryDetect.filterCategory(stock, previousDayStock);
             });
             repository.saveAll(allList);
             stockService.syncStockHistory();

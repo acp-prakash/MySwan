@@ -54,4 +54,28 @@ public class MasterController {
     public ResponseEntity<List<Master>> getAllMaster() {
         return ResponseEntity.ok(masterService.list());
     }
+
+    @PatchMapping("/master/{ticker:.+}/etrade-pattern")
+    public ResponseEntity<Master> updateEtradePatternLookup(@PathVariable String ticker, @RequestParam boolean enabled) {
+        Master master = masterService.getByTicker(ticker).orElse(null);
+        if (master == null) return ResponseEntity.notFound().build();
+
+        master.setEtradePatternLookup(enabled);
+        Master saved = masterService.update(ticker, master);
+        return ResponseEntity.ok(saved);
+    }
+
+    @PostMapping("/master/etrade-pattern/enable-all")
+    public ResponseEntity<String> enableAllEtradePatternLookup() {
+        List<Master> allMasters = masterService.list();
+        int updated = 0;
+
+        for (Master master : allMasters) {
+            master.setEtradePatternLookup(true);
+            masterService.update(master.getTicker(), master);
+            updated++;
+        }
+
+        return ResponseEntity.ok("Updated " + updated + " master records to Y (enabled)");
+    }
 }

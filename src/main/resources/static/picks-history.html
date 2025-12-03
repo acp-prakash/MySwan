@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MySwan - Pick History</title>
+    <link href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #f1f5f9;
+            min-height: 100vh;
+            padding: 10px;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        h1 {
+            color: #3b82f6;
+            font-size: 1.5rem;
+        }
+
+        .ticker-badge {
+            background: #3b82f6;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 12px;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-secondary {
+            background: rgba(148, 163, 184, 0.2);
+            color: #f1f5f9;
+            border: 1px solid #475569;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(148, 163, 184, 0.3);
+        }
+
+        .info {
+            text-align: center;
+            margin-top: 5px;
+            color: #94a3b8;
+            font-size: 11px;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 8px;
+            color: #3b82f6;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 12px;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .stat-card {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 8px 10px;
+        }
+
+        .stat-label {
+            color: #94a3b8;
+            font-size: 10px;
+            margin-bottom: 3px;
+        }
+
+        .stat-value {
+            color: #f1f5f9;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .stat-value.positive {
+            color: #10b981;
+        }
+
+        .stat-value.negative {
+            color: #ef4444;
+        }
+
+        /* Tabulator Dark Theme */
+        .tabulator {
+            background: #1e293b;
+            border: 1px solid #334155;
+            font-size: 11px;
+        }
+
+        .tabulator .tabulator-header {
+            background: #0f172a;
+            border-bottom: 2px solid #3b82f6;
+        }
+
+        .tabulator .tabulator-header .tabulator-col {
+            background: #0f172a;
+            color: #f1f5f9;
+            border-right: 1px solid #334155;
+            padding: 6px 4px;
+            font-size: 11px;
+        }
+
+        .tabulator .tabulator-tableholder .tabulator-table {
+            color: #f1f5f9;
+        }
+
+        .tabulator-row {
+            background: #1e293b;
+            border-bottom: 1px solid #334155;
+            min-height: 28px;
+            color: #f1f5f9;
+        }
+
+        .tabulator-row.tabulator-row-even {
+            background: #1a2332;
+        }
+
+        .tabulator-row.tabulator-row-odd {
+            background: #1e293b;
+        }
+
+        .tabulator-row:hover {
+            background: #334155 !important;
+            color: #f1f5f9 !important;
+        }
+
+        .tabulator-row.tabulator-selected {
+            background: #1e40af !important;
+            color: #f1f5f9 !important;
+        }
+
+        .tabulator-cell {
+            border-right: 1px solid #334155;
+            padding: 4px 6px;
+            font-size: 11px;
+            color: #f1f5f9;
+        }
+
+        .status-met {
+            color: #10b981;
+            font-weight: 600;
+        }
+
+        .status-not-met {
+            color: #ef4444;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="picks.html" class="back-link"><i class="fas fa-arrow-left"></i> Back to Picks</a>
+
+        <div class="header">
+            <h1><i class="fas fa-history"></i> Pick History</h1>
+            <div class="ticker-badge" id="tickerBadge">Loading...</div>
+        </div>
+
+        <div class="stats-grid" id="statsGrid">
+            <!-- Stats will be populated dynamically -->
+        </div>
+
+        <div class="toolbar">
+            <button class="btn btn-success" onclick="reloadHistory()">
+                <i class="fas fa-sync"></i> Reload
+            </button>
+            <button class="btn btn-secondary" onclick="exportToExcel()">
+                <i class="fas fa-file-excel"></i> Export Excel
+            </button>
+        </div>
+
+        <div id="historyTable"></div>
+        <div class="info" id="info"></div>
+    </div>
+
+    <script src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script>
+        const API_BASE = "http://jpmaxtricks.com:8070/api";
+        let table;
+        let currentTicker = "";
+
+        document.addEventListener('DOMContentLoaded', function() {
+            currentTicker = getTickerFromUrl();
+
+            if (!currentTicker) {
+                alert('No ticker specified in URL');
+                window.location.href = 'picks.html';
+                return;
+            }
+
+            document.getElementById('tickerBadge').textContent = currentTicker;
+            initTable();
+            loadHistory();
+        });
+
+        function getTickerFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('ticker');
+        }
+
+        function initTable() {
+            table = new Tabulator("#historyTable", {
+                layout: "fitData",
+                height: "calc(100vh - 250px)",
+                pagination: true,
+                paginationSize: 100,
+                paginationSizeSelector: [50, 100, 200],
+                columns: [
+                    {title: "Added", field: "addedDate", width: 85, sorter: "date"},
+                    {title: "Reason", field: "reason", width: 180},
+                    {
+                        title: "Add Px",
+                        field: "addedPrice",
+                        width: 70,
+                        formatter: function(cell) {
+                            const v = cell.getValue();
+                            return v ? v.toFixed(2) : '-';
+                        }
+                    },
+                    {
+                        title: "Entry",
+                        field: "entry",
+                        width: 70,
+                        formatter: function(cell) {
+                            const v = cell.getValue();
+                            return v ? v.toFixed(2) : '-';
+                        }
+                    },
+                    {
+                        title: "Target",
+                        field: "target",
+                        width: 70,
+                        formatter: function(cell) {
+                            const v = cell.getValue();
+                            return v ? v.toFixed(2) : '-';
+                        }
+                    },
+                    {
+                        title: "Stop",
+                        field: "stopLoss",
+                        width: 70,
+                        formatter: function(cell) {
+                            const v = cell.getValue();
+                            return v ? v.toFixed(2) : '-';
+                        }
+                    },
+                    {
+                        title: "R:R",
+                        field: "riskReward",
+                        width: 70,
+                        formatter: function(cell) {
+                            const row = cell.getRow().getData();
+                            if (row.entry && row.target && row.stopLoss) {
+                                const risk = Math.abs(row.entry - row.stopLoss);
+                                const reward = Math.abs(row.target - row.entry);
+                                const ratio = risk > 0 ? (reward / risk).toFixed(1) : '-';
+                                return ratio + ':1';
+                            }
+                            return '-';
+                        }
+                    },
+                    {title: "Tgt Date", field: "targetDate", width: 85},
+                    {
+                        title: "Tgt✓",
+                        field: "targetMet",
+                        width: 60,
+                        hozAlign: "center",
+                        formatter: function(cell) {
+                            return cell.getValue() ? '<span class="status-met">✓</span>' : '<span class="status-not-met">✗</span>';
+                        }
+                    },
+                    {
+                        title: "Stop✓",
+                        field: "stopLossMet",
+                        width: 60,
+                        hozAlign: "center",
+                        formatter: function(cell) {
+                            return cell.getValue() ? '<span class="status-met">✓</span>' : '<span class="status-not-met">✗</span>';
+                        }
+                    },
+                    {title: "Tgt Date", field: "targetMetDate", width: 85},
+                    {title: "Stop Date", field: "stopLossMetDate", width: 85},
+                    {
+                        title: "Days",
+                        field: "daysActive",
+                        width: 70,
+                        formatter: function(cell) {
+                            const row = cell.getRow().getData();
+                            if (row.addedDate) {
+                                const added = new Date(row.addedDate);
+                                const end = row.targetMetDate ? new Date(row.targetMetDate) :
+                                           row.stopLossMetDate ? new Date(row.stopLossMetDate) :
+                                           new Date();
+                                const days = Math.floor((end - added) / (1000 * 60 * 60 * 24));
+                                return days;
+                            }
+                            return '-';
+                        }
+                    },
+                ],
+                placeholder: `No pick history for ${currentTicker}`,
+                initialSort: [
+                    {column: "addedDate", dir: "desc"}
+                ]
+            });
+        }
+
+        async function loadHistory() {
+            try {
+                // Load from picksHistory collection
+                const response = await fetch(`${API_BASE}/picks/history/${encodeURIComponent(currentTicker)}`);
+                const data = await response.json();
+
+                console.log('Loaded history:', data.length);
+
+                table.setData(data);
+                updateInfo(data);
+                updateStats(data);
+            } catch (error) {
+                console.error('Error loading history:', error);
+                alert('Failed to load pick history: ' + error.message);
+            }
+        }
+
+        function updateInfo(data) {
+            const info = document.getElementById('info');
+            info.textContent = `Total Picks for ${currentTicker}: ${data.length}`;
+        }
+
+        function updateStats(picks) {
+            const statsGrid = document.getElementById('statsGrid');
+
+            if (picks.length === 0) {
+                statsGrid.innerHTML = '<div class="stat-card"><div class="stat-label">No picks yet</div></div>';
+                return;
+            }
+
+            const total = picks.length;
+            const targetMet = picks.filter(p => p.targetMet).length;
+            const stopHit = picks.filter(p => p.stopLossMet).length;
+            const active = picks.filter(p => !p.targetMet && !p.stopLossMet).length;
+            const successRate = total > 0 ? ((targetMet / total) * 100).toFixed(1) : 0;
+
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-label">Total Picks</div>
+                    <div class="stat-value">${total}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Targets Hit</div>
+                    <div class="stat-value positive">${targetMet}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Stops Hit</div>
+                    <div class="stat-value negative">${stopHit}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Active</div>
+                    <div class="stat-value">${active}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Success Rate</div>
+                    <div class="stat-value ${successRate >= 50 ? 'positive' : 'negative'}">${successRate}%</div>
+                </div>
+            `;
+        }
+
+        function reloadHistory() {
+            loadHistory();
+        }
+
+        function exportToExcel() {
+            table.download("xlsx", `pick-history-${currentTicker}.xlsx`, {sheetName: "History"});
+        }
+    </script>
+</body>
+</html>
+

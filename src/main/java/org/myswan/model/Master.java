@@ -22,4 +22,5 @@ public class Master {
     private double addedPrice;
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate addedDate;
+    private boolean etradePatternLookup; // Default to false (disabled) - explicitly enable in DB
 }

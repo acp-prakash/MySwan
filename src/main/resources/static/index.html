@@ -39,16 +39,16 @@
             min-height: 100vh;
         }
 
-        /* Header - Compact */
+        /* Header - Ultra Compact */
         .header {
             background: rgba(30, 41, 59, 0.8);
             backdrop-filter: blur(10px);
             border-bottom: 1px solid var(--border-color);
-            padding: 0.5rem 1rem;
+            padding: 0.25rem 0.5rem;
             position: sticky;
             top: 0;
             z-index: 100;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .header-content {
@@ -64,16 +64,16 @@
         .logo {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.5rem;
         }
 
         .logo i {
-            font-size: 2rem;
+            font-size: 1.25rem;
             color: var(--primary-color);
         }
 
         .logo h1 {
-            font-size: 1.5rem;
+            font-size: 1rem;
             font-weight: 700;
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             -webkit-background-clip: text;
@@ -82,17 +82,17 @@
 
         .nav-links {
             display: flex;
-            gap: 1rem;
+            gap: 0.5rem;
             align-items: center;
         }
 
         .nav-links a {
             color: var(--text-secondary);
             text-decoration: none;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
             transition: all 0.3s;
-            font-size: 0.9rem;
+            font-size: 0.75rem;
             font-weight: 500;
         }
 
@@ -111,22 +111,22 @@
             max-width: 100%;
             width: 100%;
             margin: 0;
-            padding: 0.5rem;
+            padding: 0.25rem 0.5rem;
         }
 
-        /* Stats Cards - Compact */
+        /* Stats Cards - Ultra Compact */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 0.75rem;
-            margin-bottom: 0.75rem;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
         }
 
         .stat-card {
             background: var(--card-bg);
             border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 0.75rem;
+            border-radius: 6px;
+            padding: 0.5rem;
             transition: all 0.3s;
             cursor: pointer;
         }
@@ -141,17 +141,17 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.25rem;
         }
 
         .stat-icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 6px;
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1rem;
+            font-size: 0.75rem;
         }
 
         .stat-icon.blue { background: rgba(37, 99, 235, 0.1); color: var(--primary-color); }
@@ -160,21 +160,21 @@
         .stat-icon.orange { background: rgba(245, 158, 11, 0.1); color: var(--warning-color); }
 
         .stat-value {
-            font-size: 1.5rem;
+            font-size: 1.1rem;
             font-weight: 700;
-            margin-bottom: 0.15rem;
+            margin-bottom: 0.1rem;
         }
 
         .stat-label {
             color: var(--text-secondary);
-            font-size: 0.75rem;
+            font-size: 0.65rem;
         }
 
         .stat-change {
-            font-size: 0.75rem;
-            margin-top: 0.25rem;
-            padding: 0.15rem 0.35rem;
-            border-radius: 4px;
+            font-size: 0.65rem;
+            margin-top: 0.15rem;
+            padding: 0.1rem 0.25rem;
+            border-radius: 3px;
             display: inline-block;
         }
 
@@ -188,45 +188,45 @@
             color: var(--danger-color);
         }
 
-        /* Control Panel - Compact */
+        /* Control Panel - Ultra Compact */
         .control-panel {
             background: var(--card-bg);
             border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 0.75rem;
-            margin-bottom: 0.75rem;
+            border-radius: 6px;
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
         }
 
         .control-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.5rem;
         }
 
         .control-header h2 {
-            font-size: 1rem;
+            font-size: 0.85rem;
             font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 0.35rem;
+            gap: 0.25rem;
         }
 
         .controls {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.5rem;
+            gap: 0.35rem;
             align-items: center;
         }
 
         .control-group {
             display: flex;
             flex-direction: column;
-            gap: 0.25rem;
+            gap: 0.15rem;
         }
 
         .control-group label {
-            font-size: 0.75rem;
+            font-size: 0.65rem;
             color: var(--text-secondary);
             font-weight: 500;
         }
@@ -236,11 +236,11 @@
             background: rgba(15, 23, 42, 0.5);
             border: 1px solid var(--border-color);
             color: var(--text-primary);
-            padding: 0.4rem 0.6rem;
-            border-radius: 6px;
-            font-size: 0.75rem;
+            padding: 0.3rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
             transition: all 0.3s;
-            min-width: 120px;
+            min-width: 100px;
         }
 
         .control-group select:focus,
@@ -250,18 +250,18 @@
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
 
-        /* Buttons - Compact */
+        /* Buttons - Ultra Compact */
         .btn {
-            padding: 0.4rem 0.75rem;
+            padding: 0.3rem 0.5rem;
             border: none;
-            border-radius: 6px;
-            font-size: 0.75rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
             display: inline-flex;
             align-items: center;
-            gap: 0.35rem;
+            gap: 0.25rem;
         }
 
         .btn-primary {
@@ -295,6 +295,28 @@
         .btn-secondary:hover {
             background: rgba(148, 163, 184, 0.2);
             border-color: var(--text-primary);
+        }
+
+        .btn-warning {
+            background: var(--warning-color);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #d97706;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+        }
+
+        .btn-info {
+            background: var(--info-color);
+            color: white;
+        }
+
+        .btn-info:hover {
+            background: #0891b2;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
         }
 
         /* Data Grid - Compact */
@@ -615,38 +637,49 @@
             word-wrap: break-word !important;
         }
 
-        /* Info Panel - Compact */
+        /* Info Panel - Ultra Compact */
         .info-panel {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0.5rem;
+            padding: 0.25rem 0.5rem;
             background: rgba(37, 99, 235, 0.05);
             border: 1px solid rgba(37, 99, 235, 0.2);
-            border-radius: 6px;
-            margin-top: 0.5rem;
+            border-radius: 4px;
+            margin-top: 0.25rem;
         }
 
         .info-text {
             display: flex;
             align-items: center;
-            gap: 0.35rem;
-            font-size: 0.75rem;
+            gap: 0.25rem;
+            font-size: 0.65rem;
             color: var(--text-secondary);
+            transition: all 0.3s ease;
         }
 
         .info-text i {
             color: var(--primary-color);
-            font-size: 0.75rem;
+            font-size: 0.65rem;
+        }
+
+        .info-text.updated {
+            color: var(--secondary-color);
+            animation: pulse 0.5s ease-in-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
         }
 
         /* Loading Spinner */
         .spinner {
-            border: 3px solid rgba(37, 99, 235, 0.1);
-            border-top: 3px solid var(--primary-color);
+            border: 2px solid rgba(37, 99, 235, 0.1);
+            border-top: 2px solid var(--primary-color);
             border-radius: 50%;
-            width: 24px;
-            height: 24px;
+            width: 18px;
+            height: 18px;
             animation: spin 1s linear infinite;
         }
 
@@ -709,16 +742,21 @@
             <nav class="nav-links">
                 <a href="index.html" class="active"><i class="fas fa-home"></i> Dashboard</a>
                 <a href="classic.html"><i class="fas fa-table"></i> Classic View</a>
+                <a href="watchlist.html"><i class="fas fa-eye"></i> Watchlist</a>
                 <a href="futures.html"><i class="fas fa-money-bill-trend"></i> Futures</a>
+                <a href="patterns.html"><i class="fas fa-chart-area"></i> Patterns</a>
+                <a href="picks.html"><i class="fas fa-star"></i> Picks</a>
+                <a href="ticker-groups.html"><i class="fas fa-object-group"></i> Groups</a>
                 <a href="discover.html"><i class="fas fa-search"></i> Discover</a>
+                <a href="settings.html"><i class="fas fa-cog"></i> Settings</a>
             </nav>
         </div>
     </header>
 
     <!-- Main Container -->
     <div class="container">
-        <!-- Stats Cards -->
-        <div class="stats-grid">
+        <!-- Stats Cards - HIDDEN (to show: remove style="display: none;") -->
+        <div class="stats-grid" style="display: none;">
             <div class="stat-card" onclick="selectCollection('stocks')">
                 <div class="stat-header">
                     <div>
@@ -833,6 +871,37 @@
                     <i class="fas fa-download"></i> Export Excel
                 </button>
             </div>
+
+            <!-- Update Actions -->
+            <div class="controls" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+                <div style="margin-bottom: 10px; color: var(--text-secondary); font-size: 14px; font-weight: 600;">
+                    <i class="fas fa-bolt"></i> Update Actions
+                </div>
+
+                <button class="btn btn-warning" id="updateTradingViewBtn">
+                    <i class="fas fa-chart-line"></i> Update TradingView
+                </button>
+
+                <button class="btn btn-info" id="updateBarchartDailyBtn">
+                    <i class="fas fa-sun"></i> Barchart Daily
+                </button>
+
+                <button class="btn btn-info" id="updateBarchartIntradayBtn">
+                    <i class="fas fa-clock"></i> Barchart Intraday
+                </button>
+
+                <button class="btn btn-success" id="updateScoringBtn">
+                    <i class="fas fa-calculator"></i> Calculate Scoring
+                </button>
+
+                <button class="btn btn-warning" id="updateFuturesBtn">
+                    <i class="fas fa-money-bill-trend"></i> Fetch Futures
+                </button>
+
+                <button class="btn btn-info" id="fetchPatternsBtn">
+                    <i class="fas fa-chart-area"></i> Fetch Patterns
+                </button>
+            </div>
         </div>
 
         <!-- Data Grid -->
@@ -931,35 +1000,126 @@
             {title: "Name", field: "name", headerFilter: "input", width: 200},
             {title: "Type", field: "type", headerFilter: "input", width: 70},
             {title: "Added Price", field: "addedPrice", headerFilter: "input", width: 90},
-            {title: "Added Date", field: "addedDate", headerFilter: "input", width: 100}
+            {title: "Added Date", field: "addedDate", headerFilter: "input", width: 100},
+            {
+                title: "eTrade",
+                field: "etradePatternLookup",
+                width: 100,
+                hozAlign: "center",
+                headerFilter: "select",
+                headerFilterParams: {values: {"": "All", "true": "Y", "false": "N"}},
+                formatter: function(cell) {
+                    const value = cell.getValue();
+                    const ticker = cell.getRow().getData().ticker;
+                    const checked = value === true ? 'checked' : '';
+                    const bgColor = value === true ? '#22c55e' : '#ef4444';
+                    const textColor = '#fff';
+                    const label = value === true ? 'Y' : 'N';
+                    return `
+                        <label style="display: inline-flex; align-items: center; cursor: pointer; padding: 2px 8px; border-radius: 4px; background: ${bgColor}; color: ${textColor}; font-weight: bold; font-size: 11px;">
+                            <input type="checkbox" ${checked}
+                                   onchange="toggleEtradePattern('${ticker}', this.checked)"
+                                   style="margin-right: 4px;">
+                            ${label}
+                        </label>
+                    `;
+                }
+            }
         ];
 
         const columnsStock = [
-            {title: "Ticker", field: "ticker", headerFilter: "input", width: 70, formatter:function(cell){ const v = cell.getValue(); if(!v) return ""; return `<a href="stock-history.html?ticker=${encodeURIComponent(v)}" target="_blank" style="color: #3b82f6; text-decoration: none;">${v}</a>`; }},
-            {title: "Chg", field: "change", headerFilter: "input", headerFilterPlaceholder: ">0", headerFilterFunc: numericHeaderFilter, width: 70, formatter: function(cell) { const val = cell.getValue(); if (val > 0) return `<span style="color: #22c55e;">▲ ${val.toFixed(2)}</span>`; if (val < 0) return `<span style="color: #ef4444;">▼ ${val.toFixed(2)}</span>`; return val; }},
-            {title: "Low", field: "low", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 70},
-            {title: "Price", field: "price", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 70},
-            {title: "High", field: "high", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 70},
-            {title: "Bottom", field: "bottom.bottom", headerFilter: "input", width: 70, hozAlign: "center", formatter: function(cell){ const v = cell.getValue(); return (v === true || v === 'true') ? "✅" : ""; }},
-            {title: "BotMet", field: "bottom.conditionsMet", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 70, hozAlign: "center"},
-            {title: "BotStr", field: "bottom.strength", headerFilter: "input", width: 80, hozAlign: "center"},
-            {title: "SpkLikely", field: "spike.spikeLikely", headerFilter: "input", width: 80, hozAlign: "center"},
-            {title: "SpkScore", field: "spike.spikeScore", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 80, hozAlign: "center"},
-            {title: "SpkType", field: "spike.spikeType", headerFilter: "input", width: 80, hozAlign: "center"},
-            {title: "Signal", field: "score.signal", headerFilter: "input", width: 70, formatter: function(cell) { const val = cell.getValue(); if (val === 'BUY') return `<span style="background: rgba(34, 197, 94, 0.2); color: #22c55e; padding: 2px 4px; border-radius: 4px; font-weight: 600; font-size: 9px;">${val}</span>`; if (val === 'SELL') return `<span style="background: rgba(239, 68, 68, 0.2); color: #ef4444; padding: 2px 4px; border-radius: 4px; font-weight: 600; font-size: 9px;">${val}</span>`; return val; }},
-            {title: "Overall", field: "score.overallScore", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 70},
-            {title: "DT", field: "score.dayTradingScore", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 60},
-            {title: "ST", field: "score.swingTradingScore", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 60},
-            {title: "Revsl", field: "score.reversalScore", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 65},
-            {title: "Brkout", field: "score.breakoutScore", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 70},
-            {title: "Patrn", field: "score.patternScore", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 65},
-            {title: "BTShort", field: "rating.btShortRating", headerFilter: "input", width: 80},
-            {title: "BTLong", field: "rating.btLongRating", headerFilter: "input", width: 80},
-            {title: "BT", field: "rating.btRating", headerFilter: "input", width: 80},
-            {title: "BTTrend", field: "rating.btTrend", headerFilter: "input", width: 80},
-            {title: "TVMA", field: "rating.tradingViewMARating", headerFilter: "input", width: 80},
-            {title: "TVTech", field: "rating.tradingViewTechRating", headerFilter: "input", width: 80},
-            {title: "TVAnaly", field: "rating.tradingViewAnalystsRating", headerFilter: "input", width: 80},
+            {
+                title: "📌",
+                field: "pickAction",
+                width: 50,
+                hozAlign: "center",
+                headerSort: false,
+                formatter: function(cell) {
+                    return '<button class="add-pick-btn" style="padding: 2px 6px; background: #10b981; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 10px;" title="Add to Picks">+</button>';
+                },
+                cellClick: function(e, cell) {
+                    const rowData = cell.getRow().getData();
+                    addStockToPicks(rowData);
+                }
+            },
+            {
+                title: "👁",
+                field: "watchlistAction",
+                width: 50,
+                hozAlign: "center",
+                headerSort: false,
+                formatter: function(cell) {
+                    return '<button class="add-watch-btn" style="padding: 2px 6px; background: #3b82f6; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 10px;" title="Add to Watchlist">+</button>';
+                },
+                cellClick: function(e, cell) {
+                    const rowData = cell.getRow().getData();
+                    addStockToWatchlist(rowData);
+                }
+            },
+            {title: "Ticker", field: "ticker", headerFilter: "input", headerFilterPlaceholder: "AAPL", width: 85, formatter:function(cell){
+                const ticker = cell.getValue();
+                if(!ticker) return "";
+                const longCount = cell.getRow().getData().noOfLongPatterns || 0;
+                const shortCount = cell.getRow().getData().noOfShortPatterns || 0;
+                const hasPatterns = longCount > 0 || shortCount > 0;
+                let html = `<a href="stock-history.html?ticker=${encodeURIComponent(ticker)}" target="_blank" style="color: #3b82f6; text-decoration: none; font-weight: 600;">${ticker}</a>`;
+                if(hasPatterns) {
+                    html += ` <a href="patterns.html?ticker=${encodeURIComponent(ticker)}" target="_blank" style="color: #a78bfa; text-decoration: none; font-size: 0.85em; margin-left: 3px;" title="View ${longCount} long, ${shortCount} short patterns"><i class="fas fa-chart-area"></i></a>`;
+                }
+                return html;
+            }},
+            {title: "Chg", field: "change", headerFilter: "input", headerFilterPlaceholder: ">0 or <-5", headerFilterFunc: numericHeaderFilter, width: 70, formatter: function(cell) { const val = cell.getValue(); if (val > 0) return `<span style="color: #22c55e;">▲ ${val.toFixed(2)}</span>`; if (val < 0) return `<span style="color: #ef4444;">▼ ${val.toFixed(2)}</span>`; return val; }},
+            {title: "Low", field: "low", headerFilter: "input", headerFilterPlaceholder: ">=10", headerFilterFunc: numericHeaderFilter, width: 70},
+            {title: "Price", field: "price", headerFilter: "input", headerFilterPlaceholder: ">100", headerFilterFunc: numericHeaderFilter, width: 70},
+            {title: "High", field: "high", headerFilter: "input", headerFilterPlaceholder: "<=500", headerFilterFunc: numericHeaderFilter, width: 70},
+            {title: "PrimCat", field: "filterCategory.primaryCategory", headerFilter: "input", headerFilterPlaceholder: "<=500", headerFilterFunc: numericHeaderFilter, width: 70, sorter:function(a,b){
+                // custom sorter: extract leading integer from values like "1-Explosive" or "99-NO-SETUP"
+                function leadingNum(v){
+                    if(v === null || v === undefined) return Number.MAX_SAFE_INTEGER;
+                    var s = String(v).trim();
+                    var m = s.match(/^(\d+)/);
+                    return m ? parseInt(m[1], 10) : Number.MAX_SAFE_INTEGER;
+                }
+                var na = leadingNum(a);
+                var nb = leadingNum(b);
+                if(na !== nb) return na - nb;
+                // tie-breaker: compare full string (case-insensitive)
+                var sa = (a === null || a === undefined) ? '' : String(a).toLowerCase();
+                var sb = (b === null || b === undefined) ? '' : String(b).toLowerCase();
+                if(sa < sb) return -1;
+                if(sa > sb) return 1;
+                return 0;
+            }},
+            {title: "CatList", field: "filterCategory.category", headerFilter: "input", headerFilterPlaceholder: "<=500", headerFilterFunc: numericHeaderFilter, width: 70},
+            {title: "OvrSold", field: "oversold.oversoldBounce", headerFilter: "input", headerFilterPlaceholder: "true", width: 70, hozAlign: "center", formatter: function(cell){ const v = cell.getValue(); return (v === true || v === 'true') ? "✅" : ""; }},
+            {title: "OSScore", field: "oversold.bounceScore", headerFilter: "input", headerFilterPlaceholder: ">=5", headerFilterFunc: numericHeaderFilter, width: 70, hozAlign: "center"},
+            {title: "OSType", field: "oversold.bounceType", headerFilter: "input", headerFilterPlaceholder: "STRONG", width: 80, hozAlign: "center"},
+            {title: "Bottom", field: "bottom.bottom", headerFilter: "input", headerFilterPlaceholder: "true", width: 70, hozAlign: "center", formatter: function(cell){ const v = cell.getValue(); return (v === true || v === 'true') ? "✅" : ""; }},
+            {title: "BotMet", field: "bottom.conditionsMet", headerFilter: "input", headerFilterPlaceholder: ">=5", headerFilterFunc: numericHeaderFilter, width: 70, hozAlign: "center"},
+            {title: "BotStr", field: "bottom.strength", headerFilter: "input", headerFilterPlaceholder: "STRONG", width: 80, hozAlign: "center"},
+            {title: "SpkLikely", field: "spike.spikeLikely", headerFilter: "input", headerFilterPlaceholder: "true", width: 80, hozAlign: "center"},
+            {title: "SpkScore", field: "spike.spikeScore", headerFilter: "input", headerFilterPlaceholder: ">=70", headerFilterFunc: numericHeaderFilter, width: 80, hozAlign: "center"},
+            {title: "SpkType", field: "spike.spikeType", headerFilter: "input", headerFilterPlaceholder: "VOLUME", width: 80, hozAlign: "center"},
+            {title: "Overall", field: "score.overallScore", headerFilter: "input", headerFilterPlaceholder: ">=65", headerFilterFunc: numericHeaderFilter, width: 70},
+            {title: "Long#", field: "noOfLongPatterns", headerFilter: "input", headerFilterPlaceholder: ">=1", headerFilterFunc: numericHeaderFilter, width: 60, hozAlign: "center"},
+            {title: "Short#", field: "noOfShortPatterns", headerFilter: "input", headerFilterPlaceholder: ">=1", headerFilterFunc: numericHeaderFilter, width: 60, hozAlign: "center"},
+            {title: "Up↑", field: "upDays", headerFilter: "input", headerFilterPlaceholder: ">=3", headerFilterFunc: numericHeaderFilter, width: 60, hozAlign: "center", formatter: function(cell) { const val = cell.getValue(); if (val > 0) return `<span style="color: #22c55e; font-weight: 600;">${val}</span>`; return val; }},
+            {title: "UpHi", field: "upHigh", headerFilter: "input", headerFilterPlaceholder: ">100", headerFilterFunc: numericHeaderFilter, width: 70, formatter: function(cell) { const val = cell.getValue(); if (val > 0) return `<span style="color: #22c55e;">${val.toFixed(2)}</span>`; return '-'; }},
+            {title: "Dn↓", field: "downDays", headerFilter: "input", headerFilterPlaceholder: ">=3", headerFilterFunc: numericHeaderFilter, width: 60, hozAlign: "center", formatter: function(cell) { const val = cell.getValue(); if (val > 0) return `<span style="color: #ef4444; font-weight: 600;">${val}</span>`; return val; }},
+            {title: "DnLo", field: "downLow", headerFilter: "input", headerFilterPlaceholder: "<100", headerFilterFunc: numericHeaderFilter, width: 70, formatter: function(cell) { const val = cell.getValue(); if (val > 0) return `<span style="color: #ef4444;">${val.toFixed(2)}</span>`; return '-'; }},
+            {title: "Signal", field: "score.signal", headerFilter: "input", headerFilterPlaceholder: "BUY", width: 70, formatter: function(cell) { const val = cell.getValue(); if (val === 'BUY') return `<span style="background: rgba(34, 197, 94, 0.2); color: #22c55e; padding: 2px 4px; border-radius: 4px; font-weight: 600; font-size: 9px;">${val}</span>`; if (val === 'SELL') return `<span style="background: rgba(239, 68, 68, 0.2); color: #ef4444; padding: 2px 4px; border-radius: 4px; font-weight: 600; font-size: 9px;">${val}</span>`; return val; }},
+            {title: "BTShort", field: "rating.btShortRating", headerFilter: "input", headerFilterPlaceholder: "Buy", width: 80},
+            {title: "BTLong", field: "rating.btLongRating", headerFilter: "input", headerFilterPlaceholder: "Buy", width: 80},
+            {title: "BT", field: "rating.btRating", headerFilter: "input", headerFilterPlaceholder: "Buy", width: 80},
+            {title: "BTTrend", field: "rating.btTrend", headerFilter: "input", headerFilterPlaceholder: "Up", width: 80},
+            {title: "TVMA", field: "rating.tradingViewMARating", headerFilter: "input", headerFilterPlaceholder: "StrongBuy", width: 80},
+            {title: "TVTech", field: "rating.tradingViewTechRating", headerFilter: "input", headerFilterPlaceholder: "Buy", width: 80},
+            {title: "TVAnaly", field: "rating.tradingViewAnalystsRating", headerFilter: "input", headerFilterPlaceholder: "Buy", width: 80},
+           {title: "DT", field: "score.dayTradingScore", headerFilter: "input", headerFilterPlaceholder: ">=20", headerFilterFunc: numericHeaderFilter, width: 60},
+            {title: "ST", field: "score.swingTradingScore", headerFilter: "input", headerFilterPlaceholder: ">=20", headerFilterFunc: numericHeaderFilter, width: 60},
+            {title: "Revsl", field: "score.reversalScore", headerFilter: "input", headerFilterPlaceholder: ">=10", headerFilterFunc: numericHeaderFilter, width: 65},
+            {title: "Brkout", field: "score.breakoutScore", headerFilter: "input", headerFilterPlaceholder: ">=60", headerFilterFunc: numericHeaderFilter, width: 70},
+            {title: "Patrn", field: "score.patternScore", headerFilter: "input", headerFilterPlaceholder: ">=10", headerFilterFunc: numericHeaderFilter, width: 65},
             {title: "BotReasons", field: "bottom.reasons", headerFilter: "input", width: 150, formatter: function(cell){ const v = cell.getValue(); if (!v) return ""; if (Array.isArray(v)) return v.join(', '); return v; }},
             {title: "SpkReasons", field: "spike.reasons", headerFilter: "input", width: 150, formatter: function(cell){ const v = cell.getValue(); if (!v) return ""; if (Array.isArray(v)) return v.join(', '); return v; }},
             {title: "DTR", field: "score.dayTradingReason", headerFilter: "input", width: 120},
@@ -970,20 +1130,20 @@
         ];
 
         const columnsFutures = [
-            {title: "Ticker", field: "ticker", headerFilter: "input", width: 90, formatter:function(cell){ const v = cell.getValue(); if(!v) return ""; return `<a href="futures-history.html?ticker=${encodeURIComponent(v)}" target="_blank" style="color: #3b82f6; text-decoration: none;">${v}</a>`; }},
-            {title: "Type", field: "type", headerFilter: "input", width: 70},
-            {title: "Price", field: "price", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 80},
-            {title: "Change", field: "change", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 80, formatter: function(cell) { const val = cell.getValue(); if (val > 0) return `<span style="color: #22c55e;">▲ ${val.toFixed(2)}</span>`; if (val < 0) return `<span style="color: #ef4444;">▼ ${val.toFixed(2)}</span>`; return val; }},
-            {title: "Open", field: "open", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 80},
-            {title: "High", field: "high", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 80},
-            {title: "Low", field: "low", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 80},
-            {title: "Volume", field: "volume", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 100},
-            {title: "OpenInt", field: "openInterest", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 90},
-            {title: "ExpDate", field: "expiryDate", headerFilter: "input", width: 100},
-            {title: "ExpDays", field: "expiryDays", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 80},
-            {title: "PrevClose", field: "prevClose", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 90},
-            {title: "UpHigh", field: "upHigh", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 80},
-            {title: "DnLow", field: "downLow", headerFilter: "input", headerFilterFunc: numericHeaderFilter, width: 80},
+            {title: "Ticker", field: "ticker", headerFilter: "input", headerFilterPlaceholder: "GC", width: 90, formatter:function(cell){ const v = cell.getValue(); if(!v) return ""; return `<a href="futures-history.html?ticker=${encodeURIComponent(v)}" target="_blank" style="color: #3b82f6; text-decoration: none;">${v}</a>`; }},
+            {title: "Type", field: "type", headerFilter: "input", headerFilterPlaceholder: "FUTURE", width: 70},
+            {title: "Price", field: "price", headerFilter: "input", headerFilterPlaceholder: ">100", headerFilterFunc: numericHeaderFilter, width: 80},
+            {title: "Change", field: "change", headerFilter: "input", headerFilterPlaceholder: ">0", headerFilterFunc: numericHeaderFilter, width: 80, formatter: function(cell) { const val = cell.getValue(); if (val > 0) return `<span style="color: #22c55e;">▲ ${val.toFixed(2)}</span>`; if (val < 0) return `<span style="color: #ef4444;">▼ ${val.toFixed(2)}</span>`; return val; }},
+            {title: "Open", field: "open", headerFilter: "input", headerFilterPlaceholder: ">=100", headerFilterFunc: numericHeaderFilter, width: 80},
+            {title: "High", field: "high", headerFilter: "input", headerFilterPlaceholder: ">=100", headerFilterFunc: numericHeaderFilter, width: 80},
+            {title: "Low", field: "low", headerFilter: "input", headerFilterPlaceholder: ">=100", headerFilterFunc: numericHeaderFilter, width: 80},
+            {title: "Volume", field: "volume", headerFilter: "input", headerFilterPlaceholder: ">1000", headerFilterFunc: numericHeaderFilter, width: 100},
+            {title: "OpenInt", field: "openInterest", headerFilter: "input", headerFilterPlaceholder: ">100", headerFilterFunc: numericHeaderFilter, width: 90},
+            {title: "ExpDate", field: "expiryDate", headerFilter: "input", headerFilterPlaceholder: "2025", width: 100},
+            {title: "ExpDays", field: "expiryDays", headerFilter: "input", headerFilterPlaceholder: "<30", headerFilterFunc: numericHeaderFilter, width: 80},
+            {title: "PrevClose", field: "prevClose", headerFilter: "input", headerFilterPlaceholder: ">=100", headerFilterFunc: numericHeaderFilter, width: 90},
+            {title: "UpHigh", field: "upHigh", headerFilter: "input", headerFilterPlaceholder: ">=100", headerFilterFunc: numericHeaderFilter, width: 80},
+            {title: "DnLow", field: "downLow", headerFilter: "input", headerFilterPlaceholder: ">=100", headerFilterFunc: numericHeaderFilter, width: 80},
             {title: "BTShort", field: "rating.btShortRating", headerFilter: "input", width: 80},
             {title: "BTLong", field: "rating.btLongRating", headerFilter: "input", width: 80},
             {title: "BT", field: "rating.btRating", headerFilter: "input", width: 80},
@@ -1066,7 +1226,7 @@
 
             table = new Tabulator("#dataTable", {
                 layout: "fitData",
-                height: "calc(100vh - 260px)",
+                height: "calc(100vh - 120px)",
                 pagination: true,
                 paginationSize: 100,
                 paginationSizeSelector: [50, 100, 200, 500],
@@ -1162,7 +1322,27 @@
 
                 updateGridInfo();
                 updateCounts();
-                document.getElementById('lastUpdate').textContent = `Last update: ${new Date().toLocaleTimeString()}`;
+                const now = new Date();
+                const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                const fullTimestamp = now.toLocaleString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                const lastUpdateEl = document.getElementById('lastUpdate');
+                lastUpdateEl.textContent = `Last update: ${dateStr} at ${timeStr}`;
+                lastUpdateEl.title = `Full timestamp: ${fullTimestamp}`;
+                lastUpdateEl.style.cursor = 'help';
+
+                // Add visual update indicator
+                lastUpdateEl.parentElement.classList.add('updated');
+                setTimeout(() => lastUpdateEl.parentElement.classList.remove('updated'), 1000);
+
                 console.log('=== Load Complete ===');
             } catch (err) {
                 console.error('=== ERROR Loading Data ===');
@@ -1191,24 +1371,53 @@
             filtered.textContent = filteredTotal;
         }
 
+        // Cache for counts to avoid duplicate API calls
+        let cachedCounts = { stocks: 0, masters: 0, futures: 0 };
+
         async function updateCounts() {
             console.log('Updating counts...');
             try {
-                const [stocks, masters, futures] = await Promise.all([
-                    fetch(`${API_BASE}/stock/list`).then(r => r.ok ? r.json() : []).catch(() => []),
-                    fetch(`${API_BASE}/master/list`).then(r => r.ok ? r.json() : []).catch(() => []),
-                    fetch(`${API_BASE}/futures/list`).then(r => r.ok ? r.json() : []).catch(() => [])
-                ]);
+                // Only fetch counts for collections NOT currently loaded in the table
+                // This avoids duplicate API calls when reloading data
+                const promises = [];
+                const collections = [];
 
-                const stockCount = Array.isArray(stocks) ? stocks.length : 0;
-                const masterCount = Array.isArray(masters) ? masters.length : 0;
-                const futuresCount = Array.isArray(futures) ? futures.length : 0;
+                if (currentCollection !== 'stocks') {
+                    promises.push(fetch(`${API_BASE}/stock/list`).then(r => r.ok ? r.json() : []).catch(() => []));
+                    collections.push('stocks');
+                }
+                if (currentCollection !== 'masters') {
+                    promises.push(fetch(`${API_BASE}/master/list`).then(r => r.ok ? r.json() : []).catch(() => []));
+                    collections.push('masters');
+                }
+                if (currentCollection !== 'futures') {
+                    promises.push(fetch(`${API_BASE}/futures/list`).then(r => r.ok ? r.json() : []).catch(() => []));
+                    collections.push('futures');
+                }
 
-                document.getElementById('stockCount').textContent = stockCount;
-                document.getElementById('masterCount').textContent = masterCount;
-                document.getElementById('futuresCount').textContent = futuresCount;
+                // Fetch only the collections we need
+                const results = await Promise.all(promises);
 
-                console.log('Counts updated - Stocks:', stockCount, 'Masters:', masterCount, 'Futures:', futuresCount);
+                // Update cached counts for fetched collections
+                results.forEach((data, index) => {
+                    const collectionName = collections[index];
+                    cachedCounts[collectionName] = Array.isArray(data) ? data.length : 0;
+                });
+
+                // For the current collection, use the loaded data count
+                if (currentCollection === 'stocks' && loadedTotal > 0) {
+                    cachedCounts.stocks = loadedTotal;
+                } else if (currentCollection === 'masters' && loadedTotal > 0) {
+                    cachedCounts.masters = loadedTotal;
+                } else if (currentCollection === 'futures' && loadedTotal > 0) {
+                    cachedCounts.futures = loadedTotal;
+                }
+
+                document.getElementById('stockCount').textContent = cachedCounts.stocks;
+                document.getElementById('masterCount').textContent = cachedCounts.masters;
+                document.getElementById('futuresCount').textContent = cachedCounts.futures;
+
+                console.log('Counts updated - Stocks:', cachedCounts.stocks, 'Masters:', cachedCounts.masters, 'Futures:', cachedCounts.futures);
             } catch (e) {
                 console.error('Failed to update counts:', e);
                 document.getElementById('stockCount').textContent = '?';
@@ -1232,15 +1441,349 @@
             }
         }
 
+        async function addStockToPicks(stockData) {
+            if (!confirm(`Add ${stockData.ticker} to picks?`)) return;
+
+            const pick = {
+                ticker: stockData.ticker,
+                reason: `Score: ${stockData.score?.overallScore || 0}, Signal: ${stockData.score?.signal || 'N/A'}`,
+                entry: stockData.price,
+                target: stockData.price * 1.05, // Default 5% target
+                stopLoss: stockData.price * 0.95, // Default 5% stop
+                targetDate: null,
+                addedDate: new Date().toISOString().split('T')[0],
+                addedPrice: stockData.price,
+                targetMet: false,
+                stopLossMet: false,
+                noOfLongPatterns: stockData.noOfLongPatterns || 0,
+                noOfShortPatterns: stockData.noOfShortPatterns || 0,
+                overAllScore: stockData.score?.overallScore || 0,
+                bottomScore: stockData.bottom?.conditionsMet || 0,
+                reversalScore: stockData.score?.reversalScore || 0,
+                breakoutScore: stockData.score?.breakoutScore || 0,
+                patternScore: stockData.score?.patternScore || 0,
+                spikeScore: stockData.spike?.spikeScore || 0,
+                signal: stockData.score?.signal || '',
+                btShortRating: stockData.rating?.btShortRating || '',
+                btLongRating: stockData.rating?.btLongRating || '',
+                btRating: stockData.rating?.btRating || '',
+                btTrend: stockData.rating?.btTrend || '',
+                tradingViewTechRating: stockData.rating?.tradingViewTechRating || '',
+                tradingViewMARating: stockData.rating?.tradingViewMARating || '',
+                tradingViewOSRating: stockData.rating?.tradingViewOSRating || ''
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/picks/create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(pick)
+                });
+
+                if (response.ok) {
+                    alert(`✓ ${stockData.ticker} added to picks!`);
+                } else {
+                    throw new Error('Failed to add pick');
+                }
+            } catch (error) {
+                console.error('Error adding to picks:', error);
+                alert('Failed to add to picks: ' + error.message);
+            }
+        }
+
+        async function addStockToWatchlist(stockData) {
+            if (!confirm(`Add ${stockData.ticker} to watchlist?`)) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/watchlist/add`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticker: stockData.ticker })
+                });
+
+                if (response.ok) {
+                    alert(`✓ ${stockData.ticker} added to watchlist!`);
+                } else {
+                    const errorText = await response.text();
+                    throw new Error(errorText);
+                }
+            } catch (error) {
+                console.error('Error adding to watchlist:', error);
+                alert('Failed to add to watchlist: ' + error.message);
+            }
+        }
+
         function exportExcel() {
             if (!table) return;
             const data = table.getData();
             if (!data.length) return alert('No data to export');
 
-            const ws = XLSX.utils.json_to_sheet(data);
+            // Flatten nested objects for Excel export
+            const flattenedData = data.map(row => {
+                const flatRow = {
+                    ticker: row.ticker,
+                    change: row.change,
+                    low: row.low,
+                    price: row.price,
+                    high: row.high,
+                    open: row.open,
+                    volume: row.volume,
+
+                    // Bottom fields
+                    'bottom.bottom': row.bottom?.bottom,
+                    'bottom.conditionsMet': row.bottom?.conditionsMet,
+                    'bottom.strength': row.bottom?.strength,
+                    'bottom.reasons': Array.isArray(row.bottom?.reasons) ? row.bottom.reasons.join(', ') : row.bottom?.reasons,
+
+                    // Spike fields
+                    'spike.spikeLikely': row.spike?.spikeLikely,
+                    'spike.spikeScore': row.spike?.spikeScore,
+                    'spike.spikeType': row.spike?.spikeType,
+                    'spike.reasons': Array.isArray(row.spike?.reasons) ? row.spike.reasons.join(', ') : row.spike?.reasons,
+
+                    // Score fields
+                    'score.overallScore': row.score?.overallScore,
+                    'score.signal': row.score?.signal,
+                    'score.dayTradingScore': row.score?.dayTradingScore,
+                    'score.swingTradingScore': row.score?.swingTradingScore,
+                    'score.reversalScore': row.score?.reversalScore,
+                    'score.breakoutScore': row.score?.breakoutScore,
+                    'score.patternScore': row.score?.patternScore,
+                    'score.dayTradingReason': row.score?.dayTradingReason,
+                    'score.swingTradingReason': row.score?.swingTradingReason,
+                    'score.reversalReason': row.score?.reversalReason,
+                    'score.breakoutReason': row.score?.breakoutReason,
+                    'score.patternReason': row.score?.patternReason,
+
+                    // Rating fields
+                    'rating.btShortRating': row.rating?.btShortRating,
+                    'rating.btLongRating': row.rating?.btLongRating,
+                    'rating.btRating': row.rating?.btRating,
+                    'rating.btTrend': row.rating?.btTrend,
+                    'rating.tradingViewMARating': row.rating?.tradingViewMARating,
+                    'rating.tradingViewTechRating': row.rating?.tradingViewTechRating,
+                    'rating.tradingViewAnalystsRating': row.rating?.tradingViewAnalystsRating,
+
+                    // Pattern counts
+                    noOfLongPatterns: row.noOfLongPatterns,
+                    noOfShortPatterns: row.noOfShortPatterns,
+
+                    // Consecutive days
+                    upDays: row.upDays,
+                    upHigh: row.upHigh,
+                    downDays: row.downDays,
+                    downLow: row.downLow,
+
+                    // Additional fields
+                    type: row.type,
+                    histDate: row.histDate,
+                    prevClose: row.prevClose,
+                    momentum: row.momentum,
+                    sma9: row.sma9,
+                    sma20: row.sma20,
+                    sma50: row.sma50,
+                    sma200: row.sma200,
+                    ema9: row.ema9,
+                    ema20: row.ema20,
+                    ema50: row.ema50,
+                    ema200: row.ema200,
+                    rsi14: row.rsi14,
+                    macd1226: row.macd1226,
+                    atr14: row.atr14,
+                    vwap: row.vwap,
+                    avgVolume10D: row.avgVolume10D,
+                    volumeChange: row.volumeChange,
+                    priceChg5D: row.priceChg5D,
+                    priceChg10D: row.priceChg10D,
+                    priceChg20D: row.priceChg20D,
+                    low52: row.low52,
+                    high52: row.high52,
+                    earningsDate: row.earningsDate,
+                    earningDays: row.earningDays
+                };
+
+                return flatRow;
+            });
+
+            const ws = XLSX.utils.json_to_sheet(flattenedData);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, currentCollection);
             XLSX.writeFile(wb, `myswan-${currentCollection}-${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+
+        // Toggle eTrade Pattern Function
+        async function toggleEtradePattern(ticker, enabled) {
+            try {
+                const response = await fetch(`${API_BASE}/master/${encodeURIComponent(ticker)}/etrade-pattern?enabled=${enabled}`, {
+                    method: 'PATCH'
+                });
+
+                if (response.ok) {
+                    console.log(`eTrade Pattern for ${ticker} updated to: ${enabled ? 'Y' : 'N'}`);
+                    // Update the row data in the table
+                    if (table) {
+                        const row = table.getRows().find(r => r.getData().ticker === ticker);
+                        if (row) {
+                            row.update({etradePatternLookup: enabled});
+                        }
+                    }
+                } else {
+                    alert(`Failed to update eTrade Pattern for ${ticker}`);
+                    // Reload to revert the checkbox
+                    loadData();
+                }
+            } catch (error) {
+                console.error('Error updating eTrade Pattern:', error);
+                alert(`Error: ${error.message}`);
+                // Reload to revert the checkbox
+                loadData();
+            }
+        }
+
+        // Update Action Functions
+        async function updateTradingView() {
+            if (!confirm('Update TradingView data for all stocks? This may take several minutes.')) return;
+
+            const btn = document.getElementById('updateTradingViewBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+
+            try {
+                const response = await fetch(`${API_BASE}/external/updateTradingView`, { method: 'POST' });
+                if (response.ok) {
+                    alert('TradingView update completed successfully!');
+                    loadData(); // Reload data to show updates
+                } else {
+                    alert('TradingView update failed. Check console for details.');
+                }
+            } catch (error) {
+                console.error('Error updating TradingView:', error);
+                alert('Error updating TradingView: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-chart-line"></i> Update TradingView';
+            }
+        }
+
+        async function updateBarchartDaily() {
+            if (!confirm('Fetch Barchart daily quotes for all stocks? This may take several minutes.')) return;
+
+            const btn = document.getElementById('updateBarchartDailyBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fetching...';
+
+            try {
+                const response = await fetch(`${API_BASE}/external/getDailyQuotes`, { method: 'POST' });
+                if (response.ok) {
+                    alert('Barchart daily quotes updated successfully!');
+                    loadData();
+                } else {
+                    alert('Barchart daily update failed. Check console for details.');
+                }
+            } catch (error) {
+                console.error('Error fetching Barchart daily quotes:', error);
+                alert('Error: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-sun"></i> Barchart Daily';
+            }
+        }
+
+        async function updateBarchartIntraday() {
+            if (!confirm('Fetch Barchart intraday quotes for all stocks? This may take several minutes.')) return;
+
+            const btn = document.getElementById('updateBarchartIntradayBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fetching...';
+
+            try {
+                const response = await fetch(`${API_BASE}/external/getIntraDayQuotes`, { method: 'POST' });
+                if (response.ok) {
+                    alert('Barchart intraday quotes updated successfully!');
+                    loadData();
+                } else {
+                    alert('Barchart intraday update failed. Check console for details.');
+                }
+            } catch (error) {
+                console.error('Error fetching Barchart intraday quotes:', error);
+                alert('Error: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-clock"></i> Barchart Intraday';
+            }
+        }
+
+        async function updateScoring() {
+            if (!confirm('Calculate scoring for all stocks? This may take several minutes.')) return;
+
+            const btn = document.getElementById('updateScoringBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Calculating...';
+
+            try {
+                const response = await fetch(`${API_BASE}/scoring/calculate`, { method: 'POST' });
+                if (response.ok) {
+                    alert('Scoring calculation completed successfully!');
+                    loadData();
+                } else {
+                    alert('Scoring calculation failed. Check console for details.');
+                }
+            } catch (error) {
+                console.error('Error calculating scoring:', error);
+                alert('Error: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-calculator"></i> Calculate Scoring';
+            }
+        }
+
+        async function updateFutures() {
+            if (!confirm('Fetch futures data from Barchart? This may take a few minutes.')) return;
+
+            const btn = document.getElementById('updateFuturesBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fetching...';
+
+            try {
+                const response = await fetch(`${API_BASE}/futures/fetch-barchart`, { method: 'POST' });
+                if (response.ok) {
+                    alert('Futures data fetched successfully!');
+                    loadData();
+                } else {
+                    alert('Futures fetch failed. Check console for details.');
+                }
+            } catch (error) {
+                console.error('Error fetching futures:', error);
+                alert('Error: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-money-bill-trend"></i> Fetch Futures';
+            }
+        }
+
+        async function fetchPatterns() {
+            if (!confirm('Fetch eTrade patterns for all enabled stocks? This will process stocks in parallel batches of 50. May take several minutes.')) return;
+
+            const btn = document.getElementById('fetchPatternsBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fetching...';
+
+            try {
+                const response = await fetch(`${API_BASE}/pattern/fetch-etrade`, { method: 'POST' });
+                if (response.ok) {
+                    const result = await response.text();
+                    alert('Patterns fetched successfully!\n' + result);
+                    loadData();
+                } else {
+                    alert('Pattern fetch failed. Check console for details.');
+                }
+            } catch (error) {
+                console.error('Error fetching patterns:', error);
+                alert('Error: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-chart-area"></i> Fetch Patterns';
+            }
         }
 
         // Event Listeners
@@ -1253,13 +1796,19 @@
         });
         document.getElementById('exportBtn').addEventListener('click', exportExcel);
 
+        // Update action button listeners
+        document.getElementById('updateTradingViewBtn').addEventListener('click', updateTradingView);
+        document.getElementById('updateBarchartDailyBtn').addEventListener('click', updateBarchartDaily);
+        document.getElementById('updateBarchartIntradayBtn').addEventListener('click', updateBarchartIntraday);
+        document.getElementById('updateScoringBtn').addEventListener('click', updateScoring);
+        document.getElementById('updateFuturesBtn').addEventListener('click', updateFutures);
+        document.getElementById('fetchPatternsBtn').addEventListener('click', fetchPatterns);
+
         // Initialize
         window.addEventListener('DOMContentLoaded', () => {
-            loadData();
-            updateCounts();
+            loadData(); // This will call updateCounts() internally
         });
     </script>
 </body>
 </html>
-
 

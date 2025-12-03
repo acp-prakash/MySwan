@@ -7,6 +7,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.sql.Date;
+import java.time.LocalDate;
 
 @Data
 @NoArgsConstructor
@@ -16,5 +17,20 @@ public class Pattern {
     @Id
     private String id;
     private String ticker;
-    private Date date;
+    private String histDate;
+    private String entry;
+    private String minPT;
+    private String maxPT;
+    private String stop;
+    private String targetDate;
+    private String name;
+    private String trend;
+    private String status;
+    private int noOfLongPatterns;
+    private int noOfShortPatterns;
+    // Stock price fields
+    private double price;
+    private double change;
+    private double high;
+    private double low;
 }

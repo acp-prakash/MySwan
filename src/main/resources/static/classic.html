@@ -223,6 +223,12 @@
         <div class="sub-title">
             View and filter <strong>master</strong>, <strong>stock</strong>, and <strong>stock history</strong> collections.
             Column headers are filterable. You can delete single rows or multiple selected rows for Master & Stock.
+            <br>
+            <a href="index.html" style="margin-right: 10px;">Dashboard</a>
+            <a href="futures.html" style="margin-right: 10px;">Futures</a>
+            <a href="patterns.html" style="margin-right: 10px;">Patterns</a>
+            <a href="discover.html" style="margin-right: 10px;">Discover</a>
+            <a href="settings.html" style="margin-right: 10px;">Settings</a>
         </div>
 
         <!-- Toolbar -->
@@ -385,7 +391,31 @@
         {title: "Name", field: "name", headerFilter: "input"},
         {title: "Type", field: "type", headerFilter: "input"},
         {title: "Added Price", field: "addedPrice", headerFilter: "input"},
-        {title: "Added Date", field: "addedDate", headerFilter: "input"}
+        {title: "Added Date", field: "addedDate", headerFilter: "input"},
+        {
+            title: "eTrade Pattern",
+            field: "etradePatternLookup",
+            width: 120,
+            hozAlign: "center",
+            headerFilter: "select",
+            headerFilterParams: {values: {"": "All", "true": "Y", "false": "N"}},
+            formatter: function(cell) {
+                const value = cell.getValue();
+                const ticker = cell.getRow().getData().ticker;
+                const checked = value === true ? 'checked' : '';
+                const bgColor = value === true ? '#22c55e' : '#ef4444';
+                const textColor = '#fff';
+                const label = value === true ? 'Y' : 'N';
+                return `
+                    <label style="display: inline-flex; align-items: center; cursor: pointer; padding: 2px 8px; border-radius: 4px; background: ${bgColor}; color: ${textColor}; font-weight: bold; font-size: 11px;">
+                        <input type="checkbox" ${checked}
+                               onchange="toggleEtradePattern('${ticker}', this.checked)"
+                               style="margin-right: 4px;">
+                        ${label}
+                    </label>
+                `;
+            }
+        }
         <!--deleteActionColumn-->
     ];
 
@@ -430,7 +460,18 @@
     }
 
     const columnsStock = [
-        {title: "Ticker", field: "ticker", headerFilter: "input", width: 60, tooltip: true, widthGrow: 0, formatter:function(cell){ const v = cell.getValue(); if(!v) return ""; return `<a href="stock-history.html?ticker=${encodeURIComponent(v)}" target="_blank">${v}</a>`; }},
+        {title: "Ticker", field: "ticker", headerFilter: "input", width: 75, tooltip: true, widthGrow: 0, formatter:function(cell){
+            const ticker = cell.getValue();
+            if(!ticker) return "";
+            const longCount = cell.getRow().getData().noOfLongPatterns || 0;
+            const shortCount = cell.getRow().getData().noOfShortPatterns || 0;
+            const hasPatterns = longCount > 0 || shortCount > 0;
+            let html = `<a href="stock-history.html?ticker=${encodeURIComponent(ticker)}" target="_blank">${ticker}</a>`;
+            if(hasPatterns) {
+                html += ` <a href="patterns.html?ticker=${encodeURIComponent(ticker)}" target="_blank" style="color: #a78bfa; text-decoration: none; font-size: 0.85em; margin-left: 3px;" title="View ${longCount} long, ${shortCount} short patterns"><i class="fas fa-chart-area"></i></a>`;
+            }
+            return html;
+        }},
         {title: "Chg", field: "change", headerFilter: "input", headerFilterPlaceholder: ">0 or <0 or 1-10", headerFilterFunc: numericHeaderFilter, width: 60,  tooltip: true, widthGrow: 0},
         {title: "Low", field: "low", headerFilter: "input", headerFilterFunc: numericHeaderFilter, headerFilterPlaceholder: ">=10", width: 60, tooltip: true, widthGrow: 0},
         {title: "Price", field: "price", headerFilter: "input", headerFilterFunc: numericHeaderFilter, headerFilterPlaceholder: ">100", width: 60, tooltip: true, widthGrow: 0},
@@ -455,6 +496,8 @@
         {title: "Reversal", field: "score.reversalScore", headerFilter: "input", headerFilterPlaceholder: ">=10", headerFilterFunc: numericHeaderFilter, width: 60, tooltip: true, widthGrow: 0},
         {title: "Breakout", field: "score.breakoutScore", headerFilter: "input", headerFilterPlaceholder: ">=60", headerFilterFunc: numericHeaderFilter, width: 60, tooltip: true, widthGrow: 0},
         {title: "Pattern", field: "score.patternScore", headerFilter: "input", headerFilterPlaceholder: ">=10", headerFilterFunc: numericHeaderFilter, width: 60, tooltip: true, widthGrow: 0},
+        {title: "Long#", field: "noOfLongPatterns", headerFilter: "input", headerFilterPlaceholder: ">=1", headerFilterFunc: numericHeaderFilter, width: 60, hozAlign: "center", tooltip: true, widthGrow: 0},
+        {title: "Short#", field: "noOfShortPatterns", headerFilter: "input", headerFilterPlaceholder: ">=1", headerFilterFunc: numericHeaderFilter, width: 60, hozAlign: "center", tooltip: true, widthGrow: 0},
 
         {title: "BTShort", field: "rating.btShortRating", headerFilter: "input", width: 90, headerHozAlign: "center", tooltip: true, widthGrow: 0},
         {title: "BTLong", field: "rating.btLongRating", headerFilter: "input", width: 90, headerHozAlign: "center", tooltip: true, widthGrow: 0},
@@ -740,6 +783,32 @@
 
         const rowDatas = rows.map(r => r.getData());
         await deleteRows(rowDatas, rows);
+    }
+
+    async function toggleEtradePattern(ticker, enabled) {
+        try {
+            const response = await fetch(`${API_BASE}/master/${encodeURIComponent(ticker)}/etrade-pattern?enabled=${enabled}`, {
+                method: 'PATCH'
+            });
+
+            if (response.ok) {
+                console.log(`eTrade Pattern for ${ticker} updated to: ${enabled ? 'Y' : 'N'}`);
+                // Update the row data in the table
+                const row = table.getRows().find(r => r.getData().ticker === ticker);
+                if (row) {
+                    row.update({etradePatternLookup: enabled});
+                }
+            } else {
+                alert(`Failed to update eTrade Pattern for ${ticker}`);
+                // Reload to revert the checkbox
+                loadData();
+            }
+        } catch (error) {
+            console.error('Error updating eTrade Pattern:', error);
+            alert(`Error: ${error.message}`);
+            // Reload to revert the checkbox
+            loadData();
+        }
     }
 
     function exportExcel() {

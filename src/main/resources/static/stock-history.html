@@ -79,36 +79,50 @@
       columns: [
         {title:'Date', field:'histDate', headerFilter:'input', width:80},
         {title:'Ticker', field:'ticker', headerFilter:'input', width:70},
-        {title:'Price', field:'price', headerFilter:'input', formatter:fmt2, width:65},
         {title:'Chg', field:'change', headerFilter:'input', formatter:fmt2, width:65},
-        {title:'High', field:'high', headerFilter:'input', formatter:fmt2, width:65},
         {title:'Low', field:'low', headerFilter:'input', formatter:fmt2, width:65},
-        {title:'Open', field:'open', headerFilter:'input', formatter:fmt2, width:65},
-        {title:'Vol', field:'volume', headerFilter:'input', formatter:fmtVol, width:70},
-        {title:'Mom', field:'momentum', headerFilter:'input', formatter:fmt2, width:65},
+        {title:'Price', field:'price', headerFilter:'input', formatter:fmt2, width:65},
+        {title:'High', field:'high', headerFilter:'input', formatter:fmt2, width:65},
+        //{title:'Open', field:'open', headerFilter:'input', formatter:fmt2, width:65},
         // BottomSignal columns
+        {title:'Long#', field:'noOfLongPatterns', headerFilter:'input', formatter:fmtInt, width:60, hozAlign:'center'},
+        {title:'Short#', field:'noOfShortPatterns', headerFilter:'input', formatter:fmtInt, width:60, hozAlign:'center'},
+        {title: "PrimCat", field: "filterCategory.primaryCategory", headerFilter: "input", width: 70},
+            {title: "CatList", field: "filterCategory.category", headerFilter: "input", width: 70},
+        {title: "OvrSold", field: "oversold.oversoldBounce", headerFilter: "input", width: 70, hozAlign: "center", formatter: function(cell){ const v = cell.getValue(); return (v === true || v === 'true') ? "✅" : ""; }},
+        {title: "OSScore", field: "oversold.bounceScore", headerFilter: "input", width: 70, hozAlign: "center"},
+        {title: "OSType", field: "oversold.bounceType", headerFilter: "input", width: 80, hozAlign: "center"},
         {title:'Bottom', field:'bottom.bottom', headerFilter:'input', width:60, hozAlign:'center', formatter:function(cell){ const v = cell.getValue(); if (v === true || v === 'true') return '✅'; if (v === false || v === 'false') return ''; return v; }},
+        {title:'spikeLikely', field:'spike.spikeLikely', headerFilter:'input', width:80, hozAlign:'center'},
         {title:'BottomMet', field:'bottom.conditionsMet', headerFilter:'input', width:80, hozAlign:'center'},
         {title:'BotStrength', field:'bottom.strength', headerFilter:'input', width:80, hozAlign:'center'},
-        {title:'BotReasons', field:'bottom.reasons', headerFilter:'input', width:150, hozAlign:'left', formatter:function(cell){ const v = cell.getValue(); if(!v) return ''; if(Array.isArray(v)) return v.join(', '); return v; }},
-        // SpikeSignal columns (new)
         {title:'spikeScore', field:'spike.spikeScore', headerFilter:'input', width:60, hozAlign:'center', formatter:function(cell){ const v = cell.getValue(); if (v === true || v === 'true') return '⚡'; if (v === false || v === 'false') return ''; return v; }},
-        {title:'spikeType', field:'spike.spikeType', headerFilter:'input', width:80, hozAlign:'center'},
-        {title:'spikeLikely', field:'spike.spikeLikely', headerFilter:'input', width:80, hozAlign:'center'},
-        {title:'SpikeReasons', field:'spike.reasons', headerFilter:'input', width:150, hozAlign:'left', formatter:function(cell){ const v = cell.getValue(); if(!v) return ''; if(Array.isArray(v)) return v.join(', '); return v; }},
-        // Barchart Ratings (shortened headers)
+        {title:'All', field:'score.overallScore', headerFilter:'input', formatter:fmtInt, width:55},
+        {title:'Signal', field:'score.signal', headerFilter:'input', width:70},
         {title:'BTShort', field:'rating.btShortRating', headerFilter:'input', width:70},
         {title:'BTLong', field:'rating.btLongRating', headerFilter:'input', width:70},
         {title:'BTRat', field:'rating.btRating', headerFilter:'input', width:65},
         {title:'BTTrend', field:'rating.btTrend', headerFilter:'input', width:70},
-        // TradingView Ratings
         {title:'TVMA', field:'rating.tradingViewMARating', headerFilter:'input', width:65},
         {title:'TVTech', field:'rating.tradingViewTechRating', headerFilter:'input', width:65},
         {title:'TVAnaly', field:'rating.tradingViewAnalystsRating', headerFilter:'input', width:70},
+        {title:'spikeType', field:'spike.spikeType', headerFilter:'input', width:80, hozAlign:'center'},
+        {title:'BotReasons', field:'bottom.reasons', headerFilter:'input', width:150, hozAlign:'left', formatter:function(cell){ const v = cell.getValue(); if(!v) return ''; if(Array.isArray(v)) return v.join(', '); return v; }},
+        {title:'Vol', field:'volume', headerFilter:'input', formatter:fmtVol, width:70},
+        {title:'Mom', field:'momentum', headerFilter:'input', formatter:fmt2, width:65},
+        // SpikeSignal columns (new)
+
+
+
+        {title:'SpikeReasons', field:'spike.reasons', headerFilter:'input', width:150, hozAlign:'left', formatter:function(cell){ const v = cell.getValue(); if(!v) return ''; if(Array.isArray(v)) return v.join(', '); return v; }},
+        // Barchart Ratings (shortened headers)
+
+        // TradingView Ratings
+
         // Score & Reasons
-        {title:'Signal', field:'score.signal', headerFilter:'input', width:70},
+
         {title:'SigR', field:'score.signalReason', headerFilter:'input', width:80},
-        {title:'All', field:'score.overallScore', headerFilter:'input', formatter:fmtInt, width:55},
+
         {title:'AllR', field:'score.overallReason', headerFilter:'input', width:90},
         {title:'DT', field:'score.dayTradingScore', headerFilter:'input', formatter:fmtInt, width:55},
         {title:'DTR', field:'score.dayTradingReason', headerFilter:'input', width:90},
@@ -120,6 +134,7 @@
         {title:'BreakR', field:'score.breakoutReason', headerFilter:'input', width:90},
         {title:'Patt', field:'score.patternScore', headerFilter:'input', formatter:fmtInt, width:55},
         {title:'PattR', field:'score.patternReason', headerFilter:'input', width:90},
+
       ],
       placeholder: 'No history loaded',
       dataChanged: updateInfo,

@@ -4,13 +4,13 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.myswan.model.compute.BottomSignal;
-import org.myswan.model.compute.Score;
-import org.myswan.model.compute.SpikeSignal;
+import org.myswan.model.compute.*;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -27,6 +27,9 @@ public class Stock {
     private Score score;
     private BottomSignal bottom;
     private SpikeSignal spike;
+    private OversoldBounceSignal oversold;
+    private FilterCategory filterCategory;
+    private MomentumPopSignal momPop;
     private double price;
     private double open;
     private double high;
@@ -65,4 +68,10 @@ public class Stock {
     private double volumeChange;
     private double avgVolume10D;
     private double vwap;
+    private int noOfLongPatterns;
+    private int noOfShortPatterns;
+
+    // Transient field - not persisted to DB, populated at runtime for API responses
+    @Transient
+    private List<Pattern> patterns;
 }

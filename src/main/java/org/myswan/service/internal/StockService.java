@@ -1,6 +1,8 @@
 package org.myswan.service.internal;
 
+import org.myswan.model.Master;
 import org.myswan.model.Stock;
+import org.myswan.model.dto.TickerGroupDTO;
 import org.myswan.repository.StockRepository;
 import org.myswan.service.external.vo.TradingViewVO;
 import org.slf4j.Logger;
@@ -17,10 +19,8 @@ import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class StockService {
@@ -182,14 +182,22 @@ public class StockService {
 
     public List<Stock> getStockHistory(String ticker, LocalDate from, LocalDate to) {
         if (ticker == null || ticker.isBlank()) return new ArrayList<>();
-        Query query = Query.query(Criteria.where("ticker").is(ticker));
-        if (from != null) {
-            query.addCriteria(Criteria.where("histDate").gte(from));
+
+        // Build criteria for ticker
+        Criteria criteria = Criteria.where("ticker").is(ticker);
+
+        // Build date range criteria (combine gte and lte in single criteria)
+        if (from != null && to != null) {
+            criteria.and("histDate").gte(from).lte(to);
+        } else if (from != null) {
+            criteria.and("histDate").gte(from);
+        } else if (to != null) {
+            criteria.and("histDate").lte(to);
         }
-        if (to != null) {
-            query.addCriteria(Criteria.where("histDate").lte(to));
-        }
+
+        Query query = Query.query(criteria);
         query.with(Sort.by(Sort.Direction.DESC, "histDate"));
+
         try {
             return mongoTemplate.find(query, Stock.class, "stockHistory");
         } catch (Exception e) {
@@ -206,6 +214,174 @@ public class StockService {
             return mongoTemplate.find(query, Stock.class, "stockHistory");
         } catch (Exception e) {
             log.warn("Failed to load history for date {}: {}", histDate, e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * Enrich stocks with their patterns.
+     * This populates the transient patterns field in Stock objects.
+     *
+     * @param stocks List of stocks to enrich
+     * @return Same list with patterns populated
+     */
+    public List<Stock> enrichWithPatterns(List<Stock> stocks) {
+        if (stocks == null || stocks.isEmpty()) {
+            return stocks;
+        }
+
+        try {
+            // Get unique tickers
+            Set<String> tickers = new java.util.HashSet<>();
+            stocks.forEach(stock -> {
+                if (stock.getTicker() != null) {
+                    tickers.add(stock.getTicker());
+                }
+            });
+
+            if (tickers.isEmpty()) {
+                return stocks;
+            }
+
+            // Fetch all patterns for these tickers in one query
+            Query query = new Query(Criteria.where("ticker").in(tickers));
+            List<org.myswan.model.Pattern> allPatterns = mongoTemplate.find(query, org.myswan.model.Pattern.class, "pattern");
+
+            // Group patterns by ticker
+            java.util.Map<String, List<org.myswan.model.Pattern>> patternsByTicker = new java.util.HashMap<>();
+            allPatterns.forEach(pattern -> {
+                patternsByTicker.computeIfAbsent(pattern.getTicker(), k -> new ArrayList<>())
+                    .add(pattern);
+            });
+
+            // Enrich each stock with its patterns
+            stocks.forEach(stock -> {
+                List<org.myswan.model.Pattern> stockPatterns = patternsByTicker.get(stock.getTicker());
+                stock.setPatterns(stockPatterns != null ? stockPatterns : new ArrayList<>());
+            });
+
+            log.debug("Enriched {} stocks with patterns", stocks.size());
+            return stocks;
+
+        } catch (Exception e) {
+            log.error("Error enriching stocks with patterns", e);
+            // Return stocks without patterns rather than failing
+            return stocks;
+        }
+    }
+
+    /**
+     * Get tickers grouped with their related tickers (ETFs) whose description contains the main ticker.
+     * Rules:
+     * 1. Main ticker type CANNOT be "ETF" (can be STOCK, DR, or anything except ETF)
+     * 2. Related ticker type MUST be "ETF" (only ETFs can be related tickers)
+     * 3. Case-sensitive matching: " TICKER " (exact case with spaces)
+     * Returns flattened list where main ticker row repeats for each related ticker.
+     *
+     * @return List of TickerGroupDTO with main ticker and ONE related ticker per row
+     */
+    public List<TickerGroupDTO> getGroupedTickers() {
+        try {
+            // Get all masters
+            List<Master> allMasters = mongoTemplate.findAll(Master.class, "master");
+            if (allMasters == null || allMasters.isEmpty()) {
+                return new ArrayList<>();
+            }
+
+            // Get all stocks for price data
+            List<Stock> allStocks = list();
+            Map<String, Stock> stockMap = allStocks.stream()
+                    .collect(Collectors.toMap(Stock::getTicker, s -> s, (a, b) -> a));
+
+            // Flattened list - one row per main+related pair
+            List<TickerGroupDTO> flattenedGroups = new ArrayList<>();
+
+            for (Master mainMaster : allMasters) {
+                String mainTicker = mainMaster.getTicker();
+                String mainType = mainMaster.getType();
+
+                if (mainTicker == null || mainTicker.isEmpty()) continue;
+
+                // Rule 1: Main ticker type CANNOT be "ETF" (only STOCK/DR/etc can be main tickers)
+                if ("ETF".equalsIgnoreCase(mainType)) {
+                    continue; // Skip ETFs as main tickers
+                }
+
+                Stock mainStock = stockMap.get(mainTicker);
+
+                // Find all tickers whose description contains this ticker with spaces around it
+                for (Master relatedMaster : allMasters) {
+                    if (relatedMaster.getTicker().equals(mainTicker)) continue;
+
+                    String relatedType = relatedMaster.getType();
+
+                    // Rule 2: Related ticker MUST be ETF type
+                    if (!"ETF".equalsIgnoreCase(relatedType)) {
+                        continue; // Skip if related ticker is not ETF
+                    }
+
+                    String relatedName = relatedMaster.getName();
+                    if (relatedName != null) {
+                        // Rule 3: Case-sensitive exact match with spaces: " TICKER "
+                        String paddedRelatedName = " " + relatedName + " ";
+                        String searchPattern = " " + mainTicker + " ";
+
+                        if (paddedRelatedName.contains(searchPattern)) {
+                            // Create a flattened row for this main+related pair
+                            TickerGroupDTO group = new TickerGroupDTO();
+
+                            // Set main ticker data
+                            group.setMainTicker(mainTicker);
+                            group.setMainName(mainMaster.getName());
+                            group.setMainType(mainMaster.getType());
+
+                            if (mainStock != null) {
+                                group.setMainPrice(mainStock.getPrice());
+                                group.setMainChange(mainStock.getChange());
+                                group.setMainHigh(mainStock.getHigh());
+                                group.setMainLow(mainStock.getLow());
+                                group.setMainVolume(mainStock.getVolume());
+                            }
+
+                            // Set related ticker data (single item)
+                            Stock relatedStock = stockMap.get(relatedMaster.getTicker());
+                            TickerGroupDTO.RelatedTickerDTO related = new TickerGroupDTO.RelatedTickerDTO();
+                            related.setTicker(relatedMaster.getTicker());
+                            related.setName(relatedMaster.getName());
+                            related.setType(relatedMaster.getType());
+
+                            // Determine leverage type: Short if description contains "short", "bear", or "inverse" (case-insensitive)
+                            String relatedNameLower = relatedName.toLowerCase();
+                            if (relatedNameLower.contains("short") || relatedNameLower.contains("bear") || relatedNameLower.contains("inverse")) {
+                                related.setLeverageType("Short");
+                            } else {
+                                related.setLeverageType("Long");
+                            }
+
+                            if (relatedStock != null) {
+                                related.setPrice(relatedStock.getPrice());
+                                related.setChange(relatedStock.getChange());
+                                related.setHigh(relatedStock.getHigh());
+                                related.setLow(relatedStock.getLow());
+                                related.setVolume(relatedStock.getVolume());
+                            }
+
+                            // Add single related ticker to list
+                            List<TickerGroupDTO.RelatedTickerDTO> relatedList = new ArrayList<>();
+                            relatedList.add(related);
+                            group.setRelatedTickers(relatedList);
+
+                            flattenedGroups.add(group);
+                        }
+                    }
+                }
+            }
+
+            log.info("Found {} flattened ticker group rows (non-ETF main tickers with ETF related tickers)", flattenedGroups.size());
+            return flattenedGroups;
+
+        } catch (Exception e) {
+            log.error("Error getting grouped tickers", e);
             return new ArrayList<>();
         }
     }

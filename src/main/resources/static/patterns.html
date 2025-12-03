@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MySwan – Patterns</title>
+    <link href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #f4f5f7;
+            color: #222;
+        }
+        .app-container {
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        .card {
+            width: 100%;
+            margin: 0;
+            border-radius: 0;
+            padding: 20px;
+        }
+        #grid {
+            width: 100%;
+        }
+        h1 {
+            margin: 0 0 8px;
+            font-size: 28px;
+        }
+        .sub-title {
+            margin-bottom: 16px;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .toolbar button {
+            padding: 8px 14px;
+            border-radius: 999px;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+            background: #2563eb;
+            color: #fff;
+            font-weight: 500;
+        }
+        .toolbar button.secondary {
+            background: #e5e7eb;
+            color: #111827;
+        }
+        .toolbar button.success {
+            background: #10b981;
+            color: #fff;
+        }
+        .grid-info {
+            margin-top: 8px;
+            font-size: 13px;
+            color: #6b7280;
+        }
+        .tabulator .tabulator-header .tabulator-col {
+            background: #f9fafb;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 8px 4px;
+        }
+        .tabulator .tabulator-cell {
+            font-size: 11px;
+            padding: 6px 4px;
+        }
+        .trend-long {
+            color: #10b981;
+            font-weight: 600;
+        }
+        .trend-short {
+            color: #ef4444;
+            font-weight: 600;
+        }
+    </style>
+    <script src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+<div class="app-container">
+    <div class="card">
+        <h1>MySwan – Stock Patterns</h1>
+        <div class="sub-title">
+            View <strong>eTrade pattern signals</strong> for active stocks. Patterns show breakout opportunities, entry/exit points, and price targets.
+            <br>
+            <a href="index.html" style="margin-right: 10px;">Dashboard</a>
+            <a href="classic.html" style="margin-right: 10px;">Classic View</a>
+            <a href="futures.html" style="margin-right: 10px;">Futures</a>
+            <a href="ticker-groups.html" style="margin-right: 10px;">Ticker Groups</a>
+            <a href="settings.html" style="margin-right: 10px;">Settings</a>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <button id="fetchPatternsBtn" class="success">Fetch Patterns (Parallel)</button>
+            <button id="reloadBtn">Reload</button>
+            <button id="clearFiltersBtn" class="secondary">Clear Filters</button>
+            <button id="exportExcelBtn" class="secondary">Export Excel</button>
+        </div>
+
+        <!-- Grid container -->
+        <div id="grid"></div>
+        <div class="grid-info" id="gridInfo"></div>
+    </div>
+</div>
+
+<script>
+    const API_BASE = "http://jpmaxtricks.com:8070/api";
+    let table;
+
+    // Custom filter function for numeric comparisons
+    function customNumberFilter(headerValue, rowValue, rowData, filterParams) {
+        // If no filter value, show all
+        if (!headerValue || headerValue.trim() === '') {
+            return true;
+        }
+
+        const filterStr = headerValue.trim();
+        const cellValue = parseFloat(rowValue);
+
+        // If cell value is not a number, don't match
+        if (isNaN(cellValue)) {
+            return false;
+        }
+
+        // Check for comparison operators
+        if (filterStr.startsWith('>=')) {
+            const threshold = parseFloat(filterStr.substring(2));
+            return !isNaN(threshold) && cellValue >= threshold;
+        } else if (filterStr.startsWith('<=')) {
+            const threshold = parseFloat(filterStr.substring(2));
+            return !isNaN(threshold) && cellValue <= threshold;
+        } else if (filterStr.startsWith('>')) {
+            const threshold = parseFloat(filterStr.substring(1));
+            return !isNaN(threshold) && cellValue > threshold;
+        } else if (filterStr.startsWith('<')) {
+            const threshold = parseFloat(filterStr.substring(1));
+            return !isNaN(threshold) && cellValue < threshold;
+        } else if (filterStr.startsWith('=')) {
+            const threshold = parseFloat(filterStr.substring(1));
+            return !isNaN(threshold) && cellValue === threshold;
+        } else {
+            // Try to parse as a number for exact match
+            const threshold = parseFloat(filterStr);
+            if (!isNaN(threshold)) {
+                return cellValue === threshold;
+            }
+            // Otherwise, show all (invalid filter)
+            return true;
+        }
+    }
+
+    const columns = [
+        {
+            title: "Action",
+            field: "action",
+            width: 80,
+            hozAlign: "center",
+            headerSort: false,
+            formatter: function(cell) {
+                return '<button class="add-pick-btn" style="padding: 4px 8px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">Add to Picks</button>';
+            },
+            cellClick: function(e, cell) {
+                const rowData = cell.getRow().getData();
+                addToPicks(rowData);
+            }
+        },
+        {
+            title: "Ticker",
+            field: "ticker",
+            headerFilter: "input",
+            headerFilterPlaceholder: "Filter...",
+            width: 80,
+            formatter: function(cell) {
+                const ticker = cell.getValue();
+                return `<a href="pattern-history.html?ticker=${encodeURIComponent(ticker)}"
+                           style="color: #2563eb; text-decoration: none; font-weight: 600;">${ticker}</a>`;
+            }
+        },
+        {
+            title: "Pattern Name",
+            field: "name",
+            headerFilter: "input",
+            headerFilterPlaceholder: "Filter...",
+            width: 200
+        },
+        {
+            title: "Trend",
+            field: "trend",
+            headerFilter: "input",
+            headerFilterPlaceholder: "long",
+            width: 80,
+            formatter: function(cell) {
+                const val = cell.getValue();
+                if (val === 'long') return '<span class="trend-long">LONG</span>';
+                if (val === 'short') return '<span class="trend-short">SHORT</span>';
+                return val;
+            }
+        },
+
+        {
+            title: "Change",
+            field: "change",
+            headerFilter: "input",
+            headerFilterPlaceholder: ">2",
+            headerFilterFunc: customNumberFilter,
+            width: 80,
+            formatter: function(cell){
+                const v = cell.getValue();
+                if (!v) return '-';
+                const formatted = v.toFixed(2);
+                if (v > 0) return `<span style="color: #22c55e;">▲ ${formatted}</span>`;
+                if (v < 0) return `<span style="color: #ef4444;">▼ ${formatted}</span>`;
+                return formatted;
+            }
+        },
+        {
+            title: "High",
+            field: "high",
+            headerFilter: "input",
+            headerFilterPlaceholder: "<200",
+            headerFilterFunc: customNumberFilter,
+            width: 80,
+            formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(2) : '-'; }
+        },
+        {
+            title: "Low",
+            field: "low",
+            headerFilter: "input",
+            headerFilterPlaceholder: ">50",
+            headerFilterFunc: customNumberFilter,
+            width: 80,
+            formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(2) : '-'; }
+        },
+        {
+            title: "Entry",
+            field: "entry",
+            headerFilter: "input",
+            headerFilterPlaceholder: ">100",
+            headerFilterFunc: customNumberFilter,
+            width: 80
+        },
+        {
+            title: "Price",
+            field: "price",
+            headerFilter: "input",
+            headerFilterPlaceholder: ">100",
+            headerFilterFunc: customNumberFilter,
+            width: 80,
+            formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(2) : '-'; }
+        },
+
+        {
+            title: "Min Target",
+            field: "minPT",
+            headerFilter: "input",
+            headerFilterPlaceholder: ">100",
+            headerFilterFunc: customNumberFilter,
+            width: 90
+        },
+        {
+            title: "Max Target",
+            field: "maxPT",
+            headerFilter: "input",
+            headerFilterPlaceholder: ">150",
+            headerFilterFunc: customNumberFilter,
+            width: 90
+        },
+        {
+            title: "Target Date",
+            field: "targetDate",
+            headerFilter: "input",
+            headerFilterPlaceholder: "2025-12",
+            width: 110
+        },
+        {
+            title: "Stop",
+            field: "stop",
+            headerFilter: "input",
+            headerFilterPlaceholder: "<100",
+            headerFilterFunc: customNumberFilter,
+            width: 80
+        },
+        {
+            title: "Open",
+            field: "open",
+            headerFilter: "input",
+            headerFilterPlaceholder: ">100",
+            headerFilterFunc: customNumberFilter,
+            width: 70,
+            formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(2) : '-'; }
+        },
+        {
+            title: "Vol",
+            field: "volume",
+            headerFilter: "input",
+            headerFilterPlaceholder: ">1M",
+            headerFilterFunc: customNumberFilter,
+            width: 90,
+            formatter: function(cell){
+                const v = cell.getValue();
+                return v ? (v / 1000000).toFixed(1) + 'M' : '-';
+            }
+        },
+        {
+            title: "Up↑",
+            field: "upDays",
+            headerFilter: "input",
+            headerFilterPlaceholder: ">=3",
+            headerFilterFunc: customNumberFilter,
+            width: 60,
+            hozAlign: "center",
+            formatter: function(cell) {
+                const val = cell.getValue();
+                if (val > 0) return `<span style="color: #22c55e; font-weight: 600;">${val}</span>`;
+                return val || '-';
+            }
+        },
+        {
+            title: "UpHi",
+            field: "upHigh",
+            headerFilter: "input",
+            headerFilterPlaceholder: ">100",
+            headerFilterFunc: customNumberFilter,
+            width: 70,
+            formatter: function(cell) {
+                const val = cell.getValue();
+                if (val > 0) return `<span style="color: #22c55e;">${val.toFixed(2)}</span>`;
+                return '-';
+            }
+        },
+        {
+            title: "Dn↓",
+            field: "downDays",
+            headerFilter: "input",
+            headerFilterPlaceholder: ">=3",
+            headerFilterFunc: customNumberFilter,
+            width: 60,
+            hozAlign: "center",
+            formatter: function(cell) {
+                const val = cell.getValue();
+                if (val > 0) return `<span style="color: #ef4444; font-weight: 600;">${val}</span>`;
+                return val || '-';
+            }
+        },
+        {
+            title: "DnLo",
+            field: "downLow",
+            headerFilter: "input",
+            headerFilterPlaceholder: "<100",
+            headerFilterFunc: customNumberFilter,
+            width: 70,
+            formatter: function(cell) {
+                const val = cell.getValue();
+                if (val > 0) return `<span style="color: #ef4444;">${val.toFixed(2)}</span>`;
+                return '-';
+            }
+        },
+        {
+            title: "Signal",
+            field: "signal",
+            headerFilter: "input",
+            headerFilterPlaceholder: "BUY",
+            width: 70,
+            formatter: function(cell) {
+                const val = cell.getValue();
+                if (val === 'BUY') return '<span style="color: #22c55e; font-weight: 600;">BUY</span>';
+                if (val === 'SELL') return '<span style="color: #ef4444; font-weight: 600;">SELL</span>';
+                return val || '-';
+            }
+        },
+        {
+            title: "Score",
+            field: "overallScore",
+            headerFilter: "input",
+            headerFilterPlaceholder: ">70",
+            headerFilterFunc: customNumberFilter,
+            width: 70,
+            hozAlign: "center"
+        },
+        {
+            title: "Bot",
+            field: "bottomConditionsMet",
+            headerFilter: "input",
+            headerFilterPlaceholder: ">=5",
+            headerFilterFunc: customNumberFilter,
+            width: 60,
+            hozAlign: "center"
+        },
+        {
+            title: "Spk",
+            field: "spikeScore",
+            headerFilter: "input",
+            headerFilterPlaceholder: ">70",
+            headerFilterFunc: customNumberFilter,
+            width: 60,
+            hozAlign: "center"
+        },
+        {
+            title: "Long#",
+            field: "noOfLongPatterns",
+            headerFilter: "input",
+            headerFilterPlaceholder: ">0",
+            headerFilterFunc: customNumberFilter,
+            width: 70,
+            hozAlign: "center"
+        },
+        {
+            title: "Short#",
+            field: "noOfShortPatterns",
+            headerFilter: "input",
+            headerFilterPlaceholder: ">0",
+            headerFilterFunc: customNumberFilter,
+            width: 70,
+            hozAlign: "center"
+        },
+        {
+            title: "BTL",
+            field: "btLongRating",
+            headerFilter: "input",
+            headerFilterPlaceholder: "Buy",
+            width: 80
+        },
+        {
+            title: "BTS",
+            field: "btShortRating",
+            headerFilter: "input",
+            headerFilterPlaceholder: "Buy",
+            width: 80
+        },
+        {
+            title: "BTT",
+            field: "btTrend",
+            headerFilter: "input",
+            headerFilterPlaceholder: "Up",
+            width: 70
+        },
+        {
+            title: "TVT",
+            field: "tradingViewTechRating",
+            headerFilter: "input",
+            headerFilterPlaceholder: "Buy",
+            width: 80
+        },
+        {
+            title: "TVM",
+            field: "tradingViewMARating",
+            headerFilter: "input",
+            headerFilterPlaceholder: "Buy",
+            width: 80
+        },
+        {
+            title: "Status",
+            field: "status",
+            headerFilter: "input",
+            headerFilterPlaceholder: "Y",
+            width: 70
+        },
+        {
+            title: "Date",
+            field: "histDate",
+            headerFilter: "input",
+            headerFilterPlaceholder: "2025-11",
+            width: 110
+        }
+    ];
+
+    function createTable() {
+        if (table) {
+            table.destroy();
+        }
+
+        table = new Tabulator("#grid", {
+            layout: "fitDataStretch",
+            height: "calc(100vh - 250px)",
+            pagination: true,
+            paginationSize: 50,
+            paginationSizeSelector: [25, 50, 100, 200, 500],
+            columns: columns,
+            initialSort: [
+                {column: "ticker", dir: "asc"}
+            ]
+        });
+    }
+
+    function getTickerFromUrl() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('ticker');
+    }
+
+    async function loadData() {
+        console.log('Loading pattern data...');
+        const tickerFilter = getTickerFromUrl();
+
+        if (tickerFilter) {
+            document.querySelector('h1').innerHTML = `MySwan – Stock Patterns <span style="background: #2563eb; color: white; padding: 4px 12px; border-radius: 6px; font-size: 0.8em; margin-left: 10px;">${tickerFilter}</span>`;
+        }
+
+        createTable();
+
+        try {
+            // Load patterns - use dedicated ticker endpoint if filtering
+            let patterns;
+            if (tickerFilter) {
+                console.log('Fetching patterns for ticker:', tickerFilter);
+
+                // Load stocks with patterns
+                const stocksResponse = await fetch(`${API_BASE}/stock/list-with-patterns`);
+                const stocks = await stocksResponse.json();
+                console.log('Loaded stocks with patterns:', stocks.length);
+
+                // Flatten patterns from stocks and filter by ticker
+                const allPatterns = [];
+                stocks.forEach(stock => {
+                    if (stock.patterns && stock.patterns.length > 0) {
+                        stock.patterns.forEach(pattern => {
+                            // Enrich pattern with stock data
+                            allPatterns.push({
+                                ...pattern,
+                                price: stock.price,
+                                change: stock.change,
+                                high: stock.high,
+                                low: stock.low,
+                                open: stock.open,
+                                volume: stock.volume,
+                                upDays: stock.upDays,
+                                downDays: stock.downDays,
+                                upHigh: stock.upHigh,
+                                downLow: stock.downLow,
+                                signal: stock.score?.signal,
+                                overallScore: stock.score?.overallScore,
+                                bottomConditionsMet: stock.bottom?.conditionsMet,
+                                spikeScore: stock.spike?.spikeScore,
+                                btShortRating: stock.rating?.btShortRating,
+                                btLongRating: stock.rating?.btLongRating,
+                                btTrend: stock.rating?.btTrend,
+                                tradingViewTechRating: stock.rating?.tradingViewTechRating,
+                                tradingViewMARating: stock.rating?.tradingViewMARating
+                            });
+                        });
+                    }
+                });
+                console.log('Total patterns from stocks:', allPatterns.length);
+
+                // Get unique tickers to see what we have
+                const uniqueTickers = [...new Set(allPatterns.map(p => p.ticker))].sort();
+                console.log('Unique tickers in patterns:', uniqueTickers.length);
+
+                // Check for VFC variations
+                const vfcVariations = uniqueTickers.filter(t => t && t.toUpperCase().includes('VFC'));
+                console.log('VFC ticker variations found:', vfcVariations);
+
+                // Try exact match first
+                patterns = allPatterns.filter(p => p.ticker === tickerFilter);
+                console.log('Exact match for "' + tickerFilter + '":', patterns.length);
+
+                // Try case-insensitive match
+                if (patterns.length === 0) {
+                    patterns = allPatterns.filter(p => p.ticker && p.ticker.toUpperCase() === tickerFilter.toUpperCase());
+                    console.log('Case-insensitive match for "' + tickerFilter + '":', patterns.length);
+                }
+
+                // Try finding similar tickers
+                if (patterns.length === 0) {
+                    const similarTickers = uniqueTickers.filter(t => t && (
+                        t.includes(tickerFilter) ||
+                        tickerFilter.includes(t) ||
+                        t.toUpperCase().includes(tickerFilter.toUpperCase())
+                    ));
+                    console.log('Similar tickers found:', similarTickers);
+                }
+
+                console.log('Final filtered patterns for ticker:', tickerFilter, 'Count:', patterns.length);
+                if (patterns.length > 0) {
+                    console.log('Pattern data:', patterns);
+                }
+            } else {
+                // Load all stocks with patterns
+                const stocksResponse = await fetch(`${API_BASE}/stock/list-with-patterns`);
+                const stocks = await stocksResponse.json();
+                console.log('Loaded stocks with patterns:', stocks.length);
+
+                // Flatten patterns from stocks
+                patterns = [];
+                stocks.forEach(stock => {
+                    if (stock.patterns && stock.patterns.length > 0) {
+                        stock.patterns.forEach(pattern => {
+                            // Enrich pattern with stock data
+                            patterns.push({
+                                ...pattern,
+                                price: stock.price,
+                                change: stock.change,
+                                high: stock.high,
+                                low: stock.low,
+                                open: stock.open,
+                                volume: stock.volume,
+                                upDays: stock.upDays,
+                                downDays: stock.downDays,
+                                upHigh: stock.upHigh,
+                                downLow: stock.downLow,
+                                signal: stock.score?.signal,
+                                overallScore: stock.score?.overallScore,
+                                bottomConditionsMet: stock.bottom?.conditionsMet,
+                                spikeScore: stock.spike?.spikeScore,
+                                btShortRating: stock.rating?.btShortRating,
+                                btLongRating: stock.rating?.btLongRating,
+                                btTrend: stock.rating?.btTrend,
+                                tradingViewTechRating: stock.rating?.tradingViewTechRating,
+                                tradingViewMARating: stock.rating?.tradingViewMARating
+                            });
+                        });
+                    }
+                });
+                console.log('Total patterns from all stocks:', patterns.length);
+            }
+
+            // Patterns already enriched with stock data
+            console.log('Patterns enriched with stock data from stock objects');
+
+            if (table) {
+                table.setData(patterns);
+                updateGridInfo(patterns.length, tickerFilter);
+            }
+
+            // Show warning if no patterns found for filtered ticker
+            if (tickerFilter && patterns.length === 0) {
+                console.warn('No patterns found for ticker:', tickerFilter);
+                alert(`No patterns found for ticker: ${tickerFilter}\n\nThis could mean:\n1. Pattern was not fetched from eTrade\n2. Pattern has no entry price (filtered out)\n3. Ticker case mismatch in database\n\nCheck console logs for details.`);
+            }
+
+        } catch (err) {
+            console.error('Error loading patterns:', err);
+            alert('Failed to load patterns: ' + err.message);
+        }
+    }
+
+    function updateGridInfo(count, ticker) {
+        const info = document.getElementById('gridInfo');
+        if (ticker) {
+            info.textContent = `Showing ${count} pattern${count !== 1 ? 's' : ''} for ${ticker}`;
+        } else {
+            info.textContent = `Showing ${count} pattern${count !== 1 ? 's' : ''}`;
+        }
+    }
+
+    async function fetchPatterns() {
+        if (!confirm('Fetch eTrade patterns for all enabled stocks? This will process stocks in parallel batches of 50.')) return;
+
+        const btn = document.getElementById('fetchPatternsBtn');
+        btn.disabled = true;
+        btn.textContent = 'Fetching...';
+
+        try {
+            const response = await fetch(`${API_BASE}/pattern/fetch-etrade`, { method: 'POST' });
+            if (response.ok) {
+                const result = await response.text();
+                alert('Patterns fetched successfully!\n' + result);
+                loadData();
+            } else {
+                alert('Pattern fetch failed. Check console for details.');
+            }
+        } catch (error) {
+            console.error('Error fetching patterns:', error);
+            alert('Error: ' + error.message);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Fetch Patterns (2 stocks test)';
+        }
+    }
+
+    function exportExcel() {
+        if (!table) return;
+        const data = table.getData();
+        if (!data.length) return alert('No data to export');
+
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Patterns');
+        XLSX.writeFile(wb, `myswan-patterns-${new Date().toISOString().slice(0,10)}.xlsx`);
+    }
+
+    async function addToPicks(patternData) {
+        if (!confirm(`Add ${patternData.ticker} to picks?`)) return;
+
+        const pick = {
+            ticker: patternData.ticker,
+            reason: `Pattern: ${patternData.name} (${patternData.trend})`,
+            entry: parseFloat(patternData.entry) || patternData.price,
+            target: parseFloat(patternData.maxPT) || 0,
+            stopLoss: parseFloat(patternData.stop) || 0,
+            targetDate: patternData.targetDate || null,
+            addedDate: new Date().toISOString().split('T')[0],
+            addedPrice: patternData.price,
+            targetMet: false,
+            stopLossMet: false,
+            noOfLongPatterns: patternData.noOfLongPatterns || 0,
+            noOfShortPatterns: patternData.noOfShortPatterns || 0
+        };
+
+        try {
+            const response = await fetch(`${API_BASE}/picks/create`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(pick)
+            });
+
+            if (response.ok) {
+                alert(`✓ ${patternData.ticker} added to picks!`);
+            } else {
+                throw new Error('Failed to add pick');
+            }
+        } catch (error) {
+            console.error('Error adding to picks:', error);
+            alert('Failed to add to picks: ' + error.message);
+        }
+    }
+
+    // Event Listeners
+    document.getElementById('reloadBtn').addEventListener('click', loadData);
+    document.getElementById('clearFiltersBtn').addEventListener('click', () => {
+        if (table) table.clearHeaderFilter();
+    });
+    document.getElementById('exportExcelBtn').addEventListener('click', exportExcel);
+    document.getElementById('fetchPatternsBtn').addEventListener('click', fetchPatterns);
+
+    // Initialize
+    window.addEventListener('DOMContentLoaded', loadData);
+</script>
+</body>
+</html>
+

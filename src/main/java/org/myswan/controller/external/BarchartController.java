@@ -4,6 +4,7 @@ import org.myswan.service.external.BarchartClient;
 import org.myswan.service.external.vo.BarchartVO;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -19,13 +20,13 @@ public class BarchartController {
         this.barchartClient = barchartClient;
     }
 
-    @GetMapping("/getDailyQuotes")
+    @PostMapping("/getDailyQuotes")
     public ResponseEntity<List<BarchartVO>> getDailyQuotes() throws Exception {
         List<BarchartVO> result = barchartClient.getDailyQuotes();
         return ResponseEntity.ok(result);
     }
 
-    @GetMapping("/getIntraDayQuotes")
+    @PostMapping("/getIntraDayQuotes")
     public ResponseEntity<List<BarchartVO>> getIntraDayQuotes() throws Exception {
         List<BarchartVO> result = barchartClient.getIntraDayQuotes();
         return ResponseEntity.ok(result);

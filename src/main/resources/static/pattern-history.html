@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MySwan – Pattern History</title>
+    <link href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #f4f5f7;
+            color: #222;
+        }
+        .app-container {
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        .card {
+            width: 100%;
+            margin: 0;
+            border-radius: 0;
+            padding: 20px;
+        }
+        #grid {
+            width: 100%;
+        }
+        h1 {
+            margin: 0 0 8px;
+            font-size: 28px;
+        }
+        .ticker-badge {
+            display: inline-block;
+            background: #2563eb;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 20px;
+            margin-left: 10px;
+        }
+        .sub-title {
+            margin-bottom: 16px;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .toolbar button {
+            padding: 8px 14px;
+            border-radius: 999px;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+            background: #2563eb;
+            color: #fff;
+            font-weight: 500;
+        }
+        .toolbar button.secondary {
+            background: #e5e7eb;
+            color: #111827;
+        }
+        .grid-info {
+            margin-top: 8px;
+            font-size: 13px;
+            color: #6b7280;
+        }
+        .tabulator .tabulator-header .tabulator-col {
+            background: #f9fafb;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 8px 4px;
+        }
+        .tabulator .tabulator-cell {
+            font-size: 11px;
+            padding: 6px 4px;
+        }
+        .trend-long {
+            color: #10b981;
+            font-weight: 600;
+        }
+        .trend-short {
+            color: #ef4444;
+            font-weight: 600;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 16px;
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+    <script src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+<div class="app-container">
+    <div class="card">
+        <a href="patterns.html" class="back-link">← Back to Patterns</a>
+        <h1>Pattern History <span class="ticker-badge" id="tickerBadge">-</span></h1>
+        <div class="sub-title">
+            View <strong>historical pattern signals</strong> for this ticker. Track how patterns have evolved over time.
+            <br>
+            <a href="index.html" style="margin-right: 10px;">Dashboard</a>
+            <a href="classic.html" style="margin-right: 10px;">Classic View</a>
+            <a href="patterns.html" style="margin-right: 10px;">Patterns</a>
+            <a href="settings.html" style="margin-right: 10px;">Settings</a>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <button id="reloadBtn">Reload</button>
+            <button id="clearFiltersBtn" class="secondary">Clear Filters</button>
+            <button id="exportExcelBtn" class="secondary">Export Excel</button>
+        </div>
+
+        <!-- Grid container -->
+        <div id="grid"></div>
+        <div class="grid-info" id="gridInfo"></div>
+    </div>
+</div>
+
+<script>
+    const API_BASE = "http://jpmaxtricks.com:8070/api";
+    let table;
+    let currentTicker = "";
+
+    const columns = [
+        {title: "Date", field: "histDate", headerFilter: "input", width: 110},
+        {title: "Pattern Name", field: "name", headerFilter: "input", width: 200},
+        {title: "Trend", field: "trend", headerFilter: "input", width: 80,
+            formatter: function(cell) {
+                const val = cell.getValue();
+                if (val === 'long') return '<span class="trend-long">LONG</span>';
+                if (val === 'short') return '<span class="trend-short">SHORT</span>';
+                return val;
+            }
+        },
+        {title: "Price", field: "price", headerFilter: "input", width: 80, formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(2) : '-'; }},
+        {title: "Change", field: "change", headerFilter: "input", width: 80, formatter: function(cell){
+            const v = cell.getValue();
+            if (!v) return '-';
+            const formatted = v.toFixed(2);
+            if (v > 0) return `<span style="color: #22c55e;">▲ ${formatted}</span>`;
+            if (v < 0) return `<span style="color: #ef4444;">▼ ${formatted}</span>`;
+            return formatted;
+        }},
+        {title: "High", field: "high", headerFilter: "input", width: 80, formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(2) : '-'; }},
+        {title: "Low", field: "low", headerFilter: "input", width: 80, formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(2) : '-'; }},
+        {title: "Entry", field: "entry", headerFilter: "input", width: 80},
+        {title: "Stop", field: "stop", headerFilter: "input", width: 80},
+        {title: "Min Target", field: "minPT", headerFilter: "input", width: 90},
+        {title: "Max Target", field: "maxPT", headerFilter: "input", width: 90},
+        {title: "Target Date", field: "targetDate", headerFilter: "input", width: 110},
+        {title: "Open", field: "open", headerFilter: "input", width: 70, formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(2) : '-'; }},
+        {title: "Vol", field: "volume", headerFilter: "input", width: 90, formatter: function(cell){ const v = cell.getValue(); return v ? (v / 1000000).toFixed(1) + 'M' : '-'; }},
+        {title: "Up↑", field: "upDays", headerFilter: "input", width: 60, hozAlign: "center", formatter: function(cell) { const val = cell.getValue(); if (val > 0) return `<span style="color: #22c55e; font-weight: 600;">${val}</span>`; return val || '-'; }},
+        {title: "UpHi", field: "upHigh", headerFilter: "input", width: 70, formatter: function(cell) { const val = cell.getValue(); if (val > 0) return `<span style="color: #22c55e;">${val.toFixed(2)}</span>`; return '-'; }},
+        {title: "Dn↓", field: "downDays", headerFilter: "input", width: 60, hozAlign: "center", formatter: function(cell) { const val = cell.getValue(); if (val > 0) return `<span style="color: #ef4444; font-weight: 600;">${val}</span>`; return val || '-'; }},
+        {title: "DnLo", field: "downLow", headerFilter: "input", width: 70, formatter: function(cell) { const val = cell.getValue(); if (val > 0) return `<span style="color: #ef4444;">${val.toFixed(2)}</span>`; return '-'; }},
+        {title: "Signal", field: "signal", headerFilter: "input", width: 70, formatter: function(cell) { const val = cell.getValue(); if (val === 'BUY') return '<span style="color: #22c55e; font-weight: 600;">BUY</span>'; if (val === 'SELL') return '<span style="color: #ef4444; font-weight: 600;">SELL</span>'; return val || '-'; }},
+        {title: "Score", field: "overallScore", headerFilter: "input", width: 70, hozAlign: "center"},
+        {title: "Bot", field: "bottomConditionsMet", headerFilter: "input", width: 60, hozAlign: "center"},
+        {title: "Spk", field: "spikeScore", headerFilter: "input", width: 60, hozAlign: "center"},
+        {title: "Long#", field: "noOfLongPatterns", headerFilter: "input", width: 70, hozAlign: "center"},
+        {title: "Short#", field: "noOfShortPatterns", headerFilter: "input", width: 70, hozAlign: "center"},
+        {title: "BTL", field: "btLongRating", headerFilter: "input", width: 80},
+        {title: "BTS", field: "btShortRating", headerFilter: "input", width: 80},
+        {title: "BTT", field: "btTrend", headerFilter: "input", width: 70},
+        {title: "TVT", field: "tradingViewTechRating", headerFilter: "input", width: 80},
+        {title: "TVM", field: "tradingViewMARating", headerFilter: "input", width: 80},
+        {title: "Status", field: "status", headerFilter: "input", width: 70}
+    ];
+
+    function createTable() {
+        if (table) {
+            table.destroy();
+        }
+
+        table = new Tabulator("#grid", {
+            layout: "fitDataStretch",
+            height: "calc(100vh - 280px)",
+            pagination: true,
+            paginationSize: 50,
+            paginationSizeSelector: [25, 50, 100, 200, 500],
+            columns: columns,
+            initialSort: [
+                {column: "histDate", dir: "desc"}
+            ]
+        });
+    }
+
+    function getTickerFromUrl() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('ticker');
+    }
+
+    async function loadData() {
+        currentTicker = getTickerFromUrl();
+
+        if (!currentTicker) {
+            alert('No ticker specified in URL');
+            return;
+        }
+
+        document.getElementById('tickerBadge').textContent = currentTicker;
+        console.log('Loading pattern history for ticker:', currentTicker);
+
+        createTable();
+
+        try {
+            // Load pattern history
+            const response = await fetch(`${API_BASE}/pattern/history/${encodeURIComponent(currentTicker)}`);
+            const patternHistory = await response.json();
+            console.log('Loaded pattern history:', patternHistory.length);
+
+            // Load stock history to enrich pattern data
+            const stockResponse = await fetch(`${API_BASE}/stock/history/${encodeURIComponent(currentTicker)}`);
+            const stockHistory = await stockResponse.json();
+            console.log('Loaded stock history for enrichment:', stockHistory.length);
+
+            // Create stock history map by date for fast lookup
+            const stockByDate = {};
+            stockHistory.forEach(stock => {
+                if (stock.histDate) {
+                    stockByDate[stock.histDate] = stock;
+                }
+            });
+
+            // Enrich pattern history with stock data
+            const enrichedData = patternHistory.map(pattern => {
+                const stockData = stockByDate[pattern.histDate];
+                if (stockData) {
+                    return {
+                        ...pattern,
+                        open: stockData.open,
+                        volume: stockData.volume,
+                        upDays: stockData.upDays,
+                        downDays: stockData.downDays,
+                        upHigh: stockData.upHigh,
+                        downLow: stockData.downLow,
+                        signal: stockData.score?.signal,
+                        overallScore: stockData.score?.overallScore,
+                        bottomConditionsMet: stockData.bottom?.conditionsMet,
+                        spikeScore: stockData.spike?.spikeScore,
+                        btLongRating: stockData.rating?.btLongRating,
+                        btShortRating: stockData.rating?.btShortRating,
+                        btTrend: stockData.rating?.btTrend,
+                        tradingViewTechRating: stockData.rating?.tradingViewTechRating,
+                        tradingViewMARating: stockData.rating?.tradingViewMARating
+                    };
+                }
+                return pattern;
+            });
+
+            console.log('Enriched pattern history with stock data');
+
+            if (table) {
+                table.setData(enrichedData);
+                updateGridInfo(enrichedData.length);
+            }
+
+        } catch (err) {
+            console.error('Error loading pattern history:', err);
+            alert('Failed to load pattern history: ' + err.message);
+        }
+    }
+
+    function updateGridInfo(count) {
+        const info = document.getElementById('gridInfo');
+        info.textContent = `Showing ${count} historical pattern${count !== 1 ? 's' : ''} for ${currentTicker}`;
+    }
+
+    function exportExcel() {
+        if (!table) return;
+        const data = table.getData();
+        if (!data.length) return alert('No data to export');
+
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Pattern History');
+        XLSX.writeFile(wb, `myswan-pattern-history-${currentTicker}-${new Date().toISOString().slice(0,10)}.xlsx`);
+    }
+
+    // Event Listeners
+    document.getElementById('reloadBtn').addEventListener('click', loadData);
+    document.getElementById('clearFiltersBtn').addEventListener('click', () => {
+        if (table) table.clearHeaderFilter();
+    });
+    document.getElementById('exportExcelBtn').addEventListener('click', exportExcel);
+
+    // Initialize
+    window.addEventListener('DOMContentLoaded', loadData);
+</script>
+</body>
+</html>
+
