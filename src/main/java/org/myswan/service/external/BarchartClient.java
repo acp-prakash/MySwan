@@ -189,6 +189,7 @@ public class BarchartClient {
     private Stock applyQuoteToStock(BarchartVO vo) {
         Stock s = new Stock();
         s.setHistDate(LocalDate.now());
+        //s.setHistDate(LocalDate.now().minusDays(1)); // set to previous day to match EOD data
         s.setTicker(vo.getSymbol());
         s.setId(vo.getSymbol());
         s.setPrice(vo.getPrice());

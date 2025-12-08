@@ -28,10 +28,12 @@ public class StockService {
     private static final Logger log = LoggerFactory.getLogger(StockService.class);
     private final StockRepository repository;
     private final MongoTemplate mongoTemplate;
+    private final PicksService picksService;
 
-    public StockService(StockRepository repository, MongoTemplate mongoTemplate) {
+    public StockService(StockRepository repository, MongoTemplate mongoTemplate, PicksService picksService) {
         this.repository = repository;
         this.mongoTemplate = mongoTemplate;
+        this.picksService = picksService;
     }
 
     public Optional<Stock> getByTicker(String ticker) {
@@ -48,18 +50,41 @@ public class StockService {
         BeanUtils.copyProperties(s, history);
         history.setId(null);
         mongoTemplate.insert(history, "stockHistory");
+
+        // notify picks to refresh for this ticker
+        if (s.getTicker() != null) {
+            try {
+                picksService.refreshPicksForTickers(Collections.singleton(s.getTicker()));
+            } catch (Exception e) {
+                log.warn("Failed to refresh picks for {} after create: {}", s.getTicker(), e.getMessage());
+            }
+        }
+
         return s;
     }
 
     public Stock update(String ticker, Stock stock) {
         stock.setTicker(ticker);
-        return repository.save(stock);
+        Stock s = repository.save(stock);
+
+        // notify picks to refresh for this ticker
+        if (ticker != null) {
+            try {
+                picksService.refreshPicksForTickers(Collections.singleton(ticker));
+            } catch (Exception e) {
+                log.warn("Failed to refresh picks for {} after update: {}", ticker, e.getMessage());
+            }
+        }
+
+        return s;
 
     }
 
     public void delete(String ticker) {
         repository.deleteById(ticker);
         deleteHistoryByTicker(ticker);
+
+        // picks unaffected? we could optionally clear stock snapshots in picks
     }
 
     public boolean exists(String ticker) {
@@ -111,6 +136,8 @@ public class StockService {
 
         BulkOperations ops = mongoTemplate.bulkOps(BulkOperations.BulkMode.UNORDERED, Stock.class);
 
+        Set<String> tickersToRefresh = new HashSet<>();
+
         for (Stock s : stocks) {
             if (s.getTicker() == null || s.getTicker().isBlank()) continue;
 
@@ -124,11 +151,21 @@ public class StockService {
             }
 
             ops.upsert(query, update);
+            tickersToRefresh.add(s.getTicker());
         }
 
         ops.execute();
 
         syncStockHistory();
+
+        // notify picks for all affected tickers
+        if (!tickersToRefresh.isEmpty()) {
+            try {
+                picksService.refreshPicksForTickers(tickersToRefresh);
+            } catch (Exception e) {
+                log.warn("Failed to refresh picks after bulkPatch: {}", e.getMessage());
+            }
+        }
     }
 
     public void updateTradingView(List<TradingViewVO> tvList) {
@@ -137,7 +174,9 @@ public class StockService {
             return;
         }
         LocalDate today = LocalDate.now();
+        //LocalDate today = LocalDate.now().minusDays(1);
         List<Stock> toSave = new ArrayList<>(tvList.size());
+        Set<String> tickersToRefresh = new HashSet<>();
         for (TradingViewVO vo : tvList) {
             if (vo.getTicker() == null || vo.getTicker().isBlank()) continue;
             // Try existing
@@ -174,9 +213,18 @@ public class StockService {
             existing.getRating().setTradingViewTechRating(vo.getTechRating());
             existing.getRating().setTradingViewAnalystsRating(vo.getAnalystsRating());
             toSave.add(existing);
+            tickersToRefresh.add(existing.getTicker());
         }
         repository.saveAll(toSave);
         syncStockHistory();
+        // notify picks
+        if (!tickersToRefresh.isEmpty()) {
+            try {
+                picksService.refreshPicksForTickers(tickersToRefresh);
+            } catch (Exception e) {
+                log.warn("Failed to refresh picks after TradingView update: {}", e.getMessage());
+            }
+        }
         log.info("TradingView update completed. Saved {} stocks", toSave.size());
     }
 

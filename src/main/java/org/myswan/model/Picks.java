@@ -27,28 +27,6 @@ public class Picks {
     private LocalDate stopLossMetDate;
     private boolean targetMet;
     private boolean stopLossMet;
-
-    // Current/Latest data (updated from stock collection)
-    private double currentPrice;
-    private double currentChange;
-    private int currentNoOfLongPatterns;
-    private int currentNoOfShortPatterns;
-
-    // Original data at time of adding
-    private int noOfLongPatterns;
-    private int noOfShortPatterns;
-    private double overAllScore;
-    private double bottomScore;
-    private double reversalScore;
-    private double breakoutScore;
-    private double patternScore;
-    private double spikeScore;
-    private String signal;
-    private String btShortRating;
-    private String btLongRating;
-    private String btRating;
-    private String btTrend;
-    private String tradingViewTechRating;
-    private String tradingViewMARating;
-    private String tradingViewOSRating;
+    private String historyDate;
+    private Stock stock;
 }

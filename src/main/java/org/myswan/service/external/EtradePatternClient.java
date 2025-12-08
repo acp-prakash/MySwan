@@ -137,6 +137,7 @@ public class EtradePatternClient {
                         Pattern pattern = new Pattern();
                         pattern.setTicker(ticker);
                         pattern.setHistDate(UtilHelper.formatLocalDateToString(LocalDate.now()));
+                        //pattern.setHistDate(UtilHelper.formatLocalDateToString(LocalDate.now().minusDays(1)));
                         pattern.setStop(UtilHelper.stripStringToTwoDecimals(
                             UtilHelper.checkForPresence(event, "deactivationPrice"), false));
                         pattern.setId(UtilHelper.checkForPresence(event, "eventId"));

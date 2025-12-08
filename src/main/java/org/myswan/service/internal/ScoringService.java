@@ -2,7 +2,6 @@ package org.myswan.service.internal;
 
 import org.myswan.helpers.scoring.*;
 import org.myswan.helpers.scoring.ConsecutiveDaysCalculator;
-import org.myswan.model.compute.FilterCategory;
 import org.myswan.model.compute.Score;
 import org.myswan.model.Stock;
 import org.myswan.repository.StockRepository;
@@ -30,14 +29,14 @@ public class ScoringService {
     private final MomentumPopDetect momentumPopDetect;
     private final FilterCategoryDetect filterCategoryDetect;
     private final ConsecutiveDaysCalculator consecutiveDaysCalculator;
+    private final DailyRanking dailyRanking;
 
     public ScoringService(StockService stockService, StockRepository repository,
                           DayTrading dayTrading,SwingTrading swingTrading,Reversal reversal,
                           Breakout breakout,Pattern pattern, BottomDetect bottomDetect,
                           SpikeDetect spikeDetect, OversoldBounceDetect oversoldBounceDetect,
-                          MomentumPopDetect momentumPopDetect,
-                          FilterCategoryDetect filterCategoryDetect,
-                          ConsecutiveDaysCalculator consecutiveDaysCalculator) {
+                          MomentumPopDetect momentumPopDetect, FilterCategoryDetect filterCategoryDetect,
+                          ConsecutiveDaysCalculator consecutiveDaysCalculator, DailyRanking dailyRanking) {
         this.stockService = stockService;
         this.repository = repository;
         this.dayTrading = dayTrading;
@@ -51,6 +50,7 @@ public class ScoringService {
         this.momentumPopDetect = momentumPopDetect;
         this.filterCategoryDetect = filterCategoryDetect;
         this.consecutiveDaysCalculator = consecutiveDaysCalculator;
+        this.dailyRanking = dailyRanking;
     }
 
     public String calculateScore() {
@@ -59,6 +59,7 @@ public class ScoringService {
 
             // Calculate previous business day (skip weekends)
             LocalDate previousDate = LocalDate.now().minusDays(1);
+			//LocalDate previousDate = LocalDate.now().minusDays(2);
             while (previousDate.getDayOfWeek().getValue() >= 6) { // 6=Saturday, 7=Sunday
                 previousDate = previousDate.minusDays(1);
             }
@@ -110,6 +111,8 @@ public class ScoringService {
                 Stock previousDayStock = historyMap.get(stock.getTicker());
                 filterCategoryDetect.filterCategory(stock, previousDayStock);
             });
+
+            allList.parallelStream().forEach(dailyRanking::dailyRanking);//DailyRanking Setup
             repository.saveAll(allList);
             stockService.syncStockHistory();
             return "Scoring calculation complete: " + allList.size() + " stocks processed";
@@ -180,5 +183,44 @@ public class ScoringService {
 
         stock.getScore().setSignal(signal);
         stock.getScore().setSignalReason(reason.toString());
+
+        // Calculate consecutive signal days including today
+        try {
+            // Start with today = 1 (current signal)
+            int signalDays = 1;
+
+            String ticker = stock.getTicker();
+            if (ticker != null && !ticker.isBlank()) {
+                // Determine previous business-day window to inspect (last 30 calendar days)
+                java.time.LocalDate endDate = java.time.LocalDate.now().minusDays(1);
+                // Walk back to skip weekends for endDate if needed
+                while (endDate.getDayOfWeek().getValue() >= 6) { // 6=Sat,7=Sun
+                    endDate = endDate.minusDays(1);
+                }
+                java.time.LocalDate fromDate = endDate.minusDays(30);
+
+                // Fetch history for this ticker for the date range [fromDate, endDate]
+                List<Stock> history = stockService.getStockHistory(ticker, fromDate, endDate);
+
+                // history is sorted DESC by histDate in getStockHistory
+                for (Stock h : history) {
+                    if (h == null) continue;
+                    if (h.getScore() == null) break;
+                    String prevSignal = h.getScore().getSignal();
+                    if (prevSignal == null) break;
+                    if (prevSignal.equalsIgnoreCase(signal)) {
+                        signalDays++;
+                    } else {
+                        break; // signal changed in history
+                    }
+                }
+            }
+
+            stock.getScore().setSignalDays(signalDays);
+        } catch (Exception e) {
+            log.warn("Failed to compute signalDays for {}: {}", stock.getTicker(), e.getMessage());
+            // leave signalDays as default (0) if failure
+        }
+
     }
 }

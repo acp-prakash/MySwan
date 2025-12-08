@@ -161,6 +161,7 @@ public class FuturesBarchartClient {
         futures.setId(fullSymbol);
         futures.setType("FUTURE");
         futures.setHistDate(LocalDate.now());
+        //futures.setHistDate(LocalDate.now().minusDays(1));
 
         // Price fields
         futures.setPrice(getDoubleValue(raw, "dailyLastPrice", "lastPrice"));

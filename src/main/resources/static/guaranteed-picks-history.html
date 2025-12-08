@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guaranteed Picks - Performance History</title>
+    <link href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator_midnight.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+            color: #fff;
+            padding: 15px;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.4);
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 32px;
+        }
+
+        .nav-links {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .nav-links a {
+            color: #4a90e2;
+            text-decoration: none;
+            margin: 0 15px;
+            font-size: 15px;
+        }
+
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
+
+        .stats-bar {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: #aaa;
+            margin-top: 3px;
+        }
+
+        .filters {
+            background: rgba(30, 41, 59, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .filter-group label {
+            font-weight: bold;
+            color: #aaa;
+            font-size: 14px;
+        }
+
+        .filter-group select {
+            padding: 8px 12px;
+            border-radius: 5px;
+            border: 1px solid #4a90e2;
+            background: rgba(0,0,0,0.3);
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .btn {
+            padding: 8px 20px;
+            border-radius: 20px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff;
+        }
+
+        #picks-table {
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .tabulator {
+            font-size: 13px;
+            background: transparent;
+        }
+
+        .outcome-SUCCESS {
+            background: rgba(0,255,0,0.1);
+            color: #00ff00;
+            padding: 4px 10px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        .outcome-PARTIAL {
+            background: rgba(255,215,0,0.1);
+            color: #ffd700;
+            padding: 4px 10px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        .outcome-FAIL {
+            background: rgba(255,68,68,0.1);
+            color: #ff4444;
+            padding: 4px 10px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        .outcome-PENDING {
+            background: rgba(100,100,100,0.1);
+            color: #aaa;
+            padding: 4px 10px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        .positive { color: #00ff00; font-weight: bold; }
+        .negative { color: #ff4444; font-weight: bold; }
+        .ticker-link { color: #00ff00; font-weight: bold; cursor: pointer; }
+        .ticker-link:hover { text-decoration: underline; }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 Guaranteed Picks - Performance History</h1>
+        <p>Detailed performance tracking for all guaranteed picks</p>
+    </div>
+
+    <div class="nav-links">
+        <a href="index.html"><i class="fas fa-home"></i> Dashboard</a>
+        <a href="guaranteed-explosive.html"><i class="fas fa-trophy"></i> Top 3 Picks</a>
+        <a href="explosive-scores-grid.html"><i class="fas fa-table"></i> All Scores Grid</a>
+        <a href="guaranteed-picks-history.html" style="color:#00ff00;"><i class="fas fa-history"></i> Picks History</a>
+    </div>
+
+    <div class="stats-bar" id="statsBar">
+        <div class="stat-item">
+            <div class="stat-value" style="color:#fff;" id="totalPicks">-</div>
+            <div class="stat-label">Total Picks</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" style="color:#00ff00;" id="successCount">-</div>
+            <div class="stat-label">Success (15%+)</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" style="color:#ffd700;" id="partialCount">-</div>
+            <div class="stat-label">Partial (5-15%)</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" style="color:#ff4444;" id="failCount">-</div>
+            <div class="stat-label">Fail (<5%)</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" style="color:#aaa;" id="pendingCount">-</div>
+            <div class="stat-label">Pending</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" style="color:#00ff00;" id="successRate">-</div>
+            <div class="stat-label">Success Rate</div>
+        </div>
+    </div>
+
+    <div class="filters">
+        <div class="filter-group">
+            <label>Outcome:</label>
+            <select id="outcomeFilter">
+                <option value="">All</option>
+                <option value="SUCCESS">Success</option>
+                <option value="PARTIAL">Partial</option>
+                <option value="FAIL">Fail</option>
+                <option value="PENDING">Pending</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Tracked:</label>
+            <select id="trackedFilter">
+                <option value="">All</option>
+                <option value="true">Tracked</option>
+                <option value="false">Pending</option>
+            </select>
+        </div>
+        <button class="btn btn-primary" onclick="applyFilters()">
+            <i class="fas fa-filter"></i> Apply Filters
+        </button>
+        <button class="btn btn-primary" onclick="resetFilters()">
+            <i class="fas fa-sync"></i> Reset
+        </button>
+    </div>
+
+    <div id="loading" class="loading">
+        📊 Loading all guaranteed picks history...
+    </div>
+
+    <div id="picks-table"></div>
+
+    <script>
+        const BASE_URL = "http://jpmaxtricks.com:8070";
+        let table;
+        let allData = [];
+
+        async function loadPicksHistory() {
+            try {
+                console.log('=== Loading Picks History ===');
+                console.log('Fetching from:', `${BASE_URL}/api/guaranteed/picks/all`);
+
+                // Fetch all picks from all dates
+                const response = await fetch(`${BASE_URL}/api/guaranteed/picks/all`);
+
+                console.log('Response status:', response.status);
+                console.log('Response OK:', response.ok);
+
+                if (!response.ok) {
+                    console.error('API error:', response.status, response.statusText);
+                    const errorText = await response.text();
+                    console.error('Error details:', errorText);
+
+                    document.getElementById('loading').innerHTML =
+                        `<div style="color:red">❌ API Error ${response.status}: ${response.statusText}<br>` +
+                        `Endpoint: /api/guaranteed/picks/all<br>` +
+                        `Check browser console for details.</div>`;
+                    return;
+                }
+
+                allData = await response.json();
+
+                console.log('Picks loaded:', allData.length);
+                if (allData.length > 0) {
+                    console.log('Sample pick:', allData[0]);
+                    console.log('All pick tickers:', allData.map(p => p.ticker).join(', '));
+                }
+
+                document.getElementById('loading').style.display = 'none';
+
+                if (allData.length === 0) {
+                    document.getElementById('picks-table').innerHTML =
+                        '<div style="text-align:center; padding:50px; color:#fff; font-size:18px;">' +
+                        '📭 No picks found in database.<br><br>' +
+                        'Add picks from the <a href="explosive-scores-grid.html" style="color:#00ff00;">Explosive Scores Grid</a>!' +
+                        '</div>';
+                    // Still update stats to show zeros
+                    updateStats();
+                    return;
+                }
+
+                updateStats();
+                initializeTable();
+
+            } catch (error) {
+                console.error('Error loading picks history:', error);
+                console.error('Error stack:', error.stack);
+                document.getElementById('loading').innerHTML =
+                    `<div style="color:red">❌ Error: ${error.message}<br>` +
+                    `Check browser console (F12) for full details.</div>`;
+            }
+        }
+
+        async function loadFromStats() {
+            // Alternative: manually construct data from multiple date queries
+            allData = [];
+            document.getElementById('loading').style.display = 'none';
+            updateStats();
+            initializeTable();
+        }
+
+        function updateStats() {
+            const total = allData.length;
+            const success = allData.filter(p => p.outcome === 'SUCCESS').length;
+            const partial = allData.filter(p => p.outcome === 'PARTIAL').length;
+            const fail = allData.filter(p => p.outcome === 'FAIL').length;
+            const pending = allData.filter(p => p.outcome === 'PENDING').length;
+            const tracked = allData.filter(p => p.tracked).length;
+
+            const successRate = tracked > 0 ? ((success / tracked) * 100).toFixed(1) : 0;
+
+            document.getElementById('totalPicks').textContent = total;
+            document.getElementById('successCount').textContent = success;
+            document.getElementById('partialCount').textContent = partial;
+            document.getElementById('failCount').textContent = fail;
+            document.getElementById('pendingCount').textContent = pending;
+            document.getElementById('successRate').textContent = successRate + '%';
+        }
+
+        function initializeTable() {
+            console.log('=== Initializing Table ===');
+            console.log('Data to display:', allData.length, 'picks');
+            console.log('Sample data:', allData[0]);
+
+            try {
+                table = new Tabulator("#picks-table", {
+                    data: allData,
+                    layout: "fitDataStretch",
+                    pagination: "local",
+                    paginationSize: 50,
+                    paginationSizeSelector: [25, 50, 100],
+                    initialSort: [
+                        {column: "date", dir: "desc"}
+                    ],
+                    columns: [
+                    {
+                        title: "Date",
+                        field: "date",
+                        width: 110,
+                        sorter: "string",
+                        formatter: function(cell) {
+                            return cell.getValue();
+                        }
+                    },
+                    {
+                        title: "Rank",
+                        field: "rank",
+                        width: 70,
+                        formatter: function(cell) {
+                            const rank = cell.getValue();
+                            const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉';
+                            return medal;
+                        }
+                    },
+                    {
+                        title: "Ticker",
+                        field: "ticker",
+                        width: 100,
+                        formatter: function(cell) {
+                            const ticker = cell.getValue();
+                            return `<a href="stock-history.html?ticker=${ticker}" target="_blank" class="ticker-link">${ticker}</a>`;
+                        }
+                    },
+                    {
+                        title: "Entry $",
+                        field: "entryPrice",
+                        width: 100,
+                        formatter: function(cell) {
+                            return '$' + cell.getValue().toFixed(2);
+                        }
+                    },
+                    {
+                        title: "Max $",
+                        field: "maxPriceReached",
+                        width: 100,
+                        formatter: function(cell) {
+                            const val = cell.getValue();
+                            return val ? '$' + val.toFixed(2) : '-';
+                        }
+                    },
+                    {
+                        title: "Max Gain %",
+                        field: "maxGainPct",
+                        width: 120,
+                        formatter: function(cell) {
+                            const val = cell.getValue();
+                            if (!val) return '-';
+                            const cls = val >= 0 ? 'positive' : 'negative';
+                            return `<span class="${cls}">${val.toFixed(1)}%</span>`;
+                        }
+                    },
+                    {
+                        title: "Final $",
+                        field: "finalPrice",
+                        width: 100,
+                        formatter: function(cell) {
+                            const val = cell.getValue();
+                            return val ? '$' + val.toFixed(2) : '-';
+                        }
+                    },
+                    {
+                        title: "Final Gain %",
+                        field: "finalGainPct",
+                        width: 120,
+                        formatter: function(cell) {
+                            const val = cell.getValue();
+                            if (!val) return '-';
+                            const cls = val >= 0 ? 'positive' : 'negative';
+                            return `<span class="${cls}">${val.toFixed(1)}%</span>`;
+                        }
+                    },
+                    {
+                        title: "Hit 15%?",
+                        field: "moved15Percent",
+                        width: 100,
+                        formatter: function(cell) {
+                            const val = cell.getValue();
+                            if (val === null) return '-';
+                            return val ? '<span class="positive">✓ YES</span>' : '<span class="negative">✗ NO</span>';
+                        }
+                    },
+                    {
+                        title: "Days",
+                        field: "daysToMove",
+                        width: 80,
+                        formatter: function(cell) {
+                            const val = cell.getValue();
+                            if (!val || val < 0) return '-';
+                            return val + 'd';
+                        }
+                    },
+                    {
+                        title: "Outcome",
+                        field: "outcome",
+                        width: 110,
+                        formatter: function(cell) {
+                            const val = cell.getValue();
+                            return `<span class="outcome-${val}">${val}</span>`;
+                        }
+                    },
+                    {
+                        title: "Tracked",
+                        field: "tracked",
+                        width: 90,
+                        formatter: function(cell) {
+                            return cell.getValue() ? '<span class="positive">✓</span>' : '<span style="color:#aaa;">⏳</span>';
+                        }
+                    },
+                    {
+                        title: "Score",
+                        field: "convergenceScore",
+                        width: 80
+                    },
+                    {
+                        title: "Factors",
+                        field: "factorsPassed",
+                        width: 90,
+                        formatter: function(cell) {
+                            return cell.getValue() + '/10';
+                        }
+                    },
+                    {
+                        title: "Confidence",
+                        field: "confidenceLevel",
+                        width: 110,
+                        formatter: function(cell) {
+                            return '⭐'.repeat(cell.getValue());
+                        }
+                    }
+                ]
+            });
+
+            console.log('✓ Table initialized successfully');
+
+            } catch (error) {
+                console.error('Error initializing table:', error);
+                document.getElementById('picks-table').innerHTML =
+                    '<div style="text-align:center; padding:50px; color:#ff4444;">❌ Error creating table: ' + error.message + '</div>';
+            }
+        }
+
+        function applyFilters() {
+            const outcome = document.getElementById('outcomeFilter').value;
+            const tracked = document.getElementById('trackedFilter').value;
+
+            let filtered = allData;
+
+            if (outcome) {
+                filtered = filtered.filter(p => p.outcome === outcome);
+            }
+
+            if (tracked) {
+                const isTracked = tracked === 'true';
+                filtered = filtered.filter(p => p.tracked === isTracked);
+            }
+
+            table.setData(filtered);
+        }
+
+        function resetFilters() {
+            document.getElementById('outcomeFilter').value = '';
+            document.getElementById('trackedFilter').value = '';
+            table.setData(allData);
+        }
+
+        // Load data on page load
+        loadPicksHistory();
+    </script>
+</body>
+</html>
+

@@ -329,12 +329,33 @@
                     {
                         title: "Tick",
                         field: "ticker",
-                        width: 75,
+                        width: 110,
                         headerFilter: "input",
                         headerFilterPlaceholder: "Filter...",
                         formatter: function(cell) {
                             const ticker = cell.getValue();
-                            return `<a href="stock-history.html?ticker=${encodeURIComponent(ticker)}" target="_blank" style="color: #3b82f6; text-decoration: none; font-weight: 600;">${ticker}</a>`;
+                            const rowData = cell.getRow().getData();
+                            const longPatterns = rowData.noOfLongPatterns || 0;
+                            const shortPatterns = rowData.noOfShortPatterns || 0;
+
+                            let html = `<a href="stock-history.html?ticker=${encodeURIComponent(ticker)}" target="_blank" style="color: #3b82f6; text-decoration: none; font-weight: 600;">${ticker}</a>`;
+
+                            // Add pattern icons if patterns exist
+                            if (longPatterns > 0 || shortPatterns > 0) {
+                                html += ' <a href="patterns.html?ticker=' + encodeURIComponent(ticker) + '" target="_blank" style="text-decoration: none;" title="View patterns">';
+
+                                if (longPatterns > 0) {
+                                    html += '<span style="display: inline-block; background: #10b981; color: white; font-size: 9px; padding: 2px 5px; border-radius: 3px; font-weight: 700; margin-left: 3px;">L' + longPatterns + '</span>';
+                                }
+
+                                if (shortPatterns > 0) {
+                                    html += '<span style="display: inline-block; background: #ef4444; color: white; font-size: 9px; padding: 2px 5px; border-radius: 3px; font-weight: 700; margin-left: 2px;">S' + shortPatterns + '</span>';
+                                }
+
+                                html += '</a>';
+                            }
+
+                            return html;
                         }
                     },
                     {
@@ -381,20 +402,6 @@
                         formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(2) : '-'; }
                     },
                     {
-                        title: "Up↑",
-                        field: "upDays",
-                        width: 60,
-                        hozAlign: "center",
-                        headerFilter: "input",
-                        headerFilterPlaceholder: ">=3",
-                        headerFilterFunc: customNumberFilter,
-                        formatter: function(cell) {
-                            const val = cell.getValue();
-                            if (val > 0) return `<span style="color: #22c55e; font-weight: 600;">${val}</span>`;
-                            return val || '-';
-                        }
-                    },
-                    {
                         title: "UpHi",
                         field: "upHigh",
                         width: 70,
@@ -405,20 +412,6 @@
                             const val = cell.getValue();
                             if (val > 0) return `<span style="color: #22c55e;">${val.toFixed(2)}</span>`;
                             return '-';
-                        }
-                    },
-                    {
-                        title: "Dn↓",
-                        field: "downDays",
-                        width: 60,
-                        hozAlign: "center",
-                        headerFilter: "input",
-                        headerFilterPlaceholder: ">=3",
-                        headerFilterFunc: customNumberFilter,
-                        formatter: function(cell) {
-                            const val = cell.getValue();
-                            if (val > 0) return `<span style="color: #ef4444; font-weight: 600;">${val}</span>`;
-                            return val || '-';
                         }
                     },
                     {
@@ -435,61 +428,32 @@
                         }
                     },
                     {
-                        title: "Sig",
-                        field: "score.signal",
-                        width: 65,
+                        title: "Up↑",
+                        field: "upDays",
+                        width: 60,
+                        hozAlign: "center",
                         headerFilter: "input",
-                        headerFilterPlaceholder: "BUY",
+                        headerFilterPlaceholder: ">=3",
+                        headerFilterFunc: customNumberFilter,
                         formatter: function(cell) {
                             const val = cell.getValue();
-                            if (val === 'BUY') return '<span class="signal-buy">BUY</span>';
-                            if (val === 'SELL') return '<span class="signal-sell">SELL</span>';
+                            if (val > 0) return `<span style="color: #22c55e; font-weight: 600;">${val}</span>`;
                             return val || '-';
                         }
                     },
                     {
-                        title: "All",
-                        field: "score.overallScore",
-                        width: 70,
+                        title: "Dn↓",
+                        field: "downDays",
+                        width: 60,
+                        hozAlign: "center",
                         headerFilter: "input",
-                        headerFilterPlaceholder: ">70",
+                        headerFilterPlaceholder: ">=3",
                         headerFilterFunc: customNumberFilter,
-                        formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(1) : '-'; }
-                    },
-                    {
-                        title: "Brek",
-                        field: "score.breakoutScore",
-                        width: 70,
-                        headerFilter: "input",
-                        headerFilterPlaceholder: ">60",
-                        headerFilterFunc: customNumberFilter,
-                        formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(1) : '-'; }
-                    },
-                    {
-                        title: "Reve",
-                        field: "score.reversalScore",
-                        width: 70,
-                        headerFilter: "input",
-                        headerFilterPlaceholder: ">60",
-                        headerFilterFunc: customNumberFilter,
-                        formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(1) : '-'; }
-                    },
-                    {
-                        title: "Spike",
-                        field: "spike.spikeScore",
-                        width: 70,
-                        headerFilter: "input",
-                        headerFilterPlaceholder: ">70",
-                        headerFilterFunc: customNumberFilter,
-                        formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(0) : '-'; }
-                    },
-                    {
-                        title: "Botm",
-                        field: "bottom.conditionsMet",
-                        width: 72,
-                        headerFilter: "input",
-                        headerFilterPlaceholder: ">=5",
-                        headerFilterFunc: customNumberFilter
+                        formatter: function(cell) {
+                            const val = cell.getValue();
+                            if (val > 0) return `<span style="color: #ef4444; font-weight: 600;">${val}</span>`;
+                            return val || '-';
+                        }
                     },
                     {
                         title: "L#",
@@ -509,12 +473,147 @@
                         headerFilterPlaceholder: ">0",
                         headerFilterFunc: customNumberFilter
                     },
-                    {title: "BTS", field: "rating.btShortRating", width: 80, headerFilter: "input", headerFilterPlaceholder: "Buy"},
-                    {title: "BTL", field: "rating.btLongRating", width: 80, headerFilter: "input", headerFilterPlaceholder: "Buy"},
+                    {title: "PrimCat", field: "filterCategory.primaryCategory", headerFilter: "input", headerFilterPlaceholder: "<=500", width: 70, sorter:function(a,b){
+                // custom sorter: extract leading integer from values like "1-Explosive" or "99-NO-SETUP"
+                function leadingNum(v){
+                    if(v === null || v === undefined) return Number.MAX_SAFE_INTEGER;
+                    var s = String(v).trim();
+                    var m = s.match(/^(\d+)/);
+                    return m ? parseInt(m[1], 10) : Number.MAX_SAFE_INTEGER;
+                }
+                var na = leadingNum(a);
+                var nb = leadingNum(b);
+                if(na !== nb) return na - nb;
+                // tie-breaker: compare full string (case-insensitive)
+                var sa = (a === null || a === undefined) ? '' : String(a).toLowerCase();
+                var sb = (b === null || b === undefined) ? '' : String(b).toLowerCase();
+                if(sa < sb) return -1;
+                if(sa > sb) return 1;
+                return 0;
+            }},
+            {title: "CatList", field: "filterCategory.category", headerFilter: "input", headerFilterPlaceholder: "<=500", width: 70},
+
+
+                    {
+                        title: "Sig",
+                        field: "score.signal",
+                        width: 65,
+                        headerFilter: "input",
+                        headerFilterPlaceholder: "BUY",
+                        formatter: function(cell) {
+                            const val = cell.getValue();
+                            if (val === 'BUY') return '<span class="signal-buy">BUY</span>';
+                            if (val === 'SELL') return '<span class="signal-sell">SELL</span>';
+                            return val || '-';
+                        }
+                    },
+                    {
+                        title: "PickScore",
+                        field: "dailyRank.pickScore",
+                        width: 72,
+                        editor: "number",
+                        headerFilter: "input",
+                        headerFilterPlaceholder: ">70",
+                        headerFilterFunc: customNumberFilter
+                    },
+                    {
+                        title: "Rank",
+                        field: "dailyRank.finalRank",
+                        width: 72,
+                        editor: "number",
+                        headerFilter: "input",
+                        headerFilterPlaceholder: ">70",
+                        headerFilterFunc: customNumberFilter
+                    },
+                    {
+                        title: "Safe",
+                        field: "dailyRank.safetyRank",
+                        width: 72,
+                        editor: "number",
+                        headerFilter: "input",
+                        headerFilterPlaceholder: ">70",
+                        headerFilterFunc: customNumberFilter
+                    },
+                    {
+                        title: "Bottom",
+                        field: "bottom.bottom",
+                        width: 70,
+                        hozAlign: "center",
+                        editor: "tickCross",
+                        headerFilter: "tickCross",
+                        headerFilterParams: {"tristate": true},
+                        headerFilterEmptyCheck: function(value) { return value === null; },
+                        formatter: function(cell) {
+                            return cell.getValue() ? '<span class="status-met">✓</span>' : '<span class="status-not-met">✗</span>';
+                        }
+                    },
+                    {
+                        title: "Spike",
+                        field: "spike.spikeLikely",
+                        width: 70,
+                        hozAlign: "center",
+                        editor: "tickCross",
+                        headerFilter: "tickCross",
+                        headerFilterParams: {"tristate": true},
+                        headerFilterEmptyCheck: function(value) { return value === null; },
+                        formatter: function(cell) {
+                            return cell.getValue() ? '<span class="status-met">✓</span>' : '<span class="status-not-met">✗</span>';
+                        }
+                    },
+                    {
+                        title: "SS",
+                        field: "spike.spikeScore",
+                        width: 65,
+                        headerFilter: "input",
+                        headerFilterPlaceholder: ">70",
+                        headerFilterFunc: customNumberFilter,
+                        formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(0) : '-'; }
+                    },
+                    {
+                        title: "BTM",
+                        field: "bottom.conditionsMet",
+                        width: 72,
+                        headerFilter: "input",
+                        headerFilterPlaceholder: ">=5",
+                        headerFilterFunc: customNumberFilter
+                    },
+                    {title: "SigD", field: "score.signalDays", headerFilter: "input", width: 70, formatter: function(cell) { const val = cell.getValue(); if (val === 'BUY') return `<span style="background: rgba(34, 197, 94, 0.2); color: #22c55e; padding: 2px 4px; border-radius: 4px; font-weight: 600; font-size: 9px;">${val}</span>`; if (val === 'SELL') return `<span style="background: rgba(239, 68, 68, 0.2); color: #ef4444; padding: 2px 4px; border-radius: 4px; font-weight: 600; font-size: 9px;">${val}</span>`; return val; }},
+                    {
+                        title: "All",
+                        field: "score.overallScore",
+                        width: 70,
+                        headerFilter: "input",
+                        headerFilterPlaceholder: ">70",
+                        headerFilterFunc: customNumberFilter,
+                        formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(1) : '-'; }
+                    },
+                    {
+                        title: "BRS",
+                        field: "score.breakoutScore",
+                        width: 65,
+                        headerFilter: "input",
+                        headerFilterPlaceholder: ">60",
+                        headerFilterFunc: customNumberFilter,
+                        formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(1) : '-'; }
+                    },
+                    {
+                        title: "RS",
+                        field: "score.reversalScore",
+                        width: 65,
+                        headerFilter: "input",
+                        headerFilterPlaceholder: ">60",
+                        headerFilterFunc: customNumberFilter,
+                        formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(1) : '-'; }
+                    },
+                    {title: "BL", field: "rating.btShortRating", width: 80, headerFilter: "input", headerFilterPlaceholder: "Buy"},
+                    {title: "BS", field: "rating.btLongRating", width: 80, headerFilter: "input", headerFilterPlaceholder: "Buy"},
                     {title: "B", field: "rating.btRating", width: 80, headerFilter: "input", headerFilterPlaceholder: "Filter..."},
                     {title: "BT", field: "rating.btTrend", width: 80, headerFilter: "input", headerFilterPlaceholder: "Up"},
                     {title: "TT", field: "rating.tradingViewTechRating", width: 80, headerFilter: "input", headerFilterPlaceholder: "Buy"},
                     {title: "TMA", field: "rating.tradingViewMARating", width: 80, headerFilter: "input", headerFilterPlaceholder: "Buy"},
+                    {title: "OvrSold", field: "oversold.oversoldBounce", headerFilter: "input", headerFilterPlaceholder: "true", width: 70, hozAlign: "center", formatter: function(cell){ const v = cell.getValue(); return (v === true || v === 'true') ? "✅" : ""; }},
+                    {title: "OSScore", field: "oversold.bounceScore", headerFilter: "input", headerFilterPlaceholder: ">=5", width: 70, hozAlign: "center"},
+                    {title: "OSType", field: "oversold.bounceType", headerFilter: "input", headerFilterPlaceholder: "STRONG", width: 80, hozAlign: "center"},
                 ],
                 placeholder: "No stocks in watchlist. Add tickers above.",
                 initialSort: [

@@ -1,15 +1,19 @@
 package org.myswan.service.internal;
 
 import lombok.extern.slf4j.Slf4j;
+import org.bson.Document;
 import org.myswan.model.Picks;
 import org.myswan.model.Stock;
 import org.myswan.repository.PicksRepository;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.convert.MappingMongoConverter;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 @Slf4j
@@ -33,11 +37,57 @@ public class PicksService {
     }
 
     public Picks save(Picks pick) {
-        return picksRepository.save(pick);
+        if (pick == null) return null;
+
+        if (pick.getAddedDate() == null) {
+            pick.setAddedDate(LocalDate.now());
+        }
+
+        if (pick.getTicker() != null && !pick.getTicker().isBlank()) {
+            try {
+                Query query = new Query(Criteria.where("ticker").regex("^" + pick.getTicker() + "$", "i"));
+                Stock stock = mongoTemplate.findOne(query, Stock.class);
+                if (stock != null) {
+                    pick.setStock(stock);
+                }
+            } catch (Exception e) {
+                log.warn("Failed to attach stock snapshot for {}: {}", pick.getTicker(), e.getMessage());
+            }
+        }
+
+        Picks saved = picksRepository.save(pick);
+
+        // write history for this saved pick
+        writeHistoryForPick(saved);
+
+        return saved;
     }
 
     public Picks update(Picks pick) {
-        return picksRepository.save(pick);
+        if (pick == null) return null;
+
+        if (pick.getAddedDate() == null) {
+            pick.setAddedDate(LocalDate.now());
+        }
+
+        if (pick.getTicker() != null && !pick.getTicker().isBlank()) {
+            try {
+                Query query = new Query(Criteria.where("ticker").regex("^" + pick.getTicker() + "$", "i"));
+                Stock stock = mongoTemplate.findOne(query, Stock.class);
+                if (stock != null) {
+                    pick.setStock(stock);
+                }
+            } catch (Exception e) {
+                log.warn("Failed to refresh stock snapshot for {}: {}", pick.getTicker(), e.getMessage());
+            }
+        }
+
+        Picks saved = picksRepository.save(pick);
+
+        // write history for this updated pick
+        writeHistoryForPick(saved);
+
+        return saved;
     }
 
     public void delete(String id) {
@@ -49,8 +99,61 @@ public class PicksService {
     }
 
     /**
-     * Sync all picks with current stock data (price, change, pattern counts)
+     * Refresh picks for the provided tickers: attach latest Stock snapshot to pick.stock and
+     * write/update picksHistory entries for today.
      */
+    public void refreshPicksForTickers(Collection<String> tickers) {
+        if (tickers == null || tickers.isEmpty()) return;
+
+        for (String ticker : tickers) {
+            if (ticker == null || ticker.isBlank()) continue;
+            try {
+                List<Picks> picks = picksRepository.findByTickerOrderByAddedDateDesc(ticker);
+                if (picks == null || picks.isEmpty()) continue;
+
+                // fetch latest stock once
+                Query query = new Query(Criteria.where("ticker").regex("^" + ticker + "$", "i"));
+                Stock stock = mongoTemplate.findOne(query, Stock.class);
+
+                for (Picks pick : picks) {
+                    try {
+                        if (stock != null) pick.setStock(stock);
+                        Picks saved = picksRepository.save(pick);
+                        writeHistoryForPick(saved);
+                    } catch (Exception e) {
+                        log.warn("Failed to refresh pick {} for ticker {}: {}", pick.getId(), ticker, e.getMessage());
+                    }
+                }
+
+            } catch (Exception e) {
+                log.error("Failed to refresh picks for ticker {}: {}", ticker, e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Write a picksHistory entry for the provided pick: remove existing same-day entry and insert latest snapshot.
+     */
+    private void writeHistoryForPick(Picks saved) {
+        if (saved == null || saved.getTicker() == null) return;
+        try {
+            Document doc = new Document();
+            MappingMongoConverter converter = (MappingMongoConverter) mongoTemplate.getConverter();
+            converter.write(saved, doc);
+            doc.remove("_id");
+            String histDate = LocalDate.now().toString();
+            doc.put("historyDate", histDate);
+
+            // Remove existing entry for this ticker and date
+            Query removeQuery = new Query(Criteria.where("ticker").regex("^" + saved.getTicker() + "$", "i").and("historyDate").is(histDate));
+            mongoTemplate.remove(removeQuery, "picksHistory");
+
+            mongoTemplate.getCollection("picksHistory").insertOne(doc);
+        } catch (Exception e) {
+            log.warn("Failed to write picksHistory for {}: {}", saved.getTicker(), e.getMessage());
+        }
+    }
+
     public void syncWithStockData() {
         log.info("Starting picks sync with current stock data...");
 
@@ -59,35 +162,35 @@ public class PicksService {
 
         for (Picks pick : allPicks) {
             try {
-                // Find current stock data using case-insensitive query
+                if (pick.getTicker() == null) continue;
+
                 Query query = new Query(Criteria.where("ticker").regex("^" + pick.getTicker() + "$", "i"));
-                List<Stock> stocks = mongoTemplate.find(query, Stock.class);
+                Stock stock = mongoTemplate.findOne(query, Stock.class);
 
-                if (!stocks.isEmpty()) {
-                    Stock stock = stocks.get(0);
+                if (stock != null) {
+                    // attach latest stock snapshot
+                    pick.setStock(stock);
 
-                    // Update current price and change
-                    pick.setCurrentPrice(stock.getPrice());
-                    pick.setCurrentChange(stock.getChange());
+                    // If pick has target/stop values (non-zero), check hits
+                    try {
+                        double price = stock.getPrice();
+                        if (pick.getTarget() != 0 && price >= pick.getTarget() && !pick.isTargetMet()) {
+                            pick.setTargetMet(true);
+                            pick.setTargetMetDate(LocalDate.now());
+                            log.info("Target hit for {}: {} >= {}", pick.getTicker(), price, pick.getTarget());
+                        }
 
-                    // Update current pattern counts
-                    pick.setCurrentNoOfLongPatterns(stock.getNoOfLongPatterns());
-                    pick.setCurrentNoOfShortPatterns(stock.getNoOfShortPatterns());
-
-                    // Auto-check if target or stop hit
-                    if (!pick.isTargetMet() && stock.getPrice() >= pick.getTarget()) {
-                        pick.setTargetMet(true);
-                        pick.setTargetMetDate(LocalDate.now());
-                        log.info("Target hit for {}: Price {} >= Target {}", pick.getTicker(), stock.getPrice(), pick.getTarget());
-                    }
-
-                    if (!pick.isStopLossMet() && stock.getPrice() <= pick.getStopLoss()) {
-                        pick.setStopLossMet(true);
-                        pick.setStopLossMetDate(LocalDate.now());
-                        log.info("Stop loss hit for {}: Price {} <= Stop {}", pick.getTicker(), stock.getPrice(), pick.getStopLoss());
+                        if (pick.getStopLoss() != 0 && price <= pick.getStopLoss() && !pick.isStopLossMet()) {
+                            pick.setStopLossMet(true);
+                            pick.setStopLossMetDate(LocalDate.now());
+                            log.info("Stop loss hit for {}: {} <= {}", pick.getTicker(), price, pick.getStopLoss());
+                        }
+                    } catch (Exception ex) {
+                        log.warn("Error while evaluating target/stop for {}: {}", pick.getTicker(), ex.getMessage());
                     }
 
                     picksRepository.save(pick);
+                    writeHistoryForPick(pick);
                     updated++;
                 } else {
                     log.warn("Stock not found for pick ticker: {}", pick.getTicker());
@@ -100,9 +203,6 @@ public class PicksService {
         log.info("Picks sync completed. Updated {} picks", updated);
     }
 
-    /**
-     * Sync picks to history collection (snapshot of current state)
-     */
     public void syncPicksHistory() {
         log.info("Syncing picks to history...");
 
@@ -113,7 +213,6 @@ public class PicksService {
             return;
         }
 
-        // Copy each pick to history (with null ID to create new document)
         allPicks.forEach(pick -> {
             Picks historyCopy = copyPick(pick);
             historyCopy.setId(null); // Create new document in history
@@ -123,28 +222,19 @@ public class PicksService {
         log.info("Synced {} picks to history", allPicks.size());
     }
 
-    /**
-     * Get picks history for a specific ticker
-     */
     public List<Picks> getPicksHistory(String ticker) {
         Query query = new Query(Criteria.where("ticker").regex("^" + ticker + "$", "i"))
                 .with(org.springframework.data.domain.Sort.by(
-                        org.springframework.data.domain.Sort.Direction.DESC, "addedDate"));
+                        org.springframework.data.domain.Sort.Direction.DESC, "historyDate"));
         return mongoTemplate.find(query, Picks.class, "picksHistory");
     }
 
-    /**
-     * Delete picks history for a specific date
-     */
     public void deleteHistoryByDate(LocalDate date) {
         Query query = new Query(Criteria.where("addedDate").is(date));
         mongoTemplate.remove(query, "picksHistory");
         log.info("Deleted picks history for date: {}", date);
     }
 
-    /**
-     * Helper method to create a copy of a pick
-     */
     private Picks copyPick(Picks original) {
         Picks copy = new Picks();
         copy.setTicker(original.getTicker());
@@ -159,27 +249,7 @@ public class PicksService {
         copy.setStopLossMetDate(original.getStopLossMetDate());
         copy.setTargetMet(original.isTargetMet());
         copy.setStopLossMet(original.isStopLossMet());
-        copy.setCurrentPrice(original.getCurrentPrice());
-        copy.setCurrentChange(original.getCurrentChange());
-        copy.setCurrentNoOfLongPatterns(original.getCurrentNoOfLongPatterns());
-        copy.setCurrentNoOfShortPatterns(original.getCurrentNoOfShortPatterns());
-        copy.setNoOfLongPatterns(original.getNoOfLongPatterns());
-        copy.setNoOfShortPatterns(original.getNoOfShortPatterns());
-        copy.setOverAllScore(original.getOverAllScore());
-        copy.setBottomScore(original.getBottomScore());
-        copy.setReversalScore(original.getReversalScore());
-        copy.setBreakoutScore(original.getBreakoutScore());
-        copy.setPatternScore(original.getPatternScore());
-        copy.setSpikeScore(original.getSpikeScore());
-        copy.setSignal(original.getSignal());
-        copy.setBtShortRating(original.getBtShortRating());
-        copy.setBtLongRating(original.getBtLongRating());
-        copy.setBtRating(original.getBtRating());
-        copy.setBtTrend(original.getBtTrend());
-        copy.setTradingViewTechRating(original.getTradingViewTechRating());
-        copy.setTradingViewMARating(original.getTradingViewMARating());
-        copy.setTradingViewOSRating(original.getTradingViewOSRating());
+        copy.setStock(original.getStock());
         return copy;
     }
 }
-

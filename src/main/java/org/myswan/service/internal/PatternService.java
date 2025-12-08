@@ -2,6 +2,7 @@ package org.myswan.service.internal;
 
 import lombok.extern.slf4j.Slf4j;
 import org.myswan.model.Pattern;
+import org.myswan.model.Stock;
 import org.myswan.repository.PatternRepository;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -67,9 +68,26 @@ public class PatternService {
         if (patterns != null && !patterns.isEmpty()) {
             patterns.forEach(pattern -> {
                 pattern.setId(null);
+
+                // Fetch and attach stock snapshot for this pattern's ticker
+                if (pattern.getTicker() != null && !pattern.getTicker().isEmpty()) {
+                    try {
+                        Query stockQuery = new Query(Criteria.where("ticker").regex("^" + pattern.getTicker() + "$", "i"));
+                        Stock stock = mongoTemplate.findOne(stockQuery, Stock.class, "stock");
+
+                        if (stock != null) {
+                            pattern.setStock(stock);
+                            log.debug("Attached stock snapshot for pattern ticker: {}", pattern.getTicker());
+                        } else {
+                            log.warn("No stock found for pattern ticker: {}", pattern.getTicker());
+                        }
+                    } catch (Exception e) {
+                        log.error("Error fetching stock for pattern ticker {}: {}", pattern.getTicker(), e.getMessage());
+                    }
+                }
             });
             mongoTemplate.insert(patterns, "patternHistory");
-            log.info("Saved {} patterns to history", patterns.size());
+            log.info("Saved {} patterns to history with stock snapshots", patterns.size());
         }
     }
 }

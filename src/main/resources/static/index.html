@@ -741,6 +741,9 @@
             </div>
             <nav class="nav-links">
                 <a href="index.html" class="active"><i class="fas fa-home"></i> Dashboard</a>
+                <a href="guaranteed-explosive.html"><i class="fas fa-rocket"></i> 🎯 Top 3 Picks</a>
+                <a href="explosive-scores-grid.html"><i class="fas fa-table-cells"></i> All Scores Grid</a>
+                <a href="guaranteed-picks-history.html"><i class="fas fa-history"></i> Picks History</a>
                 <a href="classic.html"><i class="fas fa-table"></i> Classic View</a>
                 <a href="watchlist.html"><i class="fas fa-eye"></i> Watchlist</a>
                 <a href="futures.html"><i class="fas fa-money-bill-trend"></i> Futures</a>
@@ -832,7 +835,7 @@
             </div>
             <div class="controls">
                 <div class="control-group">
-                    <label>Collection</label>
+                    <label for="collectionSelect">Collection</label>
                     <select id="collectionSelect">
                         <option value="masters">Master Symbols</option>
                         <option value="stocks" selected>Stocks</option>
@@ -841,17 +844,17 @@
                 </div>
 
                 <div class="control-group">
-                    <label>Preset Filters</label>
+                    <label for="presetFilterSelect">Preset Filters</label>
                     <select id="presetFilterSelect">
                         <option value="none">-- No Preset --</option>
-                        <option value="explosive">🚀 EXPLOSIVE 4-7 DAY</option>
-                        <option value="filter2">💎 High Value Stocks</option>
-                        <option value="filter3">📈 Momentum Leaders</option>
-                        <option value="filter4">🎯 Breakout Candidates</option>
-                        <option value="filter5">⚡ Quick Gains</option>
-                        <option value="filter6">🔥 Hot Picks</option>
-                        <option value="filter7">💰 Value Plays</option>
-                        <option value="filter8">🌟 Top Rated</option>
+                        <!-- Use exact primaryCategory values (value must match the column cell value) -->
+                        <option value="1-Explosive">🚀 1 - Explosive</option>
+                        <option value="2-Oversold">💎 2 - Oversold</option>
+                        <option value="3-Downtrend Reversal">🔁 3 - Downtrend Reversal</option>
+                        <option value="4-MomentumPop">🎯 4 - Momentum Pop</option>
+                        <option value="5-Breakout Watch">🔥 5 - Breakout Watch</option>
+                        <option value="6-Trend Continuation">📈 6 - Trend Continuation</option>
+                        <option value="7-Overextended">⚡ 7 - Overextended</option>
                     </select>
                 </div>
 
@@ -878,8 +881,8 @@
                     <i class="fas fa-bolt"></i> Update Actions
                 </div>
 
-                <button class="btn btn-warning" id="updateTradingViewBtn">
-                    <i class="fas fa-chart-line"></i> Update TradingView
+                <button class="btn btn-warning" id="updateFuturesBtn">
+                    <i class="fas fa-money-bill-trend"></i> Fetch Futures
                 </button>
 
                 <button class="btn btn-info" id="updateBarchartDailyBtn">
@@ -890,16 +893,16 @@
                     <i class="fas fa-clock"></i> Barchart Intraday
                 </button>
 
-                <button class="btn btn-success" id="updateScoringBtn">
-                    <i class="fas fa-calculator"></i> Calculate Scoring
-                </button>
-
-                <button class="btn btn-warning" id="updateFuturesBtn">
-                    <i class="fas fa-money-bill-trend"></i> Fetch Futures
+                <button class="btn btn-warning" id="updateTradingViewBtn">
+                    <i class="fas fa-chart-line"></i> Update TradingView
                 </button>
 
                 <button class="btn btn-info" id="fetchPatternsBtn">
                     <i class="fas fa-chart-area"></i> Fetch Patterns
+                </button>
+
+                <button class="btn btn-success" id="updateScoringBtn">
+                    <i class="fas fa-calculator"></i> Calculate Scoring
                 </button>
             </div>
         </div>
@@ -1069,9 +1072,13 @@
                 return html;
             }},
             {title: "Chg", field: "change", headerFilter: "input", headerFilterPlaceholder: ">0 or <-5", headerFilterFunc: numericHeaderFilter, width: 70, formatter: function(cell) { const val = cell.getValue(); if (val > 0) return `<span style="color: #22c55e;">▲ ${val.toFixed(2)}</span>`; if (val < 0) return `<span style="color: #ef4444;">▼ ${val.toFixed(2)}</span>`; return val; }},
-            {title: "Low", field: "low", headerFilter: "input", headerFilterPlaceholder: ">=10", headerFilterFunc: numericHeaderFilter, width: 70},
-            {title: "Price", field: "price", headerFilter: "input", headerFilterPlaceholder: ">100", headerFilterFunc: numericHeaderFilter, width: 70},
-            {title: "High", field: "high", headerFilter: "input", headerFilterPlaceholder: "<=500", headerFilterFunc: numericHeaderFilter, width: 70},
+            {title: "Low", field: "low", headerFilter: "input", headerFilterPlaceholder: ">=10", headerFilterFunc: numericHeaderFilter, width: 60},
+            {title: "Price", field: "price", headerFilter: "input", headerFilterPlaceholder: ">100", headerFilterFunc: numericHeaderFilter, width: 60},
+            {title: "High", field: "high", headerFilter: "input", headerFilterPlaceholder: "<=500", headerFilterFunc: numericHeaderFilter, width: 60},
+            {title: "pickScore", field: "dailyRank.pickScore", headerFilter: "input", headerFilterPlaceholder: "<=500", headerFilterFunc: numericHeaderFilter, width: 60},
+            {title: "Rank", field: "dailyRank.finalRank", headerFilter: "input", headerFilterPlaceholder: "<=500", headerFilterFunc: numericHeaderFilter, width: 50},
+            {title: "Safe", field: "dailyRank.safetyRank", headerFilter: "input", headerFilterPlaceholder: "<=500", headerFilterFunc: numericHeaderFilter, width: 50},
+            {title: "Alloc", field: "dailyRank.allocation", headerFilter: "input", headerFilterPlaceholder: "<=500", headerFilterFunc: numericHeaderFilter, width: 50},
             {title: "PrimCat", field: "filterCategory.primaryCategory", headerFilter: "input", headerFilterPlaceholder: "<=500", headerFilterFunc: numericHeaderFilter, width: 70, sorter:function(a,b){
                 // custom sorter: extract leading integer from values like "1-Explosive" or "99-NO-SETUP"
                 function leadingNum(v){
@@ -1091,9 +1098,6 @@
                 return 0;
             }},
             {title: "CatList", field: "filterCategory.category", headerFilter: "input", headerFilterPlaceholder: "<=500", headerFilterFunc: numericHeaderFilter, width: 70},
-            {title: "OvrSold", field: "oversold.oversoldBounce", headerFilter: "input", headerFilterPlaceholder: "true", width: 70, hozAlign: "center", formatter: function(cell){ const v = cell.getValue(); return (v === true || v === 'true') ? "✅" : ""; }},
-            {title: "OSScore", field: "oversold.bounceScore", headerFilter: "input", headerFilterPlaceholder: ">=5", headerFilterFunc: numericHeaderFilter, width: 70, hozAlign: "center"},
-            {title: "OSType", field: "oversold.bounceType", headerFilter: "input", headerFilterPlaceholder: "STRONG", width: 80, hozAlign: "center"},
             {title: "Bottom", field: "bottom.bottom", headerFilter: "input", headerFilterPlaceholder: "true", width: 70, hozAlign: "center", formatter: function(cell){ const v = cell.getValue(); return (v === true || v === 'true') ? "✅" : ""; }},
             {title: "BotMet", field: "bottom.conditionsMet", headerFilter: "input", headerFilterPlaceholder: ">=5", headerFilterFunc: numericHeaderFilter, width: 70, hozAlign: "center"},
             {title: "BotStr", field: "bottom.strength", headerFilter: "input", headerFilterPlaceholder: "STRONG", width: 80, hozAlign: "center"},
@@ -1101,13 +1105,16 @@
             {title: "SpkScore", field: "spike.spikeScore", headerFilter: "input", headerFilterPlaceholder: ">=70", headerFilterFunc: numericHeaderFilter, width: 80, hozAlign: "center"},
             {title: "SpkType", field: "spike.spikeType", headerFilter: "input", headerFilterPlaceholder: "VOLUME", width: 80, hozAlign: "center"},
             {title: "Overall", field: "score.overallScore", headerFilter: "input", headerFilterPlaceholder: ">=65", headerFilterFunc: numericHeaderFilter, width: 70},
-            {title: "Long#", field: "noOfLongPatterns", headerFilter: "input", headerFilterPlaceholder: ">=1", headerFilterFunc: numericHeaderFilter, width: 60, hozAlign: "center"},
-            {title: "Short#", field: "noOfShortPatterns", headerFilter: "input", headerFilterPlaceholder: ">=1", headerFilterFunc: numericHeaderFilter, width: 60, hozAlign: "center"},
-            {title: "Up↑", field: "upDays", headerFilter: "input", headerFilterPlaceholder: ">=3", headerFilterFunc: numericHeaderFilter, width: 60, hozAlign: "center", formatter: function(cell) { const val = cell.getValue(); if (val > 0) return `<span style="color: #22c55e; font-weight: 600;">${val}</span>`; return val; }},
-            {title: "UpHi", field: "upHigh", headerFilter: "input", headerFilterPlaceholder: ">100", headerFilterFunc: numericHeaderFilter, width: 70, formatter: function(cell) { const val = cell.getValue(); if (val > 0) return `<span style="color: #22c55e;">${val.toFixed(2)}</span>`; return '-'; }},
-            {title: "Dn↓", field: "downDays", headerFilter: "input", headerFilterPlaceholder: ">=3", headerFilterFunc: numericHeaderFilter, width: 60, hozAlign: "center", formatter: function(cell) { const val = cell.getValue(); if (val > 0) return `<span style="color: #ef4444; font-weight: 600;">${val}</span>`; return val; }},
-            {title: "DnLo", field: "downLow", headerFilter: "input", headerFilterPlaceholder: "<100", headerFilterFunc: numericHeaderFilter, width: 70, formatter: function(cell) { const val = cell.getValue(); if (val > 0) return `<span style="color: #ef4444;">${val.toFixed(2)}</span>`; return '-'; }},
-            {title: "Signal", field: "score.signal", headerFilter: "input", headerFilterPlaceholder: "BUY", width: 70, formatter: function(cell) { const val = cell.getValue(); if (val === 'BUY') return `<span style="background: rgba(34, 197, 94, 0.2); color: #22c55e; padding: 2px 4px; border-radius: 4px; font-weight: 600; font-size: 9px;">${val}</span>`; if (val === 'SELL') return `<span style="background: rgba(239, 68, 68, 0.2); color: #ef4444; padding: 2px 4px; border-radius: 4px; font-weight: 600; font-size: 9px;">${val}</span>`; return val; }},
+            {title: "L#", field: "noOfLongPatterns", headerFilter: "input", headerFilterPlaceholder: ">=1", headerFilterFunc: numericHeaderFilter, width: 30 },
+            {title: "S#", field: "noOfShortPatterns", headerFilter: "input", headerFilterPlaceholder: ">=1", headerFilterFunc: numericHeaderFilter, width: 30},
+            {title: "Up↑", field: "upDays", headerFilter: "input", headerFilterPlaceholder: ">=3", headerFilterFunc: numericHeaderFilter, width: 40, formatter: function(cell) { const val = cell.getValue(); if (val > 0) return `<span style="color: #22c55e; font-weight: 600;">${val}</span>`; return val; }},
+            {title: "UpHi", field: "upHigh", headerFilter: "input", headerFilterPlaceholder: ">100", headerFilterFunc: numericHeaderFilter, width: 40, formatter: function(cell) { const val = cell.getValue(); if (val > 0) return `<span style="color: #22c55e;">${val.toFixed(2)}</span>`; return '-'; }},
+            {title: "Dn↓", field: "downDays", headerFilter: "input", headerFilterPlaceholder: ">=3", headerFilterFunc: numericHeaderFilter, width: 40, formatter: function(cell) { const val = cell.getValue(); if (val > 0) return `<span style="color: #ef4444; font-weight: 600;">${val}</span>`; return val; }},
+            {title: "DnLo", field: "downLow", headerFilter: "input", headerFilterPlaceholder: "<100", headerFilterFunc: numericHeaderFilter, width: 40, formatter: function(cell) { const val = cell.getValue(); if (val > 0) return `<span style="color: #ef4444;">${val.toFixed(2)}</span>`; return '-'; }},
+            {title: "OvrSold", field: "oversold.oversoldBounce", headerFilter: "input", headerFilterPlaceholder: "true", width: 70, formatter: function(cell){ const v = cell.getValue(); return (v === true || v === 'true') ? "✅" : ""; }},
+            {title: "OSScore", field: "oversold.bounceScore", headerFilter: "input", headerFilterPlaceholder: ">=5", headerFilterFunc: numericHeaderFilter, width: 70, hozAlign: "center"},
+            {title: "OSType", field: "oversold.bounceType", headerFilter: "input", headerFilterPlaceholder: "STRONG", width: 80, hozAlign: "center"},{title: "Signal", field: "score.signal", headerFilter: "input", headerFilterPlaceholder: "BUY", width: 70, formatter: function(cell) { const val = cell.getValue(); if (val === 'BUY') return `<span style="background: rgba(34, 197, 94, 0.2); color: #22c55e; padding: 2px 4px; border-radius: 4px; font-weight: 600; font-size: 9px;">${val}</span>`; if (val === 'SELL') return `<span style="background: rgba(239, 68, 68, 0.2); color: #ef4444; padding: 2px 4px; border-radius: 4px; font-weight: 600; font-size: 9px;">${val}</span>`; return val; }},
+            {title: "SigD", field: "score.signalDays", headerFilter: "input", headerFilterPlaceholder: "BUY", width: 70, formatter: function(cell) { const val = cell.getValue(); if (val === 'BUY') return `<span style="background: rgba(34, 197, 94, 0.2); color: #22c55e; padding: 2px 4px; border-radius: 4px; font-weight: 600; font-size: 9px;">${val}</span>`; if (val === 'SELL') return `<span style="background: rgba(239, 68, 68, 0.2); color: #ef4444; padding: 2px 4px; border-radius: 4px; font-weight: 600; font-size: 9px;">${val}</span>`; return val; }},
             {title: "BTShort", field: "rating.btShortRating", headerFilter: "input", headerFilterPlaceholder: "Buy", width: 80},
             {title: "BTLong", field: "rating.btLongRating", headerFilter: "input", headerFilterPlaceholder: "Buy", width: 80},
             {title: "BT", field: "rating.btRating", headerFilter: "input", headerFilterPlaceholder: "Buy", width: 80},
@@ -1176,6 +1183,32 @@
                 return;
             }
 
+            // If the selected preset looks like a PrimCat value (e.g. '1-Explosive'),
+            // apply an exact (case-insensitive) equality filter against the column.
+            try {
+                const s = String(name || '').trim();
+                const primMatch = s.match(/^\d+-/);
+                if (primMatch) {
+                    try { table.clearFilter(true); } catch (e) { /* ignore */ }
+                    table.setFilter(function(row){
+                        const val = getNested(row, 'filterCategory.primaryCategory');
+                        if (val === null || val === undefined) return false;
+                        return String(val).trim().toUpperCase() === s.toUpperCase();
+                    });
+
+                    document.getElementById('activePreset').style.display = 'flex';
+                    document.getElementById('presetName').textContent = s;
+                    document.getElementById('filterStatus').innerHTML = '<i class="fas fa-filter"></i> PrimCat = ' + s;
+                    document.getElementById('filterStatus').className = 'stat-change positive';
+                    try { filteredTotal = table.getData(true).length; } catch (e) { filteredTotal = table.getData().length; }
+                    updateGridInfo();
+                    return;
+                }
+            } catch (err) {
+                console.warn('PrimCat filter application failed', err);
+            }
+
+            // Legacy named presets (non-PrimCat) - keep existing behavior
             let fn, displayName;
             switch (name) {
                 case 'explosive': fn = filterExplosive; displayName = 'EXPLOSIVE 4-7 DAY'; break;

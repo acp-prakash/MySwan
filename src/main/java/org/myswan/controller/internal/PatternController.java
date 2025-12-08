@@ -94,7 +94,8 @@ public class PatternController {
             AtomicInteger successCount = new AtomicInteger(0);
             AtomicInteger failureCount = new AtomicInteger(0);
             AtomicInteger notFoundCount = new AtomicInteger(0);
-            String today = UtilHelper.formatLocalDateToString(LocalDate.now());
+			String today = UtilHelper.formatLocalDateToString(LocalDate.now());
+            //String today = UtilHelper.formatLocalDateToString(LocalDate.now().minusDays(1));
 
             log.info("Starting pattern fetch for {} enabled tickers", enabledMasters.size());
 
@@ -217,7 +218,8 @@ public class PatternController {
 
     private void updateStockPatternCounts() {
         try {
-            String today = UtilHelper.formatLocalDateToString(LocalDate.now());
+			//String today = UtilHelper.formatLocalDateToString(LocalDate.now());
+            String today = UtilHelper.formatLocalDateToString(LocalDate.now().minusDays(1));
 
             // First, reset stock pattern counts to 0 (current stock collection)
             Update resetUpdate = new Update()

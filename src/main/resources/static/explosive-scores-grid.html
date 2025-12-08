@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explosive Scores - All Stocks Grid</title>
+    <link href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator_midnight.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+            color: #fff;
+            padding: 15px;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.4);
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 32px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            margin: 8px 0 0 0;
+            opacity: 0.9;
+            font-size: 16px;
+        }
+
+        .nav-links {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .nav-links a {
+            color: #4a90e2;
+            text-decoration: none;
+            margin: 0 15px;
+            font-size: 15px;
+        }
+
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
+
+        .controls {
+            background: rgba(30, 41, 59, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .control-group label {
+            font-weight: bold;
+            color: #aaa;
+            font-size: 14px;
+        }
+
+        .control-group input,
+        .control-group select {
+            padding: 8px 12px;
+            border-radius: 5px;
+            border: 1px solid #4a90e2;
+            background: rgba(0,0,0,0.3);
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .btn {
+            padding: 8px 20px;
+            border-radius: 20px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #00ff00, #00cc00);
+            color: #000;
+        }
+
+        .btn-success:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px #00ff00;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #ffd700, #ffaa00);
+            color: #000;
+        }
+
+        .stats-bar {
+            background: rgba(0,0,0,0.3);
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #00ff00;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 3px;
+        }
+
+        #explosive-table {
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+
+        .tabulator {
+            font-size: 13px;
+            background: transparent;
+        }
+
+        .tabulator-header {
+            background: rgba(102, 126, 234, 0.2);
+            border-bottom: 2px solid #4a90e2;
+        }
+
+        .tabulator-header .tabulator-col {
+            background: transparent;
+            border-right: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .tabulator-row {
+            background: rgba(0,0,0,0.2);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .tabulator-row {
+            cursor: pointer;
+        }
+
+        .tabulator-row:hover {
+            background: rgba(102, 126, 234, 0.3);
+            transform: scale(1.01);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .tabulator-row.tabulator-row-even {
+            background: rgba(0,0,0,0.3);
+        }
+
+        .positive {
+            color: #00ff00;
+            font-weight: bold;
+        }
+
+        .negative {
+            color: #ff4444;
+            font-weight: bold;
+        }
+
+        .confidence-stars {
+            color: #ffd700;
+            font-size: 14px;
+        }
+
+        .ticker-link {
+            color: #00ff00;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .ticker-link:hover {
+            text-decoration: underline;
+            color: #00ffaa;
+        }
+
+        .badge {
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .badge-high {
+            background: #00ff00;
+            color: #000;
+        }
+
+        .badge-medium {
+            background: #ffd700;
+            color: #000;
+        }
+
+        .badge-low {
+            background: #ff4444;
+            color: #fff;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 20px;
+        }
+
+        .filter-info {
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-size: 13px;
+            color: #aaa;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            overflow: auto;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            margin: 50px auto;
+            padding: 0;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 900px;
+            box-shadow: 0 10px 50px rgba(0,0,0,0.5);
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 25px;
+            border-radius: 20px 20px 0 0;
+            position: relative;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 28px;
+            color: #fff;
+        }
+
+        .modal-header .ticker-large {
+            font-size: 36px;
+            color: #00ff00;
+            font-weight: bold;
+        }
+
+        .close {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            font-size: 35px;
+            font-weight: bold;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .close:hover {
+            color: #ff4444;
+            transform: scale(1.2);
+        }
+
+        .modal-body {
+            padding: 30px;
+        }
+
+        .modal-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .modal-metric {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .modal-metric-label {
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 5px;
+        }
+
+        .modal-metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #00ff00;
+        }
+
+        .modal-factors {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .modal-factor-section {
+            background: rgba(0,0,0,0.2);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .modal-factor-section h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .modal-factor-passed h3 {
+            color: #00ff00;
+        }
+
+        .modal-factor-failed h3 {
+            color: #ff4444;
+        }
+
+        .modal-factor-item {
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .modal-factor-item-passed {
+            background: rgba(0,255,0,0.1);
+            border-left: 3px solid #00ff00;
+        }
+
+        .modal-factor-item-failed {
+            background: rgba(255,68,68,0.1);
+            border-left: 3px solid #ff4444;
+            opacity: 0.7;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            .stats-bar {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .modal-content {
+                width: 95%;
+                margin: 20px auto;
+            }
+
+            .modal-factors {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎯 Explosive Scores - All Stocks</h1>
+        <p>Complete list with convergence analysis - Pick your own explosive candidates</p>
+    </div>
+
+    <div class="nav-links">
+        <a href="index.html"><i class="fas fa-home"></i> Dashboard</a>
+        <a href="guaranteed-explosive.html"><i class="fas fa-trophy"></i> Top 3 Picks</a>
+        <a href="explosive-scores-grid.html" style="color:#00ff00;"><i class="fas fa-table"></i> All Scores Grid</a>
+        <a href="guaranteed-picks-history.html"><i class="fas fa-history"></i> Picks History</a>
+        <a href="patterns.html"><i class="fas fa-chart-line"></i> Patterns</a>
+        <a href="watchlist.html"><i class="fas fa-eye"></i> Watchlist</a>
+    </div>
+
+    <div class="stats-bar" id="statsBar">
+        <div class="stat-item">
+            <div class="stat-value" id="totalStocks">-</div>
+            <div class="stat-label">Total Analyzed</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="highConfidence">-</div>
+            <div class="stat-label">High Confidence (7+)</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="mediumConfidence">-</div>
+            <div class="stat-label">Medium (5-6)</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="avgScore">-</div>
+            <div class="stat-label">Avg Score</div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <div class="control-group">
+            <label>Min Score:</label>
+            <input type="number" id="minScore" value="60" min="0" max="100" style="width:80px">
+        </div>
+        <div class="control-group">
+            <label>Min Factors:</label>
+            <input type="number" id="minFactors" value="5" min="0" max="10" style="width:80px">
+        </div>
+        <div class="control-group">
+            <label>Confidence:</label>
+            <select id="confidenceFilter">
+                <option value="">All</option>
+                <option value="5">5 Stars Only</option>
+                <option value="4">4+ Stars</option>
+                <option value="3">3+ Stars</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>Signal:</label>
+            <select id="signalFilter">
+                <option value="">All</option>
+                <option value="BUY">BUY Only</option>
+                <option value="HOLD">HOLD</option>
+                <option value="SELL">SELL</option>
+            </select>
+        </div>
+        <button class="btn btn-primary" onclick="applyFilters()">
+            <i class="fas fa-filter"></i> Apply Filters
+        </button>
+        <button class="btn btn-success" onclick="resetFilters()">
+            <i class="fas fa-sync"></i> Reset
+        </button>
+        <button class="btn btn-warning" onclick="downloadExcel()">
+            <i class="fas fa-download"></i> Excel
+        </button>
+    </div>
+
+    <div class="filter-info" id="filterInfo">
+        Showing all stocks. Use filters to narrow down results. <strong>💡 Click any row to see detailed factor analysis (passed/failed factors).</strong>
+    </div>
+
+    <div id="loading" class="loading">
+        🔍 Analyzing 2,100+ stocks with multi-factor convergence...
+    </div>
+
+    <div id="explosive-table"></div>
+
+    <!-- Modal for detailed factor analysis -->
+    <div id="factorModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="close" onclick="closeModal()">&times;</span>
+                <div class="ticker-large" id="modalTicker">TICKER</div>
+                <h2>Detailed Factor Analysis</h2>
+            </div>
+            <div class="modal-body">
+                <div class="modal-metrics" id="modalMetrics"></div>
+                <div class="modal-factors">
+                    <div class="modal-factor-section modal-factor-passed">
+                        <h3 id="passedTitle">✓ FACTORS PASSED (0)</h3>
+                        <div id="passedFactors"></div>
+                    </div>
+                    <div class="modal-factor-section modal-factor-failed">
+                        <h3 id="failedTitle">✗ FACTORS NOT MET (0)</h3>
+                        <div id="failedFactors"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = "http://jpmaxtricks.com:8070";
+        let table;
+        let allData = [];
+
+        async function loadExplosiveScores() {
+            try {
+                const response = await fetch(`${BASE_URL}/api/guaranteed/all-scores`);
+                allData = await response.json();
+
+                document.getElementById('loading').style.display = 'none';
+
+                updateStats();
+                initializeTable();
+
+            } catch (error) {
+                console.error('Error loading explosive scores:', error);
+                document.getElementById('loading').innerHTML =
+                    '<div style="color:red">❌ Error loading data. Please refresh the page.</div>';
+            }
+        }
+
+        function updateStats() {
+            const total = allData.length;
+            const highConf = allData.filter(s => s.factorsPassed >= 7).length;
+            const mediumConf = allData.filter(s => s.factorsPassed >= 5 && s.factorsPassed < 7).length;
+            const avgScore = total > 0
+                ? Math.round(allData.reduce((sum, s) => sum + s.convergenceScore, 0) / total)
+                : 0;
+
+            document.getElementById('totalStocks').textContent = total;
+            document.getElementById('highConfidence').textContent = highConf;
+            document.getElementById('mediumConfidence').textContent = mediumConf;
+            document.getElementById('avgScore').textContent = avgScore;
+        }
+
+        function initializeTable() {
+            table = new Tabulator("#explosive-table", {
+                data: allData,
+                layout: "fitDataStretch",
+                responsiveLayout: "collapse",
+                pagination: "local",
+                paginationSize: 50,
+                paginationSizeSelector: [25, 50, 100, 200],
+                movableColumns: true,
+                resizableRows: true,
+                initialSort: [
+                    {column: "convergenceScore", dir: "desc"}
+                ],
+                rowClick: function(e, row) {
+                    // Show detailed factor analysis modal
+                    showFactorDetails(row.getData());
+                },
+                columns: [
+                    {
+                        title: "Ticker",
+                        field: "ticker",
+                        width: 100,
+                        frozen: true,
+                        headerFilter: "input",
+                        formatter: function(cell) {
+                            const ticker = cell.getValue();
+                            return `<a href="stock-history.html?ticker=${ticker}" target="_blank" class="ticker-link">${ticker}</a>`;
+                        }
+                    },
+                    {
+                        title: "Score",
+                        field: "convergenceScore",
+                        width: 90,
+                        headerFilter: "input",
+                        headerFilterPlaceholder: ">60",
+                        formatter: function(cell) {
+                            const value = cell.getValue();
+                            let badge = 'badge-low';
+                            if (value >= 80) badge = 'badge-high';
+                            else if (value >= 60) badge = 'badge-medium';
+                            return `<span class="badge ${badge}">${value}</span>`;
+                        },
+                        sorter: "number"
+                    },
+                    {
+                        title: "Factors",
+                        field: "factorsPassed",
+                        width: 90,
+                        headerFilter: "input",
+                        headerFilterPlaceholder: ">5",
+                        formatter: function(cell) {
+                            const value = cell.getValue();
+                            return `<strong>${value}/10</strong>`;
+                        },
+                        sorter: "number"
+                    },
+                    {
+                        title: "Confidence",
+                        field: "confidenceLevel",
+                        width: 120,
+                        formatter: function(cell) {
+                            const stars = '⭐'.repeat(cell.getValue());
+                            return `<span class="confidence-stars">${stars}</span>`;
+                        },
+                        sorter: "number"
+                    },
+                    {
+                        title: "Price",
+                        field: "price",
+                        width: 100,
+                        headerFilter: "input",
+                        headerFilterPlaceholder: ">5",
+                        formatter: function(cell) {
+                            return '$' + cell.getValue().toFixed(2);
+                        },
+                        sorter: "number"
+                    },
+                    {
+                        title: "Change %",
+                        field: "changePct",
+                        width: 100,
+                        headerFilter: "input",
+                        formatter: function(cell) {
+                            const value = cell.getValue();
+                            const cls = value >= 0 ? 'positive' : 'negative';
+                            return `<span class="${cls}">${value.toFixed(2)}%</span>`;
+                        },
+                        sorter: "number"
+                    },
+                    {
+                        title: "Volume M",
+                        field: "volumeM",
+                        width: 110,
+                        headerFilter: "input",
+                        headerFilterPlaceholder: ">1",
+                        formatter: function(cell) {
+                            return cell.getValue().toFixed(2) + 'M';
+                        },
+                        sorter: "number"
+                    },
+                    {
+                        title: "Up Days",
+                        field: "upDays",
+                        width: 90,
+                        headerFilter: "input",
+                        formatter: function(cell) {
+                            const value = cell.getValue() || 0;
+                            return value > 0 ? `<span class="positive">${value}</span>` : value;
+                        },
+                        sorter: "number"
+                    },
+                    {
+                        title: "Long Patterns",
+                        field: "noOfLongPatterns",
+                        width: 120,
+                        headerFilter: "input",
+                        formatter: function(cell) {
+                            const value = cell.getValue() || 0;
+                            return value > 0 ? `<span class="positive">${value}</span>` : '0';
+                        },
+                        sorter: "number"
+                    },
+                    {
+                        title: "Spike",
+                        field: "spikeScore",
+                        width: 90,
+                        headerFilter: "input",
+                        headerFilterPlaceholder: ">60",
+                        formatter: function(cell) {
+                            const value = cell.getValue() || 0;
+                            return value;
+                        },
+                        sorter: "number"
+                    },
+                    {
+                        title: "Overall",
+                        field: "overallScore",
+                        width: 90,
+                        headerFilter: "input",
+                        headerFilterPlaceholder: ">70",
+                        formatter: function(cell) {
+                            const value = cell.getValue() || 0;
+                            return value;
+                        },
+                        sorter: "number"
+                    },
+                    {
+                        title: "Signal",
+                        field: "signal",
+                        width: 90,
+                        headerFilter: "select",
+                        headerFilterParams: {
+                            values: {"": "All", "BUY": "BUY", "HOLD": "HOLD", "SELL": "SELL"}
+                        },
+                        formatter: function(cell) {
+                            const value = cell.getValue() || 'N/A';
+                            let color = '#aaa';
+                            if (value === 'BUY') color = '#00ff00';
+                            else if (value === 'SELL') color = '#ff4444';
+                            else if (value === 'HOLD') color = '#ffd700';
+                            return `<span style="color:${color};font-weight:bold">${value}</span>`;
+                        }
+                    },
+                    {
+                        title: "Top Reasons",
+                        field: "topReasons",
+                        minWidth: 300,
+                        headerFilter: "input",
+                        formatter: "textarea"
+                    },
+                    {
+                        title: "Actions",
+                        width: 120,
+                        formatter: function(cell) {
+                            const ticker = cell.getRow().getData().ticker;
+                            return `<button onclick="saveAsPick('${ticker}')" style="padding:5px 10px; background:#00ff00; color:#000; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">💾 Save Pick</button>`;
+                        }
+                    }
+                ]
+            });
+
+            // Update filter info
+            updateFilterInfo();
+        }
+
+        function applyFilters() {
+            const minScore = parseInt(document.getElementById('minScore').value) || 0;
+            const minFactors = parseInt(document.getElementById('minFactors').value) || 0;
+            const confidence = document.getElementById('confidenceFilter').value;
+            const signal = document.getElementById('signalFilter').value;
+
+            let filteredData = allData.filter(stock => {
+                if (stock.convergenceScore < minScore) return false;
+                if (stock.factorsPassed < minFactors) return false;
+                if (confidence && stock.confidenceLevel < parseInt(confidence)) return false;
+                if (signal && stock.signal !== signal) return false;
+                return true;
+            });
+
+            table.setData(filteredData);
+            updateFilterInfo(filteredData.length);
+        }
+
+        function resetFilters() {
+            document.getElementById('minScore').value = 60;
+            document.getElementById('minFactors').value = 5;
+            document.getElementById('confidenceFilter').value = '';
+            document.getElementById('signalFilter').value = '';
+
+            table.setData(allData);
+            table.clearHeaderFilter();
+            updateFilterInfo();
+        }
+
+        function updateFilterInfo(count) {
+            const total = allData.length;
+            const showing = count !== undefined ? count : total;
+
+            if (showing === total) {
+                document.getElementById('filterInfo').textContent =
+                    `Showing all ${total} stocks. Use filters to narrow down results.`;
+            } else {
+                document.getElementById('filterInfo').textContent =
+                    `Showing ${showing} of ${total} stocks (${Math.round(showing/total*100)}% of total)`;
+            }
+        }
+
+        function downloadExcel() {
+            if (table) {
+                table.download("xlsx", "explosive-scores.xlsx", {sheetName: "Explosive Scores"});
+            }
+        }
+
+        function showFactorDetails(stockData) {
+            // Update ticker
+            document.getElementById('modalTicker').textContent = stockData.ticker;
+
+            // Update metrics
+            const metricsHtml = `
+                <div class="modal-metric">
+                    <div class="modal-metric-label">Convergence Score</div>
+                    <div class="modal-metric-value">${stockData.convergenceScore}</div>
+                </div>
+                <div class="modal-metric">
+                    <div class="modal-metric-label">Factors Passed</div>
+                    <div class="modal-metric-value">${stockData.factorsPassed}/10</div>
+                </div>
+                <div class="modal-metric">
+                    <div class="modal-metric-label">Confidence</div>
+                    <div class="modal-metric-value">${'⭐'.repeat(stockData.confidenceLevel)}</div>
+                </div>
+                <div class="modal-metric">
+                    <div class="modal-metric-label">Price</div>
+                    <div class="modal-metric-value">$${stockData.price.toFixed(2)}</div>
+                </div>
+                <div class="modal-metric">
+                    <div class="modal-metric-label">Change</div>
+                    <div class="modal-metric-value" style="color:${stockData.changePct >= 0 ? '#00ff00' : '#ff4444'}">
+                        ${stockData.changePct.toFixed(2)}%
+                    </div>
+                </div>
+                <div class="modal-metric">
+                    <div class="modal-metric-label">Signal</div>
+                    <div class="modal-metric-value" style="color:${
+                        stockData.signal === 'BUY' ? '#00ff00' :
+                        stockData.signal === 'SELL' ? '#ff4444' : '#ffd700'
+                    }">
+                        ${stockData.signal || 'N/A'}
+                    </div>
+                </div>
+            `;
+            document.getElementById('modalMetrics').innerHTML = metricsHtml;
+
+            // Update passed factors
+            const passedCount = stockData.passedFactors ? stockData.passedFactors.length : 0;
+            document.getElementById('passedTitle').textContent = `✓ FACTORS PASSED (${passedCount})`;
+
+            if (stockData.passedFactors && stockData.passedFactors.length > 0) {
+                const passedHtml = stockData.passedFactors.map(factor =>
+                    `<div class="modal-factor-item modal-factor-item-passed">${factor}</div>`
+                ).join('');
+                document.getElementById('passedFactors').innerHTML = passedHtml;
+            } else {
+                document.getElementById('passedFactors').innerHTML =
+                    '<div class="modal-factor-item" style="opacity:0.5">No factors passed</div>';
+            }
+
+            // Update failed factors
+            const failedCount = stockData.failedFactors ? stockData.failedFactors.length : 0;
+            document.getElementById('failedTitle').textContent = `✗ FACTORS NOT MET (${failedCount})`;
+
+            if (stockData.failedFactors && stockData.failedFactors.length > 0) {
+                const failedHtml = stockData.failedFactors.map(factor =>
+                    `<div class="modal-factor-item modal-factor-item-failed">${factor}</div>`
+                ).join('');
+                document.getElementById('failedFactors').innerHTML = failedHtml;
+            } else {
+                document.getElementById('failedFactors').innerHTML =
+                    '<div class="modal-factor-item" style="opacity:0.5;text-align:center;">All factors passed! 🎉</div>';
+            }
+
+            // Show modal
+            document.getElementById('factorModal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('factorModal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('factorModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+
+        // Close modal with ESC key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        async function saveAsPick(ticker) {
+            if (!confirm(`Save ${ticker} as a Guaranteed Pick?\n\nThis will add it to your guaranteed picks collection for tracking.`)) {
+                return;
+            }
+
+            try {
+                // Find the stock data from allData
+                const stockData = allData.find(s => s.ticker === ticker);
+                if (!stockData) {
+                    alert('❌ Stock data not found');
+                    return;
+                }
+
+                // Save to guaranteed picks
+                const response = await fetch(`${BASE_URL}/api/guaranteed/save-pick`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(stockData)
+                });
+
+                if (response.ok) {
+                    const message = await response.text();
+                    alert(message + '\n\nYou can view it in the Picks History page.');
+                } else {
+                    alert('❌ Error saving pick: ' + await response.text());
+                }
+
+            } catch (error) {
+                console.error('Error saving pick:', error);
+                alert('❌ Error saving pick. Please try again.');
+            }
+        }
+
+        // Load data on page load
+        loadExplosiveScores();
+
+        // Auto-refresh every 15 minutes
+        setInterval(loadExplosiveScores, 15 * 60 * 1000);
+    </script>
+</body>
+</html>
+

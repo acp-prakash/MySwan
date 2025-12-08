@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class Score {
     private String signal;
+    private int signalDays;
     private String signalReason;
     private int overallScore;
     private int dayTradingScore;

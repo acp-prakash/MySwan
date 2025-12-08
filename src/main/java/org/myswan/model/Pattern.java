@@ -33,4 +33,6 @@ public class Pattern {
     private double change;
     private double high;
     private double low;
+    // Stock snapshot (only populated in patternHistory collection)
+    private Stock stock;
 }

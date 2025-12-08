@@ -31,6 +31,7 @@ public class ConsecutiveDaysCalculator {
         try {
             // Get last 30 days of history (enough to find patterns)
             LocalDate to = LocalDate.now();
+			//LocalDate to = LocalDate.now().minusDays(1);
             LocalDate from = to.minusDays(30);
 
             List<Stock> history = stockService.getStockHistory(stock.getTicker(), from, to);

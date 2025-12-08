@@ -30,6 +30,7 @@ public class Stock {
     private OversoldBounceSignal oversold;
     private FilterCategory filterCategory;
     private MomentumPopSignal momPop;
+    private DailyRank dailyRank;
     private double price;
     private double open;
     private double high;

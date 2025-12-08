@@ -217,6 +217,21 @@
             font-weight: 600;
         }
     </style>
+    <script>
+        // Minimal Luxon shim for Tabulator's datetime module
+        (function(){
+            if (window.luxon && window.luxon.DateTime) return;
+            window.luxon = {
+                DateTime: {
+                    fromISO: function(s){
+                        try{ var d = new Date(s); var valid = !isNaN(d.getTime()); return { isValid: valid, toISO: function(){ return valid ? d.toISOString() : null; }, toISODate: function(){ return valid ? d.toISOString().slice(0,10) : null; }, toJSDate: function(){ return valid ? d : null; } }; }catch(e){ return { isValid:false }; }
+                    },
+                    fromMillis: function(ms){ try{ var d=new Date(Number(ms)); var valid=!isNaN(d.getTime()); return { isValid:valid, toISO:function(){return d.toISOString()}, toISODate:function(){return d.toISOString().slice(0,10)}, toJSDate:function(){return d} }; }catch(e){ return { isValid:false }; } },
+                    fromSeconds: function(s){ return this.fromMillis(Number(s)*1000); }
+                }
+            };
+        })();
+    </script>
 </head>
 <body>
     <div class="container">
@@ -270,6 +285,22 @@
             return urlParams.get('ticker');
         }
 
+        // Custom date sorter that uses plain JS Date parsing to avoid Luxon dependency
+        function customDateSorter(a, b) {
+            try {
+                const sa = a == null ? '' : String(a);
+                const sb = b == null ? '' : String(b);
+                const ta = Date.parse(sa);
+                const tb = Date.parse(sb);
+                if (isNaN(ta) && isNaN(tb)) return 0;
+                if (isNaN(ta)) return 1;
+                if (isNaN(tb)) return -1;
+                return ta - tb;
+            } catch (e) {
+                return 0;
+            }
+        }
+
         function initTable() {
             table = new Tabulator("#historyTable", {
                 layout: "fitData",
@@ -278,30 +309,61 @@
                 paginationSize: 100,
                 paginationSizeSelector: [50, 100, 200],
                 columns: [
-                    {title: "Added", field: "addedDate", width: 85, sorter: "date"},
-                    {title: "Reason", field: "reason", width: 180},
+                    {title: "HistDt", field: "historyDate", width: 85, sorter: customDateSorter, headerFilter: "input"},
+                    {title: "Tick", field: "ticker", width: 70, headerFilter: "input"},
                     {
-                        title: "Add Px",
-                        field: "addedPrice",
-                        width: 70,
-                        formatter: function(cell) {
+                        title: "Chg",
+                        field: "stock.change",
+                        width: 63,
+                        headerFilter: "input",
+                        formatter: function(cell){
                             const v = cell.getValue();
-                            return v ? v.toFixed(2) : '-';
+                            if (v === null || v === undefined || v === '') return '-';
+                            const num = parseFloat(v);
+                            const formatted = isNaN(num) ? v : num.toFixed(2);
+                            if (num > 0) return `<span style="color: #22c55e;">▲ ${formatted}</span>`;
+                            if (num < 0) return `<span style="color: #ef4444;">▼ ${formatted}</span>`;
+                            return formatted;
                         }
                     },
+                    {title: "Added", field: "addedDate", width: 85, sorter: customDateSorter, headerFilter: "input"},
                     {
                         title: "Entry",
                         field: "entry",
                         width: 70,
+                        headerFilter: "input",
                         formatter: function(cell) {
                             const v = cell.getValue();
                             return v ? v.toFixed(2) : '-';
                         }
                     },
                     {
-                        title: "Target",
+                        title: "AddPx",
+                        field: "addedPrice",
+                        width: 77,
+                        headerFilter: "input",
+                        formatter: function(cell) {
+                            const v = cell.getValue();
+                            return v ? v.toFixed(2) : '-';
+                        }
+                    },
+                    {
+                        title: "CurPx",
+                        field: "stock.price",
+                        width: 70,
+                        headerFilter: "input",
+                        formatter: function(cell) {
+                            const v = cell.getValue();
+                            if (v === null || v === undefined || v === '') return '-';
+                            const num = parseFloat(v);
+                            return isNaN(num) ? v : num.toFixed(2);
+                        }
+                    },
+                    {
+                        title: "TGT",
                         field: "target",
                         width: 70,
+                        headerFilter: "input",
                         formatter: function(cell) {
                             const v = cell.getValue();
                             return v ? v.toFixed(2) : '-';
@@ -310,69 +372,80 @@
                     {
                         title: "Stop",
                         field: "stopLoss",
-                        width: 70,
+                        width: 68,
+                        headerFilter: "input",
                         formatter: function(cell) {
                             const v = cell.getValue();
                             return v ? v.toFixed(2) : '-';
                         }
                     },
+                    {title: "TgtDt", field: "targetDate", width: 85, headerFilter: "input"},
                     {
-                        title: "R:R",
-                        field: "riskReward",
-                        width: 70,
-                        formatter: function(cell) {
-                            const row = cell.getRow().getData();
-                            if (row.entry && row.target && row.stopLoss) {
-                                const risk = Math.abs(row.entry - row.stopLoss);
-                                const reward = Math.abs(row.target - row.entry);
-                                const ratio = risk > 0 ? (reward / risk).toFixed(1) : '-';
-                                return ratio + ':1';
-                            }
-                            return '-';
-                        }
-                    },
-                    {title: "Tgt Date", field: "targetDate", width: 85},
-                    {
-                        title: "Tgt✓",
+                        title: "T✓",
                         field: "targetMet",
-                        width: 60,
+                        width: 57,
                         hozAlign: "center",
+                        headerFilter: "tickCross",
+                        headerFilterParams: {"tristate": true},
                         formatter: function(cell) {
                             return cell.getValue() ? '<span class="status-met">✓</span>' : '<span class="status-not-met">✗</span>';
                         }
                     },
                     {
-                        title: "Stop✓",
+                        title: "S✓",
                         field: "stopLossMet",
-                        width: 60,
+                        width: 58,
                         hozAlign: "center",
+                        headerFilter: "tickCross",
+                        headerFilterParams: {"tristate": true},
                         formatter: function(cell) {
                             return cell.getValue() ? '<span class="status-met">✓</span>' : '<span class="status-not-met">✗</span>';
                         }
                     },
-                    {title: "Tgt Date", field: "targetMetDate", width: 85},
-                    {title: "Stop Date", field: "stopLossMetDate", width: 85},
+                    {title: "TMDt", field: "targetMetDate", width: 85, headerFilter: "input"},
+                    {title: "STDt", field: "stopLossMetDate", width: 85, headerFilter: "input"},
+                    {title: "L#", field: "stock.noOfLongPatterns", width: 60, hozAlign: "center", headerFilter: "input"},
+                    {title: "S#", field: "stock.noOfShortPatterns", width: 60, hozAlign: "center", headerFilter: "input"},
+                    {title: "Sig", field: "stock.score.signal", width: 60, headerFilter: "input"},
+                    {title: "PickScore", field: "stock.dailyRank.pickScore", width: 72, headerFilter: "input"},
+                    {title: "Rank", field: "stock.dailyRank.finalRank", width: 72, headerFilter: "input"},
+                    {title: "Safe", field: "stock.dailyRank.safetyRank", width: 72, headerFilter: "input"},
                     {
-                        title: "Days",
-                        field: "daysActive",
+                        title: "Bottom",
+                        field: "stock.bottom.bottom",
                         width: 70,
+                        hozAlign: "center",
+                        headerFilter: "tickCross",
+                        headerFilterParams: {"tristate": true},
                         formatter: function(cell) {
-                            const row = cell.getRow().getData();
-                            if (row.addedDate) {
-                                const added = new Date(row.addedDate);
-                                const end = row.targetMetDate ? new Date(row.targetMetDate) :
-                                           row.stopLossMetDate ? new Date(row.stopLossMetDate) :
-                                           new Date();
-                                const days = Math.floor((end - added) / (1000 * 60 * 60 * 24));
-                                return days;
-                            }
-                            return '-';
+                            return cell.getValue() ? '<span class="status-met">✓</span>' : '<span class="status-not-met">✗</span>';
                         }
                     },
+                    {
+                        title: "Spike",
+                        field: "stock.spike.spikeLikely",
+                        width: 70,
+                        hozAlign: "center",
+                        headerFilter: "tickCross",
+                        headerFilterParams: {"tristate": true},
+                        formatter: function(cell) {
+                            return cell.getValue() ? '<span class="status-met">✓</span>' : '<span class="status-not-met">✗</span>';
+                        }
+                    },
+                    {title: "SS", field: "stock.spike.spikeScore", width: 60, headerFilter: "input"},
+                    {title: "Score", field: "stock.score.overallScore", width: 72, headerFilter: "input"},
+                    {title: "BRS", field: "stock.score.breakoutScore", width: 62, headerFilter: "input"},
+                    {title: "RS", field: "stock.score.reversalScore", width: 60, headerFilter: "input"},
+                    {title: "PS", field: "stock.score.patternScore", width: 60, headerFilter: "input"},
+                    {title: "BL", field: "stock.rating.btLongRating", width: 60, headerFilter: "input"},
+                    {title: "BS", field: "stock.rating.btShortRating", width: 60, headerFilter: "input"},
+                    {title: "BT", field: "stock.rating.btTrend", width: 60, headerFilter: "input"},
+                    {title: "TVT", field: "stock.rating.tradingViewTechRating", width: 60, headerFilter: "input"},
+                    {title: "TVM", field: "stock.rating.tradingViewMARating", width: 60, headerFilter: "input"}
                 ],
                 placeholder: `No pick history for ${currentTicker}`,
                 initialSort: [
-                    {column: "addedDate", dir: "desc"}
+                    {column: "historyDate", dir: "desc"}
                 ]
             });
         }
@@ -447,4 +520,3 @@
     </script>
 </body>
 </html>
-

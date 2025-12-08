@@ -11,94 +11,49 @@
             background: #f4f5f7;
             color: #222;
         }
-        .app-container {
-            width: 100%;
-            margin: 0;
-            padding: 0;
-        }
-        .card {
-            width: 100%;
-            margin: 0;
-            border-radius: 0;
-            padding: 20px;
-        }
-        #grid {
-            width: 100%;
-        }
-        h1 {
-            margin: 0 0 8px;
-            font-size: 28px;
-        }
-        .ticker-badge {
-            display: inline-block;
-            background: #2563eb;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 20px;
-            margin-left: 10px;
-        }
-        .sub-title {
-            margin-bottom: 16px;
-            color: #6b7280;
-            font-size: 14px;
-        }
-        .toolbar {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 16px;
-        }
-        .toolbar button {
-            padding: 8px 14px;
-            border-radius: 999px;
-            border: none;
-            font-size: 14px;
-            cursor: pointer;
-            background: #2563eb;
-            color: #fff;
-            font-weight: 500;
-        }
-        .toolbar button.secondary {
-            background: #e5e7eb;
-            color: #111827;
-        }
-        .grid-info {
-            margin-top: 8px;
-            font-size: 13px;
-            color: #6b7280;
-        }
-        .tabulator .tabulator-header .tabulator-col {
-            background: #f9fafb;
-            font-size: 11px;
-            font-weight: 600;
-            padding: 8px 4px;
-        }
-        .tabulator .tabulator-cell {
-            font-size: 11px;
-            padding: 6px 4px;
-        }
-        .trend-long {
-            color: #10b981;
-            font-weight: 600;
-        }
-        .trend-short {
-            color: #ef4444;
-            font-weight: 600;
-        }
-        .back-link {
-            display: inline-block;
-            margin-bottom: 16px;
-            color: #2563eb;
-            text-decoration: none;
-            font-weight: 500;
-        }
-        .back-link:hover {
-            text-decoration: underline;
-        }
+        .app-container { width: 100%; margin: 0; padding: 0; }
+        .card { width: 100%; margin: 0; border-radius: 0; padding: 20px; }
+        #grid { width: 100%; }
+        h1 { margin: 0 0 8px; font-size: 28px; }
+        .ticker-badge { display: inline-block; background: #2563eb; color: white; padding: 4px 12px; border-radius: 6px; font-weight: 600; font-size: 20px; margin-left: 10px; }
+        .sub-title { margin-bottom: 16px; color: #6b7280; font-size: 14px; }
+        .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px; }
+        .toolbar button { padding: 8px 14px; border-radius: 999px; border: none; font-size: 14px; cursor: pointer; background: #2563eb; color: #fff; font-weight: 500; }
+        .toolbar button.secondary { background: #e5e7eb; color: #111827; }
+        .grid-info { margin-top: 8px; font-size: 13px; color: #6b7280; }
+        .tabulator .tabulator-header .tabulator-col { background: #f9fafb; font-size: 11px; font-weight: 600; padding: 8px 4px; }
+        .tabulator .tabulator-cell { font-size: 11px; padding: 6px 4px; }
+        .trend-long { color: #10b981; font-weight: 600; }
+        .trend-short { color: #ef4444; font-weight: 600; }
+        .back-link { display: inline-block; margin-bottom: 16px; color: #2563eb; text-decoration: none; font-weight: 500; }
+        .back-link:hover { text-decoration: underline; }
     </style>
+    <script>
+        // Minimal Luxon shim for Tabulator's datetime module (implements needed DateTime.FNs)
+        (function(){
+            if (window.luxon && window.luxon.DateTime) return;
+            window.luxon = {
+                DateTime: {
+                    fromISO: function(s){
+                        try{
+                            var d = new Date(s);
+                            var valid = !isNaN(d.getTime());
+                            return {
+                                isValid: valid,
+                                toISO: function(){ return valid ? d.toISOString() : null; },
+                                toISODate: function(){ return valid ? d.toISOString().slice(0,10) : null; },
+                                toJSDate: function(){ return valid ? d : null; }
+                            };
+                        }catch(e){ return { isValid:false }; }
+                    },
+                    fromMillis: function(ms){
+                        try{ var d=new Date(Number(ms)); var valid = !isNaN(d.getTime()); return { isValid:valid, toISO:function(){return d.toISOString()}, toISODate:function(){return d.toISOString().slice(0,10)}, toJSDate:function(){return d} }; }catch(e){return {isValid:false};}
+                    },
+                    fromSeconds: function(s){ return this.fromMillis(Number(s)*1000); }
+                }
+            };
+        })();
+    </script>
     <script src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
@@ -135,57 +90,58 @@
     let currentTicker = "";
 
     const columns = [
-        {title: "Date", field: "histDate", headerFilter: "input", width: 110},
-        {title: "Pattern Name", field: "name", headerFilter: "input", width: 200},
-        {title: "Trend", field: "trend", headerFilter: "input", width: 80,
-            formatter: function(cell) {
-                const val = cell.getValue();
-                if (val === 'long') return '<span class="trend-long">LONG</span>';
-                if (val === 'short') return '<span class="trend-short">SHORT</span>';
-                return val;
-            }
-        },
-        {title: "Price", field: "price", headerFilter: "input", width: 80, formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(2) : '-'; }},
-        {title: "Change", field: "change", headerFilter: "input", width: 80, formatter: function(cell){
-            const v = cell.getValue();
-            if (!v) return '-';
-            const formatted = v.toFixed(2);
-            if (v > 0) return `<span style="color: #22c55e;">▲ ${formatted}</span>`;
-            if (v < 0) return `<span style="color: #ef4444;">▼ ${formatted}</span>`;
-            return formatted;
-        }},
-        {title: "High", field: "high", headerFilter: "input", width: 80, formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(2) : '-'; }},
-        {title: "Low", field: "low", headerFilter: "input", width: 80, formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(2) : '-'; }},
-        {title: "Entry", field: "entry", headerFilter: "input", width: 80},
-        {title: "Stop", field: "stop", headerFilter: "input", width: 80},
-        {title: "Min Target", field: "minPT", headerFilter: "input", width: 90},
-        {title: "Max Target", field: "maxPT", headerFilter: "input", width: 90},
-        {title: "Target Date", field: "targetDate", headerFilter: "input", width: 110},
-        {title: "Open", field: "open", headerFilter: "input", width: 70, formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(2) : '-'; }},
-        {title: "Vol", field: "volume", headerFilter: "input", width: 90, formatter: function(cell){ const v = cell.getValue(); return v ? (v / 1000000).toFixed(1) + 'M' : '-'; }},
-        {title: "Up↑", field: "upDays", headerFilter: "input", width: 60, hozAlign: "center", formatter: function(cell) { const val = cell.getValue(); if (val > 0) return `<span style="color: #22c55e; font-weight: 600;">${val}</span>`; return val || '-'; }},
-        {title: "UpHi", field: "upHigh", headerFilter: "input", width: 70, formatter: function(cell) { const val = cell.getValue(); if (val > 0) return `<span style="color: #22c55e;">${val.toFixed(2)}</span>`; return '-'; }},
-        {title: "Dn↓", field: "downDays", headerFilter: "input", width: 60, hozAlign: "center", formatter: function(cell) { const val = cell.getValue(); if (val > 0) return `<span style="color: #ef4444; font-weight: 600;">${val}</span>`; return val || '-'; }},
-        {title: "DnLo", field: "downLow", headerFilter: "input", width: 70, formatter: function(cell) { const val = cell.getValue(); if (val > 0) return `<span style="color: #ef4444;">${val.toFixed(2)}</span>`; return '-'; }},
-        {title: "Signal", field: "signal", headerFilter: "input", width: 70, formatter: function(cell) { const val = cell.getValue(); if (val === 'BUY') return '<span style="color: #22c55e; font-weight: 600;">BUY</span>'; if (val === 'SELL') return '<span style="color: #ef4444; font-weight: 600;">SELL</span>'; return val || '-'; }},
-        {title: "Score", field: "overallScore", headerFilter: "input", width: 70, hozAlign: "center"},
-        {title: "Bot", field: "bottomConditionsMet", headerFilter: "input", width: 60, hozAlign: "center"},
-        {title: "Spk", field: "spikeScore", headerFilter: "input", width: 60, hozAlign: "center"},
-        {title: "Long#", field: "noOfLongPatterns", headerFilter: "input", width: 70, hozAlign: "center"},
-        {title: "Short#", field: "noOfShortPatterns", headerFilter: "input", width: 70, hozAlign: "center"},
-        {title: "BTL", field: "btLongRating", headerFilter: "input", width: 80},
-        {title: "BTS", field: "btShortRating", headerFilter: "input", width: 80},
-        {title: "BTT", field: "btTrend", headerFilter: "input", width: 70},
-        {title: "TVT", field: "tradingViewTechRating", headerFilter: "input", width: 80},
-        {title: "TVM", field: "tradingViewMARating", headerFilter: "input", width: 80},
-        {title: "Status", field: "status", headerFilter: "input", width: 70}
+        {title: "Date", field: "histDate", headerFilter: "input", width: 85, sorter: customDateSorter},
+        {title: "Tick", field: "ticker", headerFilter: "input", headerFilterPlaceholder: "Filter...", width: 75},
+        {title: "Pattern", field: "name", headerFilter: "input", headerFilterPlaceholder: "Filter...", width: 130},
+        {title: "Trend", field: "trend", headerFilter: "input", headerFilterPlaceholder: "long", width: 65, formatter: function(cell) { const val = cell.getValue(); if (val === 'long') return '<span class="trend-long">LONG</span>'; if (val === 'short') return '<span class="trend-short">SHORT</span>'; return val; }},
+        {title: "Chg", field: "change", headerFilter: "input", headerFilterPlaceholder: ">2", width: 65, formatter: function(cell){ const v = cell.getValue(); if (!v) return '-'; const formatted = v.toFixed(2); if (v > 0) return `<span style="color: #22c55e;">▲ ${formatted}</span>`; if (v < 0) return `<span style="color: #ef4444;">▼ ${formatted}</span>`; return formatted; }},
+        {title: "High", field: "high", headerFilter: "input", headerFilterPlaceholder: "<200", width: 65, formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(2) : '-'; }},
+        {title: "Low", field: "low", headerFilter: "input", headerFilterPlaceholder: ">50", width: 60, formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(2) : '-'; }},
+        {title: "Entry", field: "entry", headerFilter: "input", headerFilterPlaceholder: ">100", width: 65},
+        {title: "Price", field: "price", headerFilter: "input", headerFilterPlaceholder: ">100", width: 65, formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(2) : '-'; }},
+        {title: "Min Target", field: "minPT", headerFilter: "input", headerFilterPlaceholder: ">100", width: 65},
+        {title: "Max Target", field: "maxPT", headerFilter: "input", headerFilterPlaceholder: ">150", width: 60},
+        {title: "Target Date", field: "targetDate", headerFilter: "input", headerFilterPlaceholder: "2025-12", width: 100},
+        {title: "Stop", field: "stop", headerFilter: "input", headerFilterPlaceholder: "<100", width: 65},
+        {title: "Dn↓", field: "downDays", headerFilter: "input", headerFilterPlaceholder: ">=3", width: 60, hozAlign: "center", formatter: function(cell) { const val = cell.getValue(); if (val > 0) return `<span style="color: #ef4444; font-weight: 600;">${val}</span>`; return val || '-'; }},
+        {title: "UpHi", field: "upHigh", headerFilter: "input", headerFilterPlaceholder: ">100", width: 70, formatter: function(cell) { const val = cell.getValue(); if (val > 0) return `<span style="color: #22c55e;">${val.toFixed(2)}</span>`; return '-'; }},
+        {title: "piScore", field: "piScore", headerFilter: "input", width: 70},
+        {title: "Rank", field: "Rank", headerFilter: "input", width: 70},
+        {title: "safe", field: "safe", headerFilter: "input", width: 70},
+        {title: "btMet", field: "bottomConditionsMet", headerFilter: "input", width: 70},
+        {title: "btStr", field: "btStr", headerFilter: "input", width: 70},
+        {title: "SS", field: "spikeScore", headerFilter: "input", width: 60},
+        {title: "spike", field: "spikeType", headerFilter: "input", width: 70},
+        {title: "PrimCat", field: "PrimCat", headerFilter: "input", width: 70},
+        {title: "Cat", field: "Cat", headerFilter: "input", width: 70},
+        {title: "Signal", field: "signal", headerFilter: "input", headerFilterPlaceholder: "BUY", width: 70, formatter: function(cell) { const val = cell.getValue(); if (val === 'BUY') return '<span style="color: #22c55e; font-weight: 600;">BUY</span>'; if (val === 'SELL') return '<span style="color: #ef4444; font-weight: 600;">SELL</span>'; return val || '-'; }},
+        {title: "SigD", field: "SigD", headerFilter: "input", width: 70, formatter: function(cell) { const val = cell.getValue(); if (val === 'BUY') return `<span style="background: rgba(34, 197, 94, 0.2); color: #22c55e; padding: 2px 4px; border-radius: 4px; font-weight: 600; font-size: 9px;">${val}</span>`; if (val === 'SELL') return `<span style="background: rgba(239, 68, 68, 0.2); color: #ef4444; padding: 2px 4px; border-radius: 4px; font-weight: 600; font-size: 9px;">${val}</span>`; return val; }},
+        {title: "Score", field: "overallScore", headerFilter: "input", headerFilterPlaceholder: ">70", width: 50, hozAlign: "center"},
+        {title: "L#", field: "noOfLongPatterns", headerFilter: "input", headerFilterPlaceholder: ">0", width: 50, hozAlign: "center"},
+        {title: "S#", field: "noOfShortPatterns", headerFilter: "input", headerFilterPlaceholder: ">0", width: 50, hozAlign: "center"},
+        {title: "BTL", field: "btLongRating", headerFilter: "input", headerFilterPlaceholder: "Buy", width: 80},
+        {title: "BTS", field: "btShortRating", headerFilter: "input", headerFilterPlaceholder: "Sell", width: 80},
+        {title: "BTT", field: "btTrend", headerFilter: "input", headerFilterPlaceholder: "Up", width: 70}
     ];
 
-    function createTable() {
-        if (table) {
-            table.destroy();
+    // Custom date sorter that uses plain JS Date parsing to avoid Luxon dependency
+    function customDateSorter(a, b) {
+        try {
+            const sa = a == null ? '' : String(a);
+            const sb = b == null ? '' : String(b);
+            const ta = Date.parse(sa);
+            const tb = Date.parse(sb);
+            if (isNaN(ta) && isNaN(tb)) return 0;
+            if (isNaN(ta)) return 1;
+            if (isNaN(tb)) return -1;
+            return ta - tb;
+        } catch (e) {
+            return 0;
         }
+    }
 
+    function createTable() {
+        if (table) table.destroy();
         table = new Tabulator("#grid", {
             layout: "fitDataStretch",
             height: "calc(100vh - 280px)",
@@ -193,9 +149,7 @@
             paginationSize: 50,
             paginationSizeSelector: [25, 50, 100, 200, 500],
             columns: columns,
-            initialSort: [
-                {column: "histDate", dir: "desc"}
-            ]
+            initialSort: [ {column: "histDate", dir: "desc"} ]
         });
     }
 
@@ -206,67 +160,59 @@
 
     async function loadData() {
         currentTicker = getTickerFromUrl();
-
-        if (!currentTicker) {
-            alert('No ticker specified in URL');
-            return;
-        }
+        if (!currentTicker) { alert('No ticker specified in URL'); return; }
 
         document.getElementById('tickerBadge').textContent = currentTicker;
-        console.log('Loading pattern history for ticker:', currentTicker);
-
         createTable();
 
         try {
-            // Load pattern history
+            // Load pattern history which already contains embedded `stock` snapshot
             const response = await fetch(`${API_BASE}/pattern/history/${encodeURIComponent(currentTicker)}`);
             const patternHistory = await response.json();
-            console.log('Loaded pattern history:', patternHistory.length);
 
-            // Load stock history to enrich pattern data
-            const stockResponse = await fetch(`${API_BASE}/stock/history/${encodeURIComponent(currentTicker)}`);
-            const stockHistory = await stockResponse.json();
-            console.log('Loaded stock history for enrichment:', stockHistory.length);
-
-            // Create stock history map by date for fast lookup
-            const stockByDate = {};
-            stockHistory.forEach(stock => {
-                if (stock.histDate) {
-                    stockByDate[stock.histDate] = stock;
-                }
-            });
-
-            // Enrich pattern history with stock data
-            const enrichedData = patternHistory.map(pattern => {
-                const stockData = stockByDate[pattern.histDate];
-                if (stockData) {
-                    return {
-                        ...pattern,
-                        open: stockData.open,
-                        volume: stockData.volume,
-                        upDays: stockData.upDays,
-                        downDays: stockData.downDays,
-                        upHigh: stockData.upHigh,
-                        downLow: stockData.downLow,
-                        signal: stockData.score?.signal,
-                        overallScore: stockData.score?.overallScore,
-                        bottomConditionsMet: stockData.bottom?.conditionsMet,
-                        spikeScore: stockData.spike?.spikeScore,
-                        btLongRating: stockData.rating?.btLongRating,
-                        btShortRating: stockData.rating?.btShortRating,
-                        btTrend: stockData.rating?.btTrend,
-                        tradingViewTechRating: stockData.rating?.tradingViewTechRating,
-                        tradingViewMARating: stockData.rating?.tradingViewMARating
-                    };
-                }
-                return pattern;
-            });
-
-            console.log('Enriched pattern history with stock data');
+            // Map each pattern to include top-level stock fields (if present) so grid columns work directly
+            const data = patternHistory.map(p => ({
+                ...p,
+                histDate: formatDateString(p.histDate),
+                price: p.stock?.price,
+                change: p.stock?.change,
+                high: p.stock?.high,
+                low: p.stock?.low,
+                open: p.stock?.open,
+                volume: p.stock?.volume,
+                upDays: p.stock?.upDays,
+                downDays: p.stock?.downDays,
+                upHigh: p.stock?.upHigh,
+                downLow: p.stock?.downLow,
+                piScore: p.stock?.dailyRank.pickScore,
+                Rank: p.stock?.dailyRank.finalRank,
+                safe: p.stock?.dailyRank.safetyRank,
+                PrimCat: p.stock?.filterCategory.primaryCategory,
+                Cat: p.stock?.filterCategory.category,
+                signal: p.stock?.score?.signal,
+                SigD: p.stock?.score?.signalDays,
+                bottomConditionsMet: p.stock?.bottom?.conditionsMet,
+                btStr: p.stock?.bottom?.strength,
+                spikeScore: p.stock?.spike?.spikeScore,
+                spikeType: p.stock?.spike?.spikeType,
+                overallScore: p.stock?.score?.overallScore,
+                noOfLongPatterns: p.noOfLongPatterns,
+                noOfShortPatterns: p.noOfShortPatterns,
+                piScore: p.stock?.dailyRank?.pickScore,
+                Rank: p.stock?.dailyRank?.finalRank,
+                safe: p.stock?.dailyRank?.safetyRank,
+                btStr: p.stock?.bottom?.btStr,
+                spikeType: p.stock?.spike?.spikeType,
+                PrimCat: p.stock?.score?.PrimCat,
+                Cat: p.stock?.score?.Cat,
+                btLongRating: p.stock?.rating?.btLongRating,
+                btShortRating: p.stock?.rating?.btShortRating,
+                btTrend: p.stock?.rating?.btTrend
+            }));
 
             if (table) {
-                table.setData(enrichedData);
-                updateGridInfo(enrichedData.length);
+                table.setData(data);
+                updateGridInfo(data.length);
             }
 
         } catch (err) {
@@ -291,11 +237,52 @@
         XLSX.writeFile(wb, `myswan-pattern-history-${currentTicker}-${new Date().toISOString().slice(0,10)}.xlsx`);
     }
 
+    // Date formatting helper: use plain JS Date parsing and fallbacks
+    function formatDateString(raw) {
+        if (raw === null || raw === undefined) return '-';
+
+        // If already a Date object
+        if (raw instanceof Date) {
+            if (isNaN(raw)) return '-';
+            return raw.toISOString().slice(0, 10);
+        }
+
+        const s = String(raw).trim();
+        if (!s) return '-';
+
+        // If looks like YYYY-MM-DD or starts with it, just return first 10 chars
+        const isoDateMatch = s.match(/^(\d{4}-\d{2}-\d{2})/);
+        if (isoDateMatch) return isoDateMatch[1];
+
+        // If it's a numeric timestamp (seconds or ms)
+        if (/^\d+$/.test(s)) {
+            try {
+                // Try as milliseconds first, then seconds
+                let t = Number(s);
+                let d = new Date(t);
+                if (isNaN(d.getTime()) || t < 1e11) { // likely seconds
+                    d = new Date(t * 1000);
+                }
+                if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+            } catch (e) { /* fallthrough */ }
+        }
+
+        // Try Date.parse for other string formats
+        try {
+            const parsed = Date.parse(s);
+            if (!isNaN(parsed)) {
+                const d = new Date(parsed);
+                return d.toISOString().slice(0, 10);
+            }
+        } catch (e) { /* ignore */ }
+
+        // Fallback: return first 10 chars if available, else the whole string
+        return s.length >= 10 ? s.slice(0, 10) : s;
+    }
+
     // Event Listeners
     document.getElementById('reloadBtn').addEventListener('click', loadData);
-    document.getElementById('clearFiltersBtn').addEventListener('click', () => {
-        if (table) table.clearHeaderFilter();
-    });
+    document.getElementById('clearFiltersBtn').addEventListener('click', () => { if (table) table.clearHeaderFilter(); });
     document.getElementById('exportExcelBtn').addEventListener('click', exportExcel);
 
     // Initialize
@@ -303,4 +290,3 @@
 </script>
 </body>
 </html>
-

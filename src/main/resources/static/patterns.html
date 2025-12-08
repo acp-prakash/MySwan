@@ -108,6 +108,54 @@
             <button id="exportExcelBtn" class="secondary">Export Excel</button>
         </div>
 
+        <!-- Slider Filters -->
+        <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div>
+                    <label style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px;">
+                        Pick Score: <span id="piScoreValue" style="color: #2563eb;">0+</span>
+                    </label>
+                    <input type="range" id="piScoreSlider" min="0" max="100" value="0"
+                           style="width: 100%; accent-color: #2563eb;">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px;">
+                        Safety Rank: <span id="safeValue" style="color: #2563eb;">0+</span>
+                    </label>
+                    <input type="range" id="safeSlider" min="0" max="100" value="0"
+                           style="width: 100%; accent-color: #2563eb;">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px;">
+                        Final Rank: <span id="RankValue" style="color: #2563eb;">0+</span>
+                    </label>
+                    <input type="range" id="RankSlider" min="0" max="100" value="0"
+                           style="width: 100%; accent-color: #2563eb;">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px;">
+                        Bottom Conditions: <span id="bottomConditionsMetValue" style="color: #2563eb;">0+</span>
+                    </label>
+                    <input type="range" id="bottomConditionsMetSlider" min="0" max="10" value="0"
+                           style="width: 100%; accent-color: #2563eb;">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px;">
+                        Spike Score: <span id="spikeScoreValue" style="color: #2563eb;">0+</span>
+                    </label>
+                    <input type="range" id="spikeScoreSlider" min="0" max="100" value="0"
+                           style="width: 100%; accent-color: #2563eb;">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px;">
+                        Long Patterns: <span id="noOfLongPatternsValue" style="color: #2563eb;">0+</span>
+                    </label>
+                    <input type="range" id="noOfLongPatternsSlider" min="0" max="10" value="0"
+                           style="width: 100%; accent-color: #2563eb;">
+                </div>
+            </div>
+        </div>
+
         <!-- Grid container -->
         <div id="grid"></div>
         <div class="grid-info" id="gridInfo"></div>
@@ -176,11 +224,11 @@
             }
         },
         {
-            title: "Ticker",
+            title: "Tick",
             field: "ticker",
             headerFilter: "input",
             headerFilterPlaceholder: "Filter...",
-            width: 80,
+            width: 75,
             formatter: function(cell) {
                 const ticker = cell.getValue();
                 return `<a href="pattern-history.html?ticker=${encodeURIComponent(ticker)}"
@@ -188,18 +236,18 @@
             }
         },
         {
-            title: "Pattern Name",
+            title: "Pattern",
             field: "name",
             headerFilter: "input",
             headerFilterPlaceholder: "Filter...",
-            width: 200
+            width: 130
         },
         {
             title: "Trend",
             field: "trend",
             headerFilter: "input",
             headerFilterPlaceholder: "long",
-            width: 80,
+            width: 65,
             formatter: function(cell) {
                 const val = cell.getValue();
                 if (val === 'long') return '<span class="trend-long">LONG</span>';
@@ -209,12 +257,12 @@
         },
 
         {
-            title: "Change",
+            title: "Chg",
             field: "change",
             headerFilter: "input",
             headerFilterPlaceholder: ">2",
             headerFilterFunc: customNumberFilter,
-            width: 80,
+            width: 65,
             formatter: function(cell){
                 const v = cell.getValue();
                 if (!v) return '-';
@@ -230,7 +278,7 @@
             headerFilter: "input",
             headerFilterPlaceholder: "<200",
             headerFilterFunc: customNumberFilter,
-            width: 80,
+            width: 65,
             formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(2) : '-'; }
         },
         {
@@ -239,7 +287,7 @@
             headerFilter: "input",
             headerFilterPlaceholder: ">50",
             headerFilterFunc: customNumberFilter,
-            width: 80,
+            width: 60,
             formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(2) : '-'; }
         },
         {
@@ -248,7 +296,7 @@
             headerFilter: "input",
             headerFilterPlaceholder: ">100",
             headerFilterFunc: customNumberFilter,
-            width: 80
+            width: 65
         },
         {
             title: "Price",
@@ -256,7 +304,7 @@
             headerFilter: "input",
             headerFilterPlaceholder: ">100",
             headerFilterFunc: customNumberFilter,
-            width: 80,
+            width: 65,
             formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(2) : '-'; }
         },
 
@@ -266,7 +314,7 @@
             headerFilter: "input",
             headerFilterPlaceholder: ">100",
             headerFilterFunc: customNumberFilter,
-            width: 90
+            width: 65
         },
         {
             title: "Max Target",
@@ -274,14 +322,14 @@
             headerFilter: "input",
             headerFilterPlaceholder: ">150",
             headerFilterFunc: customNumberFilter,
-            width: 90
+            width: 60
         },
         {
             title: "Target Date",
             field: "targetDate",
             headerFilter: "input",
             headerFilterPlaceholder: "2025-12",
-            width: 110
+            width: 100
         },
         {
             title: "Stop",
@@ -289,15 +337,15 @@
             headerFilter: "input",
             headerFilterPlaceholder: "<100",
             headerFilterFunc: customNumberFilter,
-            width: 80
+            width: 65
         },
-        {
+       /* {
             title: "Open",
             field: "open",
             headerFilter: "input",
             headerFilterPlaceholder: ">100",
             headerFilterFunc: customNumberFilter,
-            width: 70,
+            width: 65,
             formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(2) : '-'; }
         },
         {
@@ -306,13 +354,13 @@
             headerFilter: "input",
             headerFilterPlaceholder: ">1M",
             headerFilterFunc: customNumberFilter,
-            width: 90,
+            width: 65,
             formatter: function(cell){
                 const v = cell.getValue();
                 return v ? (v / 1000000).toFixed(1) + 'M' : '-';
             }
-        },
-        {
+        },*/
+        /*{
             title: "Up↑",
             field: "upDays",
             headerFilter: "input",
@@ -323,6 +371,21 @@
             formatter: function(cell) {
                 const val = cell.getValue();
                 if (val > 0) return `<span style="color: #22c55e; font-weight: 600;">${val}</span>`;
+                return val || '-';
+            }
+        },*/
+
+        {
+            title: "Dn↓",
+            field: "downDays",
+            headerFilter: "input",
+            headerFilterPlaceholder: ">=3",
+            headerFilterFunc: customNumberFilter,
+            width: 60,
+            hozAlign: "center",
+            formatter: function(cell) {
+                const val = cell.getValue();
+                if (val > 0) return `<span style="color: #ef4444; font-weight: 600;">${val}</span>`;
                 return val || '-';
             }
         },
@@ -339,21 +402,7 @@
                 return '-';
             }
         },
-        {
-            title: "Dn↓",
-            field: "downDays",
-            headerFilter: "input",
-            headerFilterPlaceholder: ">=3",
-            headerFilterFunc: customNumberFilter,
-            width: 60,
-            hozAlign: "center",
-            formatter: function(cell) {
-                const val = cell.getValue();
-                if (val > 0) return `<span style="color: #ef4444; font-weight: 600;">${val}</span>`;
-                return val || '-';
-            }
-        },
-        {
+        /*{
             title: "DnLo",
             field: "downLow",
             headerFilter: "input",
@@ -365,13 +414,18 @@
                 if (val > 0) return `<span style="color: #ef4444;">${val.toFixed(2)}</span>`;
                 return '-';
             }
-        },
-        {
-            title: "Signal",
-            field: "signal",
-            headerFilter: "input",
-            headerFilterPlaceholder: "BUY",
-            width: 70,
+        },*/
+
+        {title: "piScore",field: "piScore",headerFilter: "input",width: 70,headerFilterFunc: customNumberFilter},
+        {title: "Rank",field: "Rank",headerFilter: "input",width: 70,headerFilterFunc: customNumberFilter},
+        {title: "safe",field: "safe",headerFilter: "input",width: 70,headerFilterFunc: customNumberFilter},
+        {title: "btMet",field: "bottomConditionsMet",headerFilter: "input",width: 70,headerFilterFunc: customNumberFilter},
+        {title: "btStr",field: "btStr",headerFilter: "input",width: 70},
+        {title: "SS",field: "spikeScore",headerFilter: "input",width: 60,headerFilterFunc: customNumberFilter},
+        {title: "spike",field: "spikeType",headerFilter: "input",width: 70},
+        {title: "PrimCat",field: "PrimCat",headerFilter: "input",width: 70},
+        {title: "Cat",field: "Cat",headerFilter: "input",width: 70},
+        {title: "Signal",field: "signal",headerFilter: "input",headerFilterPlaceholder: "BUY",width: 70,
             formatter: function(cell) {
                 const val = cell.getValue();
                 if (val === 'BUY') return '<span style="color: #22c55e; font-weight: 600;">BUY</span>';
@@ -379,49 +433,32 @@
                 return val || '-';
             }
         },
+        {title: "SigD", field: "SigD", headerFilter: "input", width: 70, formatter: function(cell) { const val = cell.getValue(); if (val === 'BUY') return `<span style="background: rgba(34, 197, 94, 0.2); color: #22c55e; padding: 2px 4px; border-radius: 4px; font-weight: 600; font-size: 9px;">${val}</span>`; if (val === 'SELL') return `<span style="background: rgba(239, 68, 68, 0.2); color: #ef4444; padding: 2px 4px; border-radius: 4px; font-weight: 600; font-size: 9px;">${val}</span>`; return val; }},
         {
             title: "Score",
             field: "overallScore",
             headerFilter: "input",
             headerFilterPlaceholder: ">70",
             headerFilterFunc: customNumberFilter,
-            width: 70,
+            width: 50,
             hozAlign: "center"
         },
         {
-            title: "Bot",
-            field: "bottomConditionsMet",
-            headerFilter: "input",
-            headerFilterPlaceholder: ">=5",
-            headerFilterFunc: customNumberFilter,
-            width: 60,
-            hozAlign: "center"
-        },
-        {
-            title: "Spk",
-            field: "spikeScore",
-            headerFilter: "input",
-            headerFilterPlaceholder: ">70",
-            headerFilterFunc: customNumberFilter,
-            width: 60,
-            hozAlign: "center"
-        },
-        {
-            title: "Long#",
+            title: "L#",
             field: "noOfLongPatterns",
             headerFilter: "input",
             headerFilterPlaceholder: ">0",
             headerFilterFunc: customNumberFilter,
-            width: 70,
+            width: 50,
             hozAlign: "center"
         },
         {
-            title: "Short#",
+            title: "S#",
             field: "noOfShortPatterns",
             headerFilter: "input",
             headerFilterPlaceholder: ">0",
             headerFilterFunc: customNumberFilter,
-            width: 70,
+            width: 50,
             hozAlign: "center"
         },
         {
@@ -537,10 +574,18 @@
                                 downDays: stock.downDays,
                                 upHigh: stock.upHigh,
                                 downLow: stock.downLow,
+                                piScore: stock.dailyRank.pickScore,
+                                Rank: stock.dailyRank.finalRank,
+                                safe: stock.dailyRank.safetyRank,
+                                PrimCat: stock.filterCategory.primaryCategory,
+                                Cat: stock.filterCategory.category,
                                 signal: stock.score?.signal,
-                                overallScore: stock.score?.overallScore,
+                                SigD: stock.score?.signalDays,
                                 bottomConditionsMet: stock.bottom?.conditionsMet,
+                                btStr: stock.bottom?.strength,
                                 spikeScore: stock.spike?.spikeScore,
+                                spikeType: stock.spike?.spikeType,
+                                overallScore: stock.score?.overallScore,
                                 btShortRating: stock.rating?.btShortRating,
                                 btLongRating: stock.rating?.btLongRating,
                                 btTrend: stock.rating?.btTrend,
@@ -608,10 +653,18 @@
                                 downDays: stock.downDays,
                                 upHigh: stock.upHigh,
                                 downLow: stock.downLow,
+                                piScore: stock.dailyRank.pickScore,
+                                Rank: stock.dailyRank.finalRank,
+                                safe: stock.dailyRank.safetyRank,
+                                PrimCat: stock.filterCategory.primaryCategory,
+                                Cat: stock.filterCategory.category,
                                 signal: stock.score?.signal,
+                                SigD: stock.score?.signalDays,
                                 overallScore: stock.score?.overallScore,
                                 bottomConditionsMet: stock.bottom?.conditionsMet,
+                                btStr: stock.bottom?.strength,
                                 spikeScore: stock.spike?.spikeScore,
+                                spikeType: stock.spike?.spikeType,
                                 btShortRating: stock.rating?.btShortRating,
                                 btLongRating: stock.rating?.btLongRating,
                                 btTrend: stock.rating?.btTrend,
@@ -725,16 +778,116 @@
         }
     }
 
+    // Slider filter functions
+    function applySliderFilters() {
+        if (!table) return;
+
+        const filters = [
+            { field: 'piScore', value: parseInt(document.getElementById('piScoreSlider').value) },
+            { field: 'safe', value: parseInt(document.getElementById('safeSlider').value) },
+            { field: 'Rank', value: parseInt(document.getElementById('RankSlider').value) },
+            { field: 'bottomConditionsMet', value: parseInt(document.getElementById('bottomConditionsMetSlider').value) },
+            { field: 'spikeScore', value: parseInt(document.getElementById('spikeScoreSlider').value) },
+            { field: 'noOfLongPatterns', value: parseInt(document.getElementById('noOfLongPatternsSlider').value) }
+        ];
+
+        // Build filter array for Tabulator
+        const tabulatorFilters = filters
+            .filter(f => f.value > 0)
+            .map(f => ({
+                field: f.field,
+                type: '>=',
+                value: f.value
+            }));
+
+        if (tabulatorFilters.length > 0) {
+            table.setFilter(tabulatorFilters);
+        } else {
+            table.clearFilter();
+        }
+    }
+
+    function setupSliderListeners() {
+        // Pick Score slider
+        const piScoreSlider = document.getElementById('piScoreSlider');
+        const piScoreValue = document.getElementById('piScoreValue');
+        piScoreSlider.addEventListener('input', function() {
+            piScoreValue.textContent = this.value + '+';
+            applySliderFilters();
+        });
+
+        // Safety Rank slider
+        const safeSlider = document.getElementById('safeSlider');
+        const safeValue = document.getElementById('safeValue');
+        safeSlider.addEventListener('input', function() {
+            safeValue.textContent = this.value + '+';
+            applySliderFilters();
+        });
+
+        // Final Rank slider
+        const RankSlider = document.getElementById('RankSlider');
+        const RankValue = document.getElementById('RankValue');
+        RankSlider.addEventListener('input', function() {
+            RankValue.textContent = this.value + '+';
+            applySliderFilters();
+        });
+
+        // Bottom Conditions slider
+        const bottomConditionsMetSlider = document.getElementById('bottomConditionsMetSlider');
+        const bottomConditionsMetValue = document.getElementById('bottomConditionsMetValue');
+        bottomConditionsMetSlider.addEventListener('input', function() {
+            bottomConditionsMetValue.textContent = this.value + '+';
+            applySliderFilters();
+        });
+
+        // Spike Score slider
+        const spikeScoreSlider = document.getElementById('spikeScoreSlider');
+        const spikeScoreValue = document.getElementById('spikeScoreValue');
+        spikeScoreSlider.addEventListener('input', function() {
+            spikeScoreValue.textContent = this.value + '+';
+            applySliderFilters();
+        });
+
+        // Long Patterns slider
+        const noOfLongPatternsSlider = document.getElementById('noOfLongPatternsSlider');
+        const noOfLongPatternsValue = document.getElementById('noOfLongPatternsValue');
+        noOfLongPatternsSlider.addEventListener('input', function() {
+            noOfLongPatternsValue.textContent = this.value + '+';
+            applySliderFilters();
+        });
+    }
+
+    function resetSliders() {
+        document.getElementById('piScoreSlider').value = 0;
+        document.getElementById('piScoreValue').textContent = '0+';
+        document.getElementById('safeSlider').value = 0;
+        document.getElementById('safeValue').textContent = '0+';
+        document.getElementById('RankSlider').value = 0;
+        document.getElementById('RankValue').textContent = '0+';
+        document.getElementById('bottomConditionsMetSlider').value = 0;
+        document.getElementById('bottomConditionsMetValue').textContent = '0+';
+        document.getElementById('spikeScoreSlider').value = 0;
+        document.getElementById('spikeScoreValue').textContent = '0+';
+        document.getElementById('noOfLongPatternsSlider').value = 0;
+        document.getElementById('noOfLongPatternsValue').textContent = '0+';
+
+        if (table) table.clearFilter();
+    }
+
     // Event Listeners
     document.getElementById('reloadBtn').addEventListener('click', loadData);
     document.getElementById('clearFiltersBtn').addEventListener('click', () => {
         if (table) table.clearHeaderFilter();
+        resetSliders();
     });
     document.getElementById('exportExcelBtn').addEventListener('click', exportExcel);
     document.getElementById('fetchPatternsBtn').addEventListener('click', fetchPatterns);
 
     // Initialize
-    window.addEventListener('DOMContentLoaded', loadData);
+    window.addEventListener('DOMContentLoaded', () => {
+        loadData();
+        setupSliderListeners();
+    });
 </script>
 </body>
 </html>
