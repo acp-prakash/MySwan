@@ -1,6 +1,6 @@
 package org.myswan.service.internal;
 
-import org.myswan.model.Futures;
+import org.myswan.model.collection.Futures;
 import org.myswan.repository.FuturesRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

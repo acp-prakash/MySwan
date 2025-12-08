@@ -1,8 +1,8 @@
 package org.myswan.controller.internal;
 
 import lombok.extern.slf4j.Slf4j;
-import org.myswan.model.Stock;
-import org.myswan.model.Watchlist;
+import org.myswan.model.collection.Stock;
+import org.myswan.model.collection.Watchlist;
 import org.myswan.service.internal.StockService;
 import org.myswan.service.internal.WatchlistService;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Slf4j
 @RestController

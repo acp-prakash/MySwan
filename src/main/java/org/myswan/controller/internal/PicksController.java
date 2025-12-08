@@ -1,7 +1,7 @@
 package org.myswan.controller.internal;
 
 import lombok.extern.slf4j.Slf4j;
-import org.myswan.model.Picks;
+import org.myswan.model.collection.Picks;
 import org.myswan.service.internal.PicksService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

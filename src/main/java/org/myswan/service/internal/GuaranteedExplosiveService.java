@@ -1,11 +1,11 @@
-package org.myswan.service;
+package org.myswan.service.internal;
 
 import lombok.extern.slf4j.Slf4j;
-import org.myswan.model.GuaranteedPick;
-import org.myswan.model.Stock;
-import org.myswan.model.dto.GuaranteedCandidateDTO;
+import org.myswan.model.collection.GuaranteedPick;
+import org.myswan.model.collection.Stock;
+import org.myswan.model.compute.ExplosiveScoreDTO;
+import org.myswan.model.compute.GuaranteedCandidateDTO;
 import org.myswan.repository.GuaranteedPickRepository;
-import org.myswan.service.internal.StockService;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -535,16 +535,16 @@ public class GuaranteedExplosiveService {
     /**
      * Get ALL stocks with explosive scores for grid display
      */
-    public List<org.myswan.model.dto.ExplosiveScoreDTO> getAllExplosiveScores() {
+    public List<ExplosiveScoreDTO> getAllExplosiveScores() {
         List<Stock> allStocks = stockService.list();
 
         log.info("Calculating explosive scores for {} stocks", allStocks.size());
 
-        List<org.myswan.model.dto.ExplosiveScoreDTO> scores = allStocks.parallelStream()
+        List<ExplosiveScoreDTO> scores = allStocks.parallelStream()
             .filter(this::passesBasicFilters)
             .map(this::calculateExplosiveScore)
             .sorted(Comparator
-                .comparingInt(org.myswan.model.dto.ExplosiveScoreDTO::getConvergenceScore)
+                .comparingInt(ExplosiveScoreDTO::getConvergenceScore)
                 .reversed())
             .collect(Collectors.toList());
 
@@ -555,8 +555,8 @@ public class GuaranteedExplosiveService {
     /**
      * Calculate explosive score for a single stock (lighter version for grid)
      */
-    private org.myswan.model.dto.ExplosiveScoreDTO calculateExplosiveScore(Stock stock) {
-        org.myswan.model.dto.ExplosiveScoreDTO dto = new org.myswan.model.dto.ExplosiveScoreDTO();
+    private ExplosiveScoreDTO calculateExplosiveScore(Stock stock) {
+        ExplosiveScoreDTO dto = new ExplosiveScoreDTO();
 
         // Basic info
         dto.setTicker(stock.getTicker());

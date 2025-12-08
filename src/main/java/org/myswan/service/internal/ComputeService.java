@@ -3,7 +3,7 @@ package org.myswan.service.internal;
 import org.myswan.helpers.scoring.*;
 import org.myswan.helpers.scoring.ConsecutiveDaysCalculator;
 import org.myswan.model.compute.Score;
-import org.myswan.model.Stock;
+import org.myswan.model.collection.Stock;
 import org.myswan.repository.StockRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,9 +13,9 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Service
-public class ScoringService {
+public class ComputeService {
 
-    private static final Logger log = LoggerFactory.getLogger(ScoringService.class);
+    private static final Logger log = LoggerFactory.getLogger(ComputeService.class);
     private final StockService stockService;
     private final StockRepository repository;
     private final DayTrading dayTrading;
@@ -31,9 +31,9 @@ public class ScoringService {
     private final ConsecutiveDaysCalculator consecutiveDaysCalculator;
     private final DailyRanking dailyRanking;
 
-    public ScoringService(StockService stockService, StockRepository repository,
-                          DayTrading dayTrading,SwingTrading swingTrading,Reversal reversal,
-                          Breakout breakout,Pattern pattern, BottomDetect bottomDetect,
+    public ComputeService(StockService stockService, StockRepository repository,
+                          DayTrading dayTrading, SwingTrading swingTrading, Reversal reversal,
+                          Breakout breakout, Pattern pattern, BottomDetect bottomDetect,
                           SpikeDetect spikeDetect, OversoldBounceDetect oversoldBounceDetect,
                           MomentumPopDetect momentumPopDetect, FilterCategoryDetect filterCategoryDetect,
                           ConsecutiveDaysCalculator consecutiveDaysCalculator, DailyRanking dailyRanking) {

@@ -1,6 +1,6 @@
 package org.myswan.repository;
 
-import org.myswan.model.Pattern;
+import org.myswan.model.collection.Pattern;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 

@@ -1,6 +1,6 @@
 package org.myswan.controller.internal;
 
-import org.myswan.model.Master;
+import org.myswan.model.collection.Master;
 import org.myswan.service.internal.MasterService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

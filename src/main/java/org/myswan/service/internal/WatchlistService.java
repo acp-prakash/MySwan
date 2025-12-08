@@ -1,7 +1,7 @@
 package org.myswan.service.internal;
 
 import lombok.extern.slf4j.Slf4j;
-import org.myswan.model.Watchlist;
+import org.myswan.model.collection.Watchlist;
 import org.myswan.repository.WatchlistRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

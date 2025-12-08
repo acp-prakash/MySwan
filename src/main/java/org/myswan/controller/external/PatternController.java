@@ -1,11 +1,11 @@
-package org.myswan.controller.internal;
+package org.myswan.controller.external;
 
 import lombok.extern.slf4j.Slf4j;
 import org.myswan.common.UtilHelper;
-import org.myswan.model.Master;
-import org.myswan.model.Pattern;
-import org.myswan.model.Stock;
-import org.myswan.service.external.EtradePatternClient;
+import org.myswan.model.collection.Master;
+import org.myswan.model.collection.Pattern;
+import org.myswan.model.collection.Stock;
+import org.myswan.service.external.EtradeClient;
 import org.myswan.service.internal.MasterService;
 import org.myswan.service.internal.PatternService;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -29,12 +29,12 @@ public class PatternController {
 
     private final PatternService patternService;
     private final MasterService masterService;
-    private final EtradePatternClient etradePatternClient;
+    private final EtradeClient etradePatternClient;
     private final MongoTemplate mongoTemplate;
 
     public PatternController(PatternService patternService,
                            MasterService masterService,
-                           EtradePatternClient etradePatternClient,
+                           EtradeClient etradePatternClient,
                            MongoTemplate mongoTemplate) {
         this.patternService = patternService;
         this.masterService = masterService;

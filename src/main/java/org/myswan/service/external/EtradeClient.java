@@ -4,8 +4,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.myswan.common.UtilHelper;
-import org.myswan.model.AppCache;
-import org.myswan.model.Pattern;
+import org.myswan.model.collection.AppCache;
+import org.myswan.model.collection.Pattern;
 import org.myswan.service.internal.AppCacheService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -19,7 +19,7 @@ import java.util.List;
 
 @Slf4j
 @Service
-public class EtradePatternClient {
+public class EtradeClient {
 
     private final RestTemplate restTemplate;
     private final AppCacheService appCacheService;
@@ -27,7 +27,7 @@ public class EtradePatternClient {
     @Value("${etrade.pattern.url}")
     private String etradePatternUrl;
 
-    public EtradePatternClient(RestTemplate restTemplate, AppCacheService appCacheService) {
+    public EtradeClient(RestTemplate restTemplate, AppCacheService appCacheService) {
         this.restTemplate = restTemplate;
         this.appCacheService = appCacheService;
     }

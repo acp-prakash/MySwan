@@ -1,9 +1,11 @@
-package org.myswan.controller;
+package org.myswan.controller.internal;
 
 import lombok.extern.slf4j.Slf4j;
-import org.myswan.model.GuaranteedPick;
-import org.myswan.model.dto.GuaranteedCandidateDTO;
-import org.myswan.service.GuaranteedExplosiveService;
+import org.myswan.model.collection.GuaranteedPick;
+import org.myswan.model.compute.ExplosiveScoreDTO;
+import org.myswan.model.compute.GuaranteedCandidateDTO;
+import org.myswan.service.internal.GuaranteedExplosiveService;
+import org.myswan.service.internal.PerformanceTrackingService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,10 +24,10 @@ import java.util.Map;
 public class GuaranteedExplosiveController {
 
     private final GuaranteedExplosiveService guaranteedExplosiveService;
-    private final org.myswan.service.PerformanceTrackingService performanceTrackingService;
+    private final PerformanceTrackingService performanceTrackingService;
 
     public GuaranteedExplosiveController(GuaranteedExplosiveService guaranteedExplosiveService,
-                                        org.myswan.service.PerformanceTrackingService performanceTrackingService) {
+                                        PerformanceTrackingService performanceTrackingService) {
         this.guaranteedExplosiveService = guaranteedExplosiveService;
         this.performanceTrackingService = performanceTrackingService;
     }
@@ -145,11 +147,11 @@ public class GuaranteedExplosiveController {
      * GET /api/guaranteed/all-scores
      */
     @GetMapping("/all-scores")
-    public ResponseEntity<List<org.myswan.model.dto.ExplosiveScoreDTO>> getAllExplosiveScores() {
+    public ResponseEntity<List<ExplosiveScoreDTO>> getAllExplosiveScores() {
         log.info("Getting explosive scores for all stocks");
 
         try {
-            List<org.myswan.model.dto.ExplosiveScoreDTO> scores =
+            List<ExplosiveScoreDTO> scores =
                 guaranteedExplosiveService.getAllExplosiveScores();
             log.info("Analyzed {} stocks with explosive scores", scores.size());
             return ResponseEntity.ok(scores);
@@ -181,11 +183,11 @@ public class GuaranteedExplosiveController {
      * GET /api/guaranteed/performance-stats
      */
     @GetMapping("/performance-stats")
-    public ResponseEntity<org.myswan.service.PerformanceTrackingService.PerformanceStats> getDetailedStats() {
+    public ResponseEntity<PerformanceTrackingService.PerformanceStats> getDetailedStats() {
         log.info("Getting detailed performance statistics");
 
         try {
-            org.myswan.service.PerformanceTrackingService.PerformanceStats stats =
+            PerformanceTrackingService.PerformanceStats stats =
                 performanceTrackingService.getPerformanceStats();
             return ResponseEntity.ok(stats);
         } catch (Exception e) {

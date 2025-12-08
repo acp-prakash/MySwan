@@ -1,6 +1,6 @@
 package org.myswan.controller.internal;
 
-import org.myswan.model.Stock;
+import org.myswan.model.collection.Stock;
 import org.myswan.model.dto.TickerGroupDTO;
 import org.myswan.service.internal.StockService;
 import org.springframework.http.ResponseEntity;

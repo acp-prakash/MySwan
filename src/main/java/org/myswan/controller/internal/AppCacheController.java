@@ -1,6 +1,6 @@
 package org.myswan.controller.internal;
 
-import org.myswan.model.AppCache;
+import org.myswan.model.collection.AppCache;
 import org.myswan.service.internal.AppCacheService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

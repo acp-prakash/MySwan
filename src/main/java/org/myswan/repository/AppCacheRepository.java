@@ -1,7 +1,6 @@
 package org.myswan.repository;
 
-import org.myswan.model.AppCache;
-import org.myswan.model.Stock;
+import org.myswan.model.collection.AppCache;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 

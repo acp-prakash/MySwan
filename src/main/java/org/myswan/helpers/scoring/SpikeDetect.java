@@ -1,12 +1,10 @@
 package org.myswan.helpers.scoring;
 
-import org.myswan.model.Stock;
-import org.myswan.model.compute.BottomSignal;
+import org.myswan.model.collection.Stock;
 import org.myswan.model.compute.SpikeSignal;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
-import java.util.Objects;
 
 @Component
 public class SpikeDetect {

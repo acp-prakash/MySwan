@@ -2,9 +2,9 @@ package org.myswan.service.external;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.myswan.model.Master;
-import org.myswan.model.Rating;
-import org.myswan.model.Stock;
+import org.myswan.model.collection.Master;
+import org.myswan.model.collection.Rating;
+import org.myswan.model.collection.Stock;
 import org.myswan.repository.MasterRepository;
 import org.myswan.service.external.vo.BarchartVO;
 import org.myswan.service.internal.AppCacheService;
@@ -23,7 +23,6 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static org.myswan.common.UtilHelper.getFirstNonNull;
 

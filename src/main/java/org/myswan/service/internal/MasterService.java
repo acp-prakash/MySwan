@@ -1,18 +1,14 @@
 package org.myswan.service.internal;
 
-import org.myswan.model.Master;
+import org.myswan.model.collection.Master;
 import org.myswan.repository.MasterRepository;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-
-import org.bson.Document;
 
 @Service
 public class MasterService {

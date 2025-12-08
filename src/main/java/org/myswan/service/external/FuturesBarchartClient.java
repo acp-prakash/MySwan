@@ -2,8 +2,8 @@ package org.myswan.service.external;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.myswan.model.Futures;
-import org.myswan.model.Rating;
+import org.myswan.model.collection.Futures;
+import org.myswan.model.collection.Rating;
 import org.myswan.service.internal.AppCacheService;
 import org.myswan.service.internal.FuturesService;
 import org.slf4j.Logger;

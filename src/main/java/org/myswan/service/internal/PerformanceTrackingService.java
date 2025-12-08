@@ -1,10 +1,9 @@
-package org.myswan.service;
+package org.myswan.service.internal;
 
 import lombok.extern.slf4j.Slf4j;
-import org.myswan.model.GuaranteedPick;
-import org.myswan.model.Stock;
+import org.myswan.model.collection.GuaranteedPick;
+import org.myswan.model.collection.Stock;
 import org.myswan.repository.GuaranteedPickRepository;
-import org.myswan.service.internal.StockService;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 

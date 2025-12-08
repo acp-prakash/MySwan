@@ -1,7 +1,8 @@
 package org.myswan.service.internal;
 
-import org.myswan.model.Master;
-import org.myswan.model.Stock;
+import org.myswan.model.collection.Master;
+import org.myswan.model.collection.Stock;
+import org.myswan.model.collection.Pattern;
 import org.myswan.model.dto.TickerGroupDTO;
 import org.myswan.repository.StockRepository;
 import org.myswan.service.external.vo.TradingViewVO;
@@ -293,10 +294,10 @@ public class StockService {
 
             // Fetch all patterns for these tickers in one query
             Query query = new Query(Criteria.where("ticker").in(tickers));
-            List<org.myswan.model.Pattern> allPatterns = mongoTemplate.find(query, org.myswan.model.Pattern.class, "pattern");
+            List<Pattern> allPatterns = mongoTemplate.find(query, Pattern.class, "pattern");
 
             // Group patterns by ticker
-            java.util.Map<String, List<org.myswan.model.Pattern>> patternsByTicker = new java.util.HashMap<>();
+            java.util.Map<String, List<Pattern>> patternsByTicker = new java.util.HashMap<>();
             allPatterns.forEach(pattern -> {
                 patternsByTicker.computeIfAbsent(pattern.getTicker(), k -> new ArrayList<>())
                     .add(pattern);
@@ -304,7 +305,7 @@ public class StockService {
 
             // Enrich each stock with its patterns
             stocks.forEach(stock -> {
-                List<org.myswan.model.Pattern> stockPatterns = patternsByTicker.get(stock.getTicker());
+                List<Pattern> stockPatterns = patternsByTicker.get(stock.getTicker());
                 stock.setPatterns(stockPatterns != null ? stockPatterns : new ArrayList<>());
             });
 

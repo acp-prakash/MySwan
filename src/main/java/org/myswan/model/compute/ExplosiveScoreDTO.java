@@ -1,4 +1,4 @@
-package org.myswan.model.dto;
+package org.myswan.model.compute;
 
 import lombok.Data;
 

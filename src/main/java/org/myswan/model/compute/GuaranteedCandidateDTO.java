@@ -1,7 +1,7 @@
-package org.myswan.model.dto;
+package org.myswan.model.compute;
 
 import lombok.Data;
-import org.myswan.model.Stock;
+import org.myswan.model.collection.Stock;
 
 import java.util.ArrayList;
 import java.util.List;

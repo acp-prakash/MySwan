@@ -1,6 +1,6 @@
 package org.myswan.controller.internal;
 
-import org.myswan.model.Futures;
+import org.myswan.model.collection.Futures;
 import org.myswan.service.internal.FuturesService;
 import org.myswan.service.external.FuturesBarchartClient;
 import org.springframework.format.annotation.DateTimeFormat;

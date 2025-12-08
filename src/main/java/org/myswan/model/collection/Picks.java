@@ -1,4 +1,4 @@
-package org.myswan.model;
+package org.myswan.model.collection;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

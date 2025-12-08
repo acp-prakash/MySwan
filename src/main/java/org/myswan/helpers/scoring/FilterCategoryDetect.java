@@ -1,6 +1,6 @@
 package org.myswan.helpers.scoring;
 
-import org.myswan.model.Stock;
+import org.myswan.model.collection.Stock;
 import org.myswan.model.compute.FilterCategory;
 import org.springframework.stereotype.Component;
 

@@ -1,4 +1,4 @@
-package org.myswan.model;
+package org.myswan.model.collection;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;

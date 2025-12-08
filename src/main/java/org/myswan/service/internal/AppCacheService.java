@@ -1,6 +1,6 @@
 package org.myswan.service.internal;
 
-import org.myswan.model.AppCache;
+import org.myswan.model.collection.AppCache;
 import org.myswan.repository.AppCacheRepository;
 import org.springframework.stereotype.Service;
 

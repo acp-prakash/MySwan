@@ -1,15 +1,14 @@
 package org.myswan.service.internal;
 
 import lombok.extern.slf4j.Slf4j;
-import org.myswan.model.Pattern;
-import org.myswan.model.Stock;
+import org.myswan.model.collection.Pattern;
+import org.myswan.model.collection.Stock;
 import org.myswan.repository.PatternRepository;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.util.List;
 
 @Slf4j

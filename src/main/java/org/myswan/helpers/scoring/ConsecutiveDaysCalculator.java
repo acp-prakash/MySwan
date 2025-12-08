@@ -1,7 +1,7 @@
 package org.myswan.helpers.scoring;
 
 import lombok.extern.slf4j.Slf4j;
-import org.myswan.model.Stock;
+import org.myswan.model.collection.Stock;
 import org.myswan.service.internal.StockService;
 import org.springframework.stereotype.Component;
 

@@ -1,4 +1,4 @@
-package org.myswan.model;
+package org.myswan.model.collection;
 
 import lombok.Data;
 import org.springframework.data.annotation.Id;
