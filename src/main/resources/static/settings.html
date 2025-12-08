@@ -176,7 +176,6 @@
             <div class="btn-group">
                 <button class="btn-save" onclick="save('barchart')">Save</button>
                 <button class="btn-clear" onclick="clear('barchart')">Clear</button>
-                <button class="btn-save" style="background: #10b981;" onclick="autoLoginBarchart()">🤖 Auto-Login</button>
             </div>
             <div class="status" id="barchartStatus"></div>
         </div>
@@ -198,7 +197,6 @@
             <div class="btn-group">
                 <button class="btn-save" onclick="save('tradingView')">Save</button>
                 <button class="btn-clear" onclick="clear('tradingView')">Clear</button>
-                <button class="btn-save" style="background: #10b981;" onclick="autoLoginTradingView()">🤖 Auto-Login</button>
             </div>
             <div class="status" id="tradingViewStatus"></div>
         </div>
@@ -384,74 +382,6 @@
             setTimeout(() => el.style.display = 'none', 3000);
         }
 
-        // Auto-login to Barchart
-        async function autoLoginBarchart() {
-            const statusId = 'barchartStatus';
-            const loadingEl = document.getElementById('loading');
-            const spinnerEl = loadingEl.querySelector('.spinner');
-
-            // Show loading
-            spinnerEl.textContent = '🤖 Auto-Login in progress... This may take 10-20 seconds...';
-            loadingEl.style.display = 'flex';
-
-            try {
-                const res = await fetch(`${API}/automation/barchart/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-
-                const data = await res.json();
-                loadingEl.style.display = 'none';
-                spinnerEl.textContent = '⏳ Saving...';
-
-                if (data.status === 'success') {
-                    showStatus(statusId, '✅ Auto-login successful! Credentials saved.', 'success');
-                    setTimeout(loadCurrent, 500);
-                } else if (data.status === 'partial') {
-                    showStatus(statusId, '⚠️ Partial success: ' + data.message, 'error');
-                    setTimeout(loadCurrent, 500);
-                } else {
-                    showStatus(statusId, '❌ Failed: ' + data.message, 'error');
-                }
-            } catch (err) {
-                loadingEl.style.display = 'none';
-                spinnerEl.textContent = '⏳ Saving...';
-                showStatus(statusId, '❌ Error: ' + err.message, 'error');
-            }
-        }
-
-        // Auto-login to TradingView
-        async function autoLoginTradingView() {
-            const statusId = 'tradingViewStatus';
-            const loadingEl = document.getElementById('loading');
-            const spinnerEl = loadingEl.querySelector('.spinner');
-
-            // Show loading
-            spinnerEl.textContent = '🤖 TradingView Auto-Login in progress... This may take 15-25 seconds...';
-            loadingEl.style.display = 'flex';
-
-            try {
-                const res = await fetch(`${API}/automation/tradingview/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-
-                const data = await res.json();
-                loadingEl.style.display = 'none';
-                spinnerEl.textContent = '⏳ Saving...';
-
-                if (data.status === 'success') {
-                    showStatus(statusId, '✅ Auto-login successful! Cookie saved.', 'success');
-                    setTimeout(loadCurrent, 500);
-                } else {
-                    showStatus(statusId, '❌ Failed: ' + data.message, 'error');
-                }
-            } catch (err) {
-                loadingEl.style.display = 'none';
-                spinnerEl.textContent = '⏳ Saving...';
-                showStatus(statusId, '❌ Error: ' + err.message, 'error');
-            }
-        }
 
         // Load on page load
         loadCurrent();

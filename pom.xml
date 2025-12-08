@@ -63,12 +63,6 @@
             <version>20231013</version>
         </dependency>
 
-        <!-- Playwright for browser automation -->
-        <dependency>
-            <groupId>com.microsoft.playwright</groupId>
-            <artifactId>playwright</artifactId>
-            <version>1.40.0</version>
-        </dependency>
 
         <!-- Test dependencies -->
         <dependency>
