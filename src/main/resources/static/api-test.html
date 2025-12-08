@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Diagnostic Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #0f0; }
+        .test { margin: 20px 0; padding: 15px; border: 1px solid #0f0; }
+        .success { background: #003300; }
+        .error { background: #330000; color: #f00; }
+        pre { background: #000; padding: 10px; overflow-x: auto; }
+        button { padding: 10px 20px; background: #0f0; color: #000; border: none; cursor: pointer; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>🔍 API Diagnostic Test</h1>
+    <p>This page will test if your backend APIs are working</p>
+
+    <div class="test">
+        <h2>Test 1: Hello Endpoint</h2>
+        <button onclick="testHello()">Test /api/hello</button>
+        <div id="hello-result"></div>
+    </div>
+
+    <div class="test">
+        <h2>Test 2: Picks Endpoint</h2>
+        <button onclick="testPicks()">Test /api/guaranteed/picks/all</button>
+        <div id="picks-result"></div>
+    </div>
+
+    <div class="test">
+        <h2>Test 3: Network Info</h2>
+        <pre id="network-info"></pre>
+    </div>
+
+    <script>
+        const BASE_URL = "http://jpmaxtricks.com:8070";
+
+        // Show network info immediately
+        document.getElementById('network-info').textContent =
+            `Current URL: ${window.location.href}\n` +
+            `Origin: ${window.location.origin}\n` +
+            `BASE_URL: ${BASE_URL}\n` +
+            `User Agent: ${navigator.userAgent}`;
+
+        async function testHello() {
+            const result = document.getElementById('hello-result');
+            result.innerHTML = '<p>⏳ Testing...</p>';
+
+            try {
+                console.log('Testing:', `${BASE_URL}/api/hello`);
+                const response = await fetch(`${BASE_URL}/api/hello`);
+                console.log('Response status:', response.status);
+
+                const text = await response.text();
+                console.log('Response text:', text);
+
+                result.innerHTML = `
+                    <div class="success">
+                        <h3>✅ SUCCESS</h3>
+                        <p>Status: ${response.status}</p>
+                        <p>Response: ${text}</p>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error:', error);
+                result.innerHTML = `
+                    <div class="error">
+                        <h3>❌ ERROR</h3>
+                        <p>${error.message}</p>
+                        <p>Check console for details</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function testPicks() {
+            const result = document.getElementById('picks-result');
+            result.innerHTML = '<p>⏳ Testing...</p>';
+
+            try {
+                console.log('Testing:', `${BASE_URL}/api/guaranteed/picks/all`);
+                const response = await fetch(`${BASE_URL}/api/guaranteed/picks/all`);
+                console.log('Response status:', response.status);
+                console.log('Response OK:', response.ok);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
+                const data = await response.json();
+                console.log('Data received:', data);
+                console.log('Number of picks:', data.length);
+
+                result.innerHTML = `
+                    <div class="success">
+                        <h3>✅ SUCCESS</h3>
+                        <p>Status: ${response.status}</p>
+                        <p>Picks Found: ${data.length}</p>
+                        <h4>Sample Pick:</h4>
+                        <pre>${JSON.stringify(data[0], null, 2)}</pre>
+                        <h4>All Tickers:</h4>
+                        <p>${data.map(p => p.ticker).join(', ')}</p>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error:', error);
+                result.innerHTML = `
+                    <div class="error">
+                        <h3>❌ ERROR</h3>
+                        <p>${error.message}</p>
+                        <pre>${error.stack}</pre>
+                        <p>Check console for full details</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Auto-test on load
+        setTimeout(() => {
+            console.log('=== AUTO-TESTING APIS ===');
+            testHello();
+            setTimeout(testPicks, 2000);
+        }, 1000);
+    </script>
+</body>
+</html>
+
