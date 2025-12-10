@@ -109,49 +109,56 @@
         </div>
 
         <!-- Slider Filters -->
-        <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-                <div>
-                    <label style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px;">
-                        Pick Score: <span id="piScoreValue" style="color: #2563eb;">0+</span>
+        <div style="background: #094b92; padding: 8px; border-radius: 8px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;">
+                <div style="padding: 2px; margin: 0;">
+                    <label style="display: block; font-size: 10px; font-weight: 600; color: #ffffff; margin-bottom: 2px;">
+                        Pick: <span id="piScoreValue" style="color: #fbbf24;">0+</span>
                     </label>
                     <input type="range" id="piScoreSlider" min="0" max="100" value="0"
-                           style="width: 100%; accent-color: #2563eb;">
+                           style="width: 80px; accent-color: #fbbf24;">
                 </div>
-                <div>
-                    <label style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px;">
-                        Safety Rank: <span id="safeValue" style="color: #2563eb;">0+</span>
+                <div style="padding: 2px; margin: 0;">
+                    <label style="display: block; font-size: 10px; font-weight: 600; color: #ffffff; margin-bottom: 2px;">
+                        Safe: <span id="safeValue" style="color: #fbbf24;">0+</span>
                     </label>
                     <input type="range" id="safeSlider" min="0" max="100" value="0"
-                           style="width: 100%; accent-color: #2563eb;">
+                           style="width: 80px; accent-color: #fbbf24;">
                 </div>
-                <div>
-                    <label style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px;">
-                        Final Rank: <span id="RankValue" style="color: #2563eb;">0+</span>
+                <div style="padding: 2px; margin: 0;">
+                    <label style="display: block; font-size: 10px; font-weight: 600; color: #ffffff; margin-bottom: 2px;">
+                        Rank: <span id="RankValue" style="color: #fbbf24;">0+</span>
                     </label>
                     <input type="range" id="RankSlider" min="0" max="100" value="0"
-                           style="width: 100%; accent-color: #2563eb;">
+                           style="width: 80px; accent-color: #fbbf24;">
                 </div>
-                <div>
-                    <label style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px;">
-                        Bottom Conditions: <span id="bottomConditionsMetValue" style="color: #2563eb;">0+</span>
+                <div style="padding: 2px; margin: 0;">
+                    <label style="display: block; font-size: 10px; font-weight: 600; color: #ffffff; margin-bottom: 2px;">
+                        BtmCnd: <span id="bottomConditionsMetValue" style="color: #fbbf24;">0+</span>
                     </label>
                     <input type="range" id="bottomConditionsMetSlider" min="0" max="10" value="0"
-                           style="width: 100%; accent-color: #2563eb;">
+                           style="width: 80px; accent-color: #fbbf24;">
                 </div>
-                <div>
-                    <label style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px;">
-                        Spike Score: <span id="spikeScoreValue" style="color: #2563eb;">0+</span>
+                <div style="padding: 2px; margin: 0;">
+                    <label style="display: block; font-size: 10px; font-weight: 600; color: #ffffff; margin-bottom: 2px;">
+                        Spike: <span id="spikeScoreValue" style="color: #fbbf24;">0+</span>
                     </label>
                     <input type="range" id="spikeScoreSlider" min="0" max="100" value="0"
-                           style="width: 100%; accent-color: #2563eb;">
+                           style="width: 80px; accent-color: #fbbf24;">
                 </div>
-                <div>
-                    <label style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px;">
-                        Long Patterns: <span id="noOfLongPatternsValue" style="color: #2563eb;">0+</span>
+                <div style="padding: 2px; margin: 0;">
+                    <label style="display: block; font-size: 10px; font-weight: 600; color: #ffffff; margin-bottom: 2px;">
+                        Long#: <span id="noOfLongPatternsValue" style="color: #fbbf24;">0+</span>
                     </label>
                     <input type="range" id="noOfLongPatternsSlider" min="0" max="10" value="0"
-                           style="width: 100%; accent-color: #2563eb;">
+                           style="width: 80px; accent-color: #fbbf24;">
+                </div>
+                <div style="padding: 2px; margin: 0;">
+                    <label style="display: block; font-size: 10px; font-weight: 600; color: #ffffff; margin-bottom: 2px;">
+                        Short#: <span id="noOfShortPatternsValue" style="color: #fbbf24;">0+</span>
+                    </label>
+                    <input type="range" id="noOfShortPatternsSlider" min="0" max="10" value="0"
+                           style="width: 80px; accent-color: #fbbf24;">
                 </div>
             </div>
         </div>
@@ -788,7 +795,8 @@
             { field: 'Rank', value: parseInt(document.getElementById('RankSlider').value) },
             { field: 'bottomConditionsMet', value: parseInt(document.getElementById('bottomConditionsMetSlider').value) },
             { field: 'spikeScore', value: parseInt(document.getElementById('spikeScoreSlider').value) },
-            { field: 'noOfLongPatterns', value: parseInt(document.getElementById('noOfLongPatternsSlider').value) }
+            { field: 'noOfLongPatterns', value: parseInt(document.getElementById('noOfLongPatternsSlider').value) },
+            { field: 'noOfShortPatterns', value: parseInt(document.getElementById('noOfShortPatternsSlider').value) }
         ];
 
         // Build filter array for Tabulator
@@ -855,6 +863,14 @@
             noOfLongPatternsValue.textContent = this.value + '+';
             applySliderFilters();
         });
+
+        // Short Patterns slider
+        const noOfShortPatternsSlider = document.getElementById('noOfShortPatternsSlider');
+        const noOfShortPatternsValue = document.getElementById('noOfShortPatternsValue');
+        noOfShortPatternsSlider.addEventListener('input', function() {
+            noOfShortPatternsValue.textContent = this.value + '+';
+            applySliderFilters();
+        });
     }
 
     function resetSliders() {
@@ -870,6 +886,8 @@
         document.getElementById('spikeScoreValue').textContent = '0+';
         document.getElementById('noOfLongPatternsSlider').value = 0;
         document.getElementById('noOfLongPatternsValue').textContent = '0+';
+        document.getElementById('noOfShortPatternsSlider').value = 0;
+        document.getElementById('noOfShortPatternsValue').textContent = '0+';
 
         if (table) table.clearFilter();
     }

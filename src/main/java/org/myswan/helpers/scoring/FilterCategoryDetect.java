@@ -78,24 +78,25 @@ public class FilterCategoryDetect {
 
     // 1 Explosive Spike Candidate (CLSX / CONL / QBTS type)
     private static boolean isExplosiveSpike(Stock s) {
-        return s.getBottom().isBottom()
-                && s.getBottom().getStrength().contains("Strong")
-                && s.getOversold().getBounceScore() >= 40
+        return s.getBottom() != null && s.getBottom().isBottom()
+                && s.getBottom().getStrength() != null && s.getBottom().getStrength().contains("Strong")
+                && s.getOversold() != null && s.getOversold().getBounceScore() >= 40
                 && s.getDownDays() >= 3
-                && s.getSpike().getSpikeScore() >= 60
+                && s.getSpike() != null && s.getSpike().getSpikeScore() >= 60
                 && s.getSpike().isSpikeLikely()
                 && s.getNoOfLongPatterns() >= 1;
     }
 
     // 2 Oversold Bounce
     private static boolean isOversoldBounce(Stock s) {
-        return s.getOversold().isOversoldBounce()
+        return s.getOversold() != null && s.getOversold().isOversoldBounce()
                 && s.getOversold().getBounceScore() >= 40
-                && s.getBottom().isBottom()
+                && s.getBottom() != null && s.getBottom().isBottom()
                 && s.getDownDays() >= 4
-                && s.getSpike().getSpikeScore() < 40
+                && s.getSpike() != null && s.getSpike().getSpikeScore() < 40
                 && s.getNoOfLongPatterns() >= 1
-                && !s.getScore().getSignal().equalsIgnoreCase("SELL");
+                && s.getScore() != null && s.getScore().getSignal() != null &&
+                !s.getScore().getSignal().equalsIgnoreCase("SELL");
     }
 
     // 3 Trend Continuation (Strong Uptrend)
@@ -103,8 +104,9 @@ public class FilterCategoryDetect {
         return s.getUpDays() >= 3
                 && s.getUpHigh() >= s.getPrice() * 0.98
                 && s.getNoOfLongPatterns() >= 2
-                && s.getSpike().getSpikeScore() < 40
-                && s.getScore().getOverallScore() >= 60
+                && s.getSpike() != null && s.getSpike().getSpikeScore() < 40
+                && s.getScore() != null && s.getScore().getOverallScore() >= 60
+                && s.getScore().getSignal() != null
                 && (s.getScore().getSignal().equalsIgnoreCase("BUY")
                 || s.getScore().getSignal().equalsIgnoreCase("HOLD"));
     }
@@ -121,7 +123,7 @@ public class FilterCategoryDetect {
         return (s.getUpDays() == 1 || s.getUpDays() == 2)
                 && s.getUpHigh() > history.getHigh()
                 && s.getNoOfLongPatterns() >= 1
-                && s.getSpike().getSpikeScore() >= 20
+                && s.getSpike() != null && s.getSpike().getSpikeScore() >= 20
                 && s.getSpike().getSpikeScore() < 60
                 && s.getScore().getOverallScore() >= 40;
     }
@@ -135,7 +137,8 @@ public class FilterCategoryDetect {
         return s.getUpDays() >= 4
                 && s.getUpHigh() >= s.getPrice() * 1.05
                 && changePct > 3
-                && s.getSpike().getSpikeScore() < 20
+                && s.getSpike() != null && s.getSpike().getSpikeScore() < 20
+                && s.getScore() != null && s.getScore().getSignal() != null
                 && s.getScore().getSignal().equalsIgnoreCase("SELL");
     }
 
@@ -143,8 +146,9 @@ public class FilterCategoryDetect {
     private static boolean isDowntrendReversal(Stock s) {
         return s.getDownDays() >= 5
                 && Math.abs(s.getPrice() - s.getDownLow()) <= s.getPrice() * 0.02
-                && s.getBottom().getStrength().contains("Reversal")
-                && s.getOversold().getBounceScore() >= 30
+                && s.getBottom() != null && s.getBottom().getStrength() != null &&
+                s.getBottom().getStrength().contains("Reversal")
+                && s.getOversold() != null && s.getOversold().getBounceScore() >= 30
                 && s.getNoOfLongPatterns() >= 1;
     }
 }

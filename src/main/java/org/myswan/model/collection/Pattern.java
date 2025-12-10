@@ -25,11 +25,7 @@ public class Pattern {
     private String status;
     private int noOfLongPatterns;
     private int noOfShortPatterns;
-    // Stock price fields
-    private double price;
-    private double change;
-    private double high;
-    private double low;
+
     // Stock snapshot (only populated in patternHistory collection)
     private Stock stock;
 }

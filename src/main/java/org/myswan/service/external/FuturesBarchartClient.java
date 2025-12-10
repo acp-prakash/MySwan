@@ -19,7 +19,6 @@ import java.net.http.HttpResponse;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 @Service
 public class FuturesBarchartClient {
@@ -241,14 +240,18 @@ public class FuturesBarchartClient {
         return null;
     }
 
+    /**
+     * Bulk replace futures in MongoDB - deletes existing by ticker and inserts all new data
+     */
     private void updateFuturesQuotes(List<Futures> futures) {
-        if (futures == null || futures.isEmpty()) return;
+        if (futures == null || futures.isEmpty()) {
+            log.warn("No futures data to update");
+            return;
+        }
 
-        futuresService.bulkPatch(futures,
-                Set.of("id", "ticker", "type", "histDate", "price", "change", "open", "high", "low",
-                        "volume", "prevClose", "openInterest", "expiryDate", "expiryDays",
-                        "upHigh", "downLow", "rating"));
-        log.info("Updated {} futures records in MongoDB", futures.size());
+        log.info("Bulk replacing {} futures records in MongoDB...", futures.size());
+        futuresService.bulkReplaceByTickers(futures);
+        log.info("Successfully updated {} futures records", futures.size());
     }
 }
 

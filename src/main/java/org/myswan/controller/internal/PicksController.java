@@ -3,6 +3,7 @@ package org.myswan.controller.internal;
 import lombok.extern.slf4j.Slf4j;
 import org.myswan.model.collection.Picks;
 import org.myswan.service.internal.PicksService;
+import org.myswan.service.internal.StockService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,9 +15,11 @@ import java.util.List;
 public class PicksController {
 
     private final PicksService picksService;
+    private final StockService stockService;
 
-    public PicksController(PicksService picksService) {
+    public PicksController(PicksService picksService, StockService stockservice) {
         this.picksService = picksService;
+        this.stockService = stockservice;
     }
 
     @GetMapping("/picks/list")
@@ -63,7 +66,7 @@ public class PicksController {
     public ResponseEntity<String> syncPicksWithStockData() {
         log.info("Syncing picks with current stock data...");
         try {
-            picksService.syncWithStockData();
+            picksService.syncWithStockData(stockService.list());
             return ResponseEntity.ok("Picks synced successfully with current stock data");
         } catch (Exception e) {
             log.error("Error syncing picks", e);

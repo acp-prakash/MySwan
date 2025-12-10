@@ -9,6 +9,7 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Slf4j
@@ -25,6 +26,23 @@ public class PatternService {
 
     public List<Pattern> list() {
         return patternRepository.findAll();
+    }
+
+    public void syncPatternHistory() {
+        List<Pattern> patterns = list();
+        if(patterns != null && !patterns.isEmpty()) {
+            deleteHistoryByDate(patterns.getFirst().getHistDate());
+            patterns.forEach(stock -> {
+                stock.setId(null);
+            });
+            mongoTemplate.insert(patterns, "patternHistory");
+        }
+    }
+
+    public void deleteHistoryByDate(String histDate) {
+        Query query = new Query(Criteria.where("histDate").is(histDate));
+        mongoTemplate.remove(query, "patternHistory");
+        log.info("Deleted pattern history for date: {}", histDate);
     }
 
     public List<Pattern> listByTicker(String ticker) {
@@ -57,11 +75,7 @@ public class PatternService {
         }
     }
 
-    public void deleteHistoryByDate(String histDate) {
-        Query query = new Query(Criteria.where("histDate").is(histDate));
-        mongoTemplate.remove(query, "patternHistory");
-        log.info("Deleted pattern history for date: {}", histDate);
-    }
+
 
     public void saveToHistory(List<Pattern> patterns) {
         if (patterns != null && !patterns.isEmpty()) {

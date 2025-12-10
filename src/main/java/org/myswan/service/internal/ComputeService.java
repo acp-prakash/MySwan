@@ -4,20 +4,21 @@ import org.myswan.helpers.scoring.*;
 import org.myswan.helpers.scoring.ConsecutiveDaysCalculator;
 import org.myswan.model.compute.Score;
 import org.myswan.model.collection.Stock;
-import org.myswan.repository.StockRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class ComputeService {
 
     private static final Logger log = LoggerFactory.getLogger(ComputeService.class);
     private final StockService stockService;
-    private final StockRepository repository;
+    private final PatternService patternService;
     private final DayTrading dayTrading;
     private final SwingTrading swingTrading;
     private final Reversal reversal;
@@ -30,15 +31,18 @@ public class ComputeService {
     private final FilterCategoryDetect filterCategoryDetect;
     private final ConsecutiveDaysCalculator consecutiveDaysCalculator;
     private final DailyRanking dailyRanking;
+    private final SyncupService syncupService;
+    private final PicksService picksService;
 
-    public ComputeService(StockService stockService, StockRepository repository,
+    public ComputeService(StockService stockService, PatternService patternService,
                           DayTrading dayTrading, SwingTrading swingTrading, Reversal reversal,
                           Breakout breakout, Pattern pattern, BottomDetect bottomDetect,
                           SpikeDetect spikeDetect, OversoldBounceDetect oversoldBounceDetect,
                           MomentumPopDetect momentumPopDetect, FilterCategoryDetect filterCategoryDetect,
-                          ConsecutiveDaysCalculator consecutiveDaysCalculator, DailyRanking dailyRanking) {
+                          ConsecutiveDaysCalculator consecutiveDaysCalculator, DailyRanking dailyRanking,
+                          SyncupService syncupService, PicksService picksService) {
         this.stockService = stockService;
-        this.repository = repository;
+        this.patternService = patternService;
         this.dayTrading = dayTrading;
         this.swingTrading = swingTrading;
         this.reversal = reversal;
@@ -51,21 +55,91 @@ public class ComputeService {
         this.filterCategoryDetect = filterCategoryDetect;
         this.consecutiveDaysCalculator = consecutiveDaysCalculator;
         this.dailyRanking = dailyRanking;
+        this.syncupService = syncupService;
+        this.picksService = picksService;
     }
 
-    public String calculateScore() {
+    public String compute() {
+
         try {
             List<Stock> allList = stockService.list();
+            updatePatternAndStockCounts(allList);
+            calculateScore(allList);
+            return "Compute and Scoring calculation complete: " + allList.size() + " stocks processed";
+        } catch (Exception e) {
+            return "Error during Compute and Scoring calculation: " + e.getMessage();
+        }
+    }
 
-            // Calculate previous business day (skip weekends)
-            LocalDate previousDate = LocalDate.now().minusDays(1);
-			//LocalDate previousDate = LocalDate.now().minusDays(2);
-            while (previousDate.getDayOfWeek().getValue() >= 6) { // 6=Saturday, 7=Sunday
-                previousDate = previousDate.minusDays(1);
+    private void updatePatternAndStockCounts(List<Stock> allStocks) {
+
+        // 1. Fetch all patterns
+        List<org.myswan.model.collection.Pattern> allPatterns = patternService.list();
+
+        // 2. Group patterns by ticker
+        Map<String, List<org.myswan.model.collection.Pattern>> patternsByTicker = allPatterns.stream()
+                .collect(Collectors.groupingBy(p ->
+                        p.getTicker() != null ? p.getTicker().toUpperCase() : "")
+                );
+
+        log.info("Processing {} patterns grouped into {} tickers",
+                allPatterns.size(), patternsByTicker.size());
+
+        // 3. Precompute long/short counts for each ticker (avoid recomputing)
+        Map<String, int[]> countsByTicker = new HashMap<>();
+
+        patternsByTicker.forEach((ticker, patterns) -> {
+            if (ticker.isEmpty()) return;
+
+            int longCount = 0;
+            int shortCount = 0;
+
+            for (org.myswan.model.collection.Pattern p : patterns) {
+                if ("long".equalsIgnoreCase(p.getTrend())) longCount++;
+                else if ("short".equalsIgnoreCase(p.getTrend())) shortCount++;
+            }
+            countsByTicker.put(ticker, new int[] {longCount, shortCount});
+
+            // Update each pattern object
+            for (org.myswan.model.collection.Pattern p : patterns) {
+                p.setNoOfLongPatterns(longCount);
+                p.setNoOfShortPatterns(shortCount);
+            }
+        });
+
+        // 4. Update stock objects using the SAME precomputed map
+        for (Stock stock : allStocks) {
+            String ticker = stock.getTicker() != null ? stock.getTicker().toUpperCase() : "";
+            int[] counts = countsByTicker.get(ticker);
+
+            if (counts != null) {
+                stock.setNoOfLongPatterns(counts[0]);
+                stock.setNoOfShortPatterns(counts[1]);
+            } else {
+                stock.setNoOfLongPatterns(0);
+                stock.setNoOfShortPatterns(0);
+            }
+        }
+        patternService.deleteAll();
+        patternService.saveAll(allPatterns);
+        log.info("Updated {} patterns and {} stocks", allPatterns.size(), allStocks.size());
+    }
+
+    public String calculateScore(List<Stock> allList) {
+        try {
+
+            List<Stock> historyList = stockService.getHistoryByDate(LocalDate.now().minusDays(1));
+            if(historyList == null || historyList.isEmpty())
+            {
+                historyList = stockService.getHistoryByDate(LocalDate.now().minusDays(2));
+                if(historyList == null || historyList.isEmpty())
+                {
+                    historyList = stockService.getHistoryByDate(LocalDate.now().minusDays(3));
+                }
             }
 
-            List<Stock> historyList = stockService.getHistoryByDate(previousDate);
-            log.info("Loaded {} history records for previous business day: {}", historyList.size(), previousDate);
+            log.info("Loaded {} history records for previous business day: {}", historyList.size(),
+                    historyList.getFirst().getHistDate());
 
             // Create a map of previous day history by ticker for fast lookup
             var historyMap = new java.util.HashMap<String, Stock>();
@@ -113,8 +187,9 @@ public class ComputeService {
             });
 
             allList.parallelStream().forEach(dailyRanking::dailyRanking);//DailyRanking Setup
-            repository.saveAll(allList);
-            stockService.syncStockHistory();
+            stockService.replaceStocks(allList);
+            picksService.syncWithStockData(allList);
+            syncupService.syncupAllHistory();
             return "Scoring calculation complete: " + allList.size() + " stocks processed";
         } catch (Exception e) {
             return "Error during scoring calculation: " + e.getMessage();
@@ -221,6 +296,5 @@ public class ComputeService {
             log.warn("Failed to compute signalDays for {}: {}", stock.getTicker(), e.getMessage());
             // leave signalDays as default (0) if failure
         }
-
     }
 }

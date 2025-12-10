@@ -1754,7 +1754,7 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Calculating...';
 
             try {
-                const response = await fetch(`${API_BASE}/scoring/calculate`, { method: 'POST' });
+                const response = await fetch(`${API_BASE}/compute/process`, { method: 'POST' });
                 if (response.ok) {
                     alert('Scoring calculation completed successfully!');
                     loadData();
@@ -1778,7 +1778,7 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fetching...';
 
             try {
-                const response = await fetch(`${API_BASE}/futures/fetch-barchart`, { method: 'POST' });
+                const response = await fetch(`${API_BASE}/external/futures/fetch-barchart`, { method: 'POST' });
                 if (response.ok) {
                     alert('Futures data fetched successfully!');
                     loadData();
@@ -1802,7 +1802,7 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fetching...';
 
             try {
-                const response = await fetch(`${API_BASE}/pattern/fetch-etrade`, { method: 'POST' });
+                const response = await fetch(`${API_BASE}/external/pattern/fetch-etrade`, { method: 'POST' });
                 if (response.ok) {
                     const result = await response.text();
                     alert('Patterns fetched successfully!\n' + result);

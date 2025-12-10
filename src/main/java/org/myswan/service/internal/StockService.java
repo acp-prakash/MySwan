@@ -8,15 +8,10 @@ import org.myswan.repository.StockRepository;
 import org.myswan.service.external.vo.TradingViewVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.BeanUtils;
-import org.springframework.beans.BeanWrapper;
-import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.mongodb.core.BulkOperations;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -29,12 +24,58 @@ public class StockService {
     private static final Logger log = LoggerFactory.getLogger(StockService.class);
     private final StockRepository repository;
     private final MongoTemplate mongoTemplate;
-    private final PicksService picksService;
 
-    public StockService(StockRepository repository, MongoTemplate mongoTemplate, PicksService picksService) {
+    public StockService(StockRepository repository, MongoTemplate mongoTemplate) {
         this.repository = repository;
         this.mongoTemplate = mongoTemplate;
-        this.picksService = picksService;
+    }
+
+    /**
+     * Bulk delete existing stocks by tickers and insert new ones
+     */
+    public void replaceStocks(List<Stock> stockList) {
+        if (stockList == null || stockList.isEmpty()) {
+            log.warn("No Stocks to insert");
+            return;
+        }
+
+        // Extract all tickers to delete
+        List<String> tickers = stockList.stream()
+                .map(Stock::getTicker)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+
+        // Delete existing stocks with these tickers
+        if (!tickers.isEmpty()) {
+            Query deleteQuery = Query.query(Criteria.where("ticker").in(tickers));
+            long deletedCount = mongoTemplate.remove(deleteQuery, Stock.class).getDeletedCount();
+            log.info("Deleted {} existing stocks records", deletedCount);
+        }
+
+        // Insert all new stocks
+        try {
+            mongoTemplate.insert(stockList, Stock.class);
+            log.info("Inserted {} new stocks records", stockList.size());
+        } catch (Exception e) {
+            log.error("Failed to bulk insert stocks", e);
+        }
+    }
+
+    public void syncStockHistory() {
+        List<Stock> stocks = list();
+        if(stocks != null && !stocks.isEmpty()) {
+            deleteHistoryByDate(stocks.getFirst().getHistDate());
+            stocks.forEach(stock -> {
+                stock.setId(null);
+            });
+            mongoTemplate.insert(stocks, "stockHistory");
+        }
+    }
+
+    public void deleteHistoryByDate(LocalDate histDate) {
+        Query query = Query.query(Criteria.where("histDate").is(histDate));
+        mongoTemplate.remove(query, "stockHistory");
     }
 
     public Optional<Stock> getByTicker(String ticker) {
@@ -46,46 +87,17 @@ public class StockService {
     }
 
     public Stock create(Stock stock) {
-        Stock s = repository.save(stock);
-        Stock history = new Stock();
-        BeanUtils.copyProperties(s, history);
-        history.setId(null);
-        mongoTemplate.insert(history, "stockHistory");
-
-        // notify picks to refresh for this ticker
-        if (s.getTicker() != null) {
-            try {
-                picksService.refreshPicksForTickers(Collections.singleton(s.getTicker()));
-            } catch (Exception e) {
-                log.warn("Failed to refresh picks for {} after create: {}", s.getTicker(), e.getMessage());
-            }
-        }
-
-        return s;
+        return repository.save(stock);
     }
 
     public Stock update(String ticker, Stock stock) {
         stock.setTicker(ticker);
-        Stock s = repository.save(stock);
-
-        // notify picks to refresh for this ticker
-        if (ticker != null) {
-            try {
-                picksService.refreshPicksForTickers(Collections.singleton(ticker));
-            } catch (Exception e) {
-                log.warn("Failed to refresh picks for {} after update: {}", ticker, e.getMessage());
-            }
-        }
-
-        return s;
-
+        return repository.save(stock);
     }
 
     public void delete(String ticker) {
         repository.deleteById(ticker);
         deleteHistoryByTicker(ticker);
-
-        // picks unaffected? we could optionally clear stock snapshots in picks
     }
 
     public boolean exists(String ticker) {
@@ -104,10 +116,7 @@ public class StockService {
         return new ArrayList<>();
     }
 
-    public void deleteHistoryByDate(LocalDate histDate) {
-        Query query = Query.query(Criteria.where("histDate").is(histDate));
-        mongoTemplate.remove(query, "stockHistory");
-    }
+
 
     public void deleteHistoryByTicker(String ticker) {
         Query query = Query.query(Criteria.where("ticker").is(ticker));
@@ -122,68 +131,32 @@ public class StockService {
         mongoTemplate.remove(query, "stockHistory");
     }
 
-    public void syncStockHistory() {
-        List<Stock> stocks = list();
-        if(stocks != null && !stocks.isEmpty()) {
-            deleteHistoryByDate(stocks.get(0).getHistDate());
-            stocks.forEach(stock -> {
-                stock.setId(null);
-            });
-            mongoTemplate.insert(stocks, "stockHistory");
-        }
-    }
-    public void bulkPatch(List<Stock> stocks, Set<String> fields) {
-        if (stocks == null || stocks.isEmpty() || fields == null || fields.isEmpty()) return;
-
-        BulkOperations ops = mongoTemplate.bulkOps(BulkOperations.BulkMode.UNORDERED, Stock.class);
-
-        Set<String> tickersToRefresh = new HashSet<>();
-
-        for (Stock s : stocks) {
-            if (s.getTicker() == null || s.getTicker().isBlank()) continue;
-
-            Query query = Query.query(Criteria.where("_id").is(s.getTicker()));
-            Update update = new Update();
-
-            BeanWrapper bw = new BeanWrapperImpl(s);
-            for (String field : fields) {
-                Object val = bw.getPropertyValue(field);
-                update.set(field, val);
-            }
-
-            ops.upsert(query, update);
-            tickersToRefresh.add(s.getTicker());
-        }
-
-        ops.execute();
-
-        syncStockHistory();
-
-        // notify picks for all affected tickers
-        if (!tickersToRefresh.isEmpty()) {
-            try {
-                picksService.refreshPicksForTickers(tickersToRefresh);
-            } catch (Exception e) {
-                log.warn("Failed to refresh picks after bulkPatch: {}", e.getMessage());
-            }
-        }
-    }
-
     public void updateTradingView(List<TradingViewVO> tvList) {
         if (tvList == null || tvList.isEmpty()) {
             log.info("TradingView update skipped: empty list");
             return;
         }
-        LocalDate today = LocalDate.now();
-        //LocalDate today = LocalDate.now().minusDays(1);
+        // Load all existing stocks once
+        List<Stock> existList = list();
+
+        // Create a map for fast lookup by ticker
+        Map<String, Stock> stockMap = existList.stream()
+                .filter(s -> s.getTicker() != null && !s.getTicker().isBlank())
+                .collect(Collectors.toMap(Stock::getTicker, s -> s, (a, b) -> a));
+
         List<Stock> toSave = new ArrayList<>(tvList.size());
-        Set<String> tickersToRefresh = new HashSet<>();
+
+        // Loop through TradingView data and update from existList map
         for (TradingViewVO vo : tvList) {
             if (vo.getTicker() == null || vo.getTicker().isBlank()) continue;
-            // Try existing
-            Stock existing = repository.findById(vo.getTicker()).orElse(null);
-            if(existing == null || existing.getTicker() == null || existing.getTicker().isBlank())
+
+            // Get existing stock from map instead of repository
+            Stock existing = stockMap.get(vo.getTicker());
+            if (existing == null || existing.getTicker() == null || existing.getTicker().isBlank()) {
                 continue;
+            }
+
+            // Update stock with TradingView data
             existing.setPrice(vo.getPrice());
             existing.setType(vo.getType());
             existing.setOpen(vo.getOpen());
@@ -214,18 +187,8 @@ public class StockService {
             existing.getRating().setTradingViewTechRating(vo.getTechRating());
             existing.getRating().setTradingViewAnalystsRating(vo.getAnalystsRating());
             toSave.add(existing);
-            tickersToRefresh.add(existing.getTicker());
         }
-        repository.saveAll(toSave);
-        syncStockHistory();
-        // notify picks
-        if (!tickersToRefresh.isEmpty()) {
-            try {
-                picksService.refreshPicksForTickers(tickersToRefresh);
-            } catch (Exception e) {
-                log.warn("Failed to refresh picks after TradingView update: {}", e.getMessage());
-            }
-        }
+        replaceStocks(toSave);
         log.info("TradingView update completed. Saved {} stocks", toSave.size());
     }
 

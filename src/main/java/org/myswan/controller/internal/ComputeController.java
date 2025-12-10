@@ -14,9 +14,9 @@ public class ComputeController {
         this.computeService = computeService;
     }
 
-    @PostMapping("/scoring/calculate")
-    public ResponseEntity<String> calculateScore() {
-        return ResponseEntity.ok(computeService.calculateScore());
+    @PostMapping("/compute/process")
+    public ResponseEntity<String> compute() {
+        return ResponseEntity.ok(computeService.compute());
     }
 
 }

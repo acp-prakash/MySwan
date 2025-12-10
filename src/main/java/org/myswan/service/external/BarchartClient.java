@@ -175,14 +175,7 @@ public class BarchartClient {
                 .map(this::applyQuoteToStock)
                 .toList();
 
-        stockService.bulkPatch(stocks,
-                Set.of("id","ticker","histDate","price", "change", "open", "high", "low",
-                        "volume", "prevClose", "priceChg5D", "priceChg10D", "priceChg20D",
-                        "earningsDate", "rating.btAnalysts","rating.btAnalystRating","rating.btShortRating",
-                        "rating.btLongRating","rating.btRating","rating.btTrend"));
-
-        //stockService.syncStockHistory();
-
+        stockService.replaceStocks(stocks);
     }
 
     private Stock applyQuoteToStock(BarchartVO vo) {

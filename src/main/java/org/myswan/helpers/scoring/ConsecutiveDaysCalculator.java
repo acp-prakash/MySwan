@@ -45,8 +45,15 @@ public class ConsecutiveDaysCalculator {
                 return;
             }
 
+
             // Sort by date ascending (oldest first) for consecutive calculation
             history.sort((a, b) -> a.getHistDate().compareTo(b.getHistDate()));
+
+            //log.info("History Dates for upDown Ticker: {} - {} and {}", stock.getTicker(), history.getLast().getHistDate(), stock.getHistDate());
+            if(!history.getLast().getHistDate().equals(stock.getHistDate())) {
+                history.addLast(stock); // Include current day
+                //log.info("History Dates for upDown Ticker: {} - {} and {}", stock.getTicker(), history.getLast().getHistDate(), stock.getHistDate());
+            }
 
             // Find current consecutive streak
             int consecutiveUpDays = 0;

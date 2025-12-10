@@ -24,41 +24,26 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
-@RequestMapping("/api")
-public class PatternController {
+@RequestMapping("/api/external")
+public class ETradeController {
 
     private final PatternService patternService;
     private final MasterService masterService;
     private final EtradeClient etradePatternClient;
     private final MongoTemplate mongoTemplate;
 
-    public PatternController(PatternService patternService,
-                           MasterService masterService,
-                           EtradeClient etradePatternClient,
-                           MongoTemplate mongoTemplate) {
+    public ETradeController(PatternService patternService,
+                            MasterService masterService,
+                            EtradeClient etradePatternClient,
+                            MongoTemplate mongoTemplate) {
         this.patternService = patternService;
         this.masterService = masterService;
         this.etradePatternClient = etradePatternClient;
         this.mongoTemplate = mongoTemplate;
     }
 
-    @GetMapping("/pattern/list")
-    public ResponseEntity<List<Pattern>> getAllPatterns() {
-        return ResponseEntity.ok(patternService.list());
-    }
-
-    @GetMapping("/pattern/{ticker}")
-    public ResponseEntity<List<Pattern>> getPatternsByTicker(@PathVariable String ticker) {
-        return ResponseEntity.ok(patternService.listByTicker(ticker));
-    }
-
-    @GetMapping("/pattern/history/{ticker}")
-    public ResponseEntity<List<Pattern>> getPatternHistoryByTicker(@PathVariable String ticker) {
-        return ResponseEntity.ok(patternService.listHistoryByTicker(ticker));
-    }
-
     @PostMapping("/pattern/fetch-etrade")
-    public ResponseEntity<String> fetchEtradePatterns() {
+    public ResponseEntity<String> fetchETradePatterns() {
         try {
             log.info("Starting eTrade pattern fetch with parallel processing...");
 
@@ -78,7 +63,7 @@ public class PatternController {
 
             log.info("Found {} masters with eTrade pattern enabled (etradePatternLookup = true)", enabledMasters.size());
 
-            if (enabledMasters.size() > 0 && enabledMasters.size() <= 10) {
+            if (!enabledMasters.isEmpty() && enabledMasters.size() <= 10) {
                 log.info("Enabled tickers: {}", enabledMasters.stream()
                     .map(Master::getTicker)
                     .collect(Collectors.joining(", ")));
@@ -178,16 +163,12 @@ public class PatternController {
             log.info("Saved {} new patterns", allPatterns.size());
 
             // Delete history for today
-            patternService.deleteHistoryByDate(today);
-            log.info("Deleted pattern history for today: {}", today);
+            //patternService.deleteHistoryByDate(today);
+            //log.info("Deleted pattern history for today: {}", today);
 
             // Save to history
-            patternService.saveToHistory(allPatterns);
-            log.info("Saved patterns to history");
-
-            // Update stock pattern counts
-            updateStockPatternCounts();
-            log.info("Updated stock pattern counts");
+            //patternService.saveToHistory(allPatterns);
+            //log.info("Saved patterns to history");
 
             StringBuilder result = new StringBuilder();
             result.append(String.format(
@@ -216,70 +197,6 @@ public class PatternController {
         }
     }
 
-    private void updateStockPatternCounts() {
-        try {
-			//String today = UtilHelper.formatLocalDateToString(LocalDate.now());
-            String today = UtilHelper.formatLocalDateToString(LocalDate.now().minusDays(1));
-
-            // First, reset stock pattern counts to 0 (current stock collection)
-            Update resetUpdate = new Update()
-                .set("noOfLongPatterns", 0)
-                .set("noOfShortPatterns", 0);
-            mongoTemplate.updateMulti(new Query(), resetUpdate, Stock.class);
-            log.info("Reset stock pattern counts to 0 in stock collection");
-
-            // Reset ONLY today's stockHistory records to 0
-            Query todayHistoryQuery = new Query(Criteria.where("histDate").is(LocalDate.parse(today)));
-            mongoTemplate.updateMulti(todayHistoryQuery, resetUpdate, "stockHistory");
-            log.info("Reset stock pattern counts to 0 in stockHistory for date: {}", today);
-
-            // Get all patterns grouped by ticker (case-insensitive grouping)
-            List<Pattern> allPatterns = patternService.list();
-            Map<String, List<Pattern>> patternsByTicker = allPatterns.stream()
-                .collect(Collectors.groupingBy(p -> p.getTicker() != null ? p.getTicker().toUpperCase() : ""));
-
-            log.info("Processing pattern counts for {} unique tickers", patternsByTicker.size());
-
-            // Update each stock
-            patternsByTicker.forEach((upperTicker, patterns) -> {
-                if (upperTicker.isEmpty()) return;
-
-                long longCount = patterns.stream()
-                    .filter(p -> "long".equalsIgnoreCase(p.getTrend()))
-                    .count();
-                long shortCount = patterns.stream()
-                    .filter(p -> "short".equalsIgnoreCase(p.getTrend()))
-                    .count();
-
-                // Update stock collection (current stock)
-                Query stockQuery = new Query(Criteria.where("ticker").regex("^" + upperTicker + "$", "i"));
-                Update update = new Update()
-                    .set("noOfLongPatterns", (int) longCount)
-                    .set("noOfShortPatterns", (int) shortCount);
-
-                long stocksUpdated = mongoTemplate.updateFirst(stockQuery, update, Stock.class).getModifiedCount();
-
-                // Update ONLY today's stockHistory record for this ticker
-                Query historyQuery = new Query(
-                    Criteria.where("ticker").regex("^" + upperTicker + "$", "i")
-                        .and("histDate").is(LocalDate.parse(today))
-                );
-                long historyUpdated = mongoTemplate.updateFirst(historyQuery, update, "stockHistory").getModifiedCount();
-
-                if (stocksUpdated > 0) {
-                    log.debug("Updated pattern counts for {}: Long={}, Short={} (stock: {}, history: {})",
-                             upperTicker, longCount, shortCount, stocksUpdated, historyUpdated);
-                } else {
-                    log.warn("No stock found for ticker: {} (from patterns)", patterns.get(0).getTicker());
-                }
-            });
-
-            log.info("Updated pattern counts for {} stocks", patternsByTicker.size());
-        } catch (Exception e) {
-            log.error("Error updating stock pattern counts", e);
-        }
-    }
-
     private void enrichPatternsWithStockData(List<Pattern> patterns) {
         try {
             // Group patterns by ticker for efficient lookup
@@ -299,19 +216,11 @@ public class PatternController {
             patterns.forEach(pattern -> {
                 Stock stock = stockMap.get(pattern.getTicker());
                 if (stock != null) {
-                    pattern.setPrice(stock.getPrice());
-                    pattern.setChange(stock.getChange());
-                    pattern.setHigh(stock.getHigh());
-                    pattern.setLow(stock.getLow());
-                    log.debug("Enriched pattern for {} with price: {}, change: {}, high: {}, low: {}",
+                    pattern.setStock(stock);
+                    log.debug("Enriched pattern for {} with stock data: Price={}, Change={}, High={}, Low={}",
                             pattern.getTicker(), stock.getPrice(), stock.getChange(), stock.getHigh(), stock.getLow());
                 } else {
                     log.warn("No stock data found for ticker: {}", pattern.getTicker());
-                    // Set default values
-                    pattern.setPrice(0.0);
-                    pattern.setChange(0.0);
-                    pattern.setHigh(0.0);
-                    pattern.setLow(0.0);
                 }
             });
 

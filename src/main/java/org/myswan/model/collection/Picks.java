@@ -29,4 +29,5 @@ public class Picks {
     private boolean stopLossMet;
     private String historyDate;
     private Stock stock;
+    private String status;// e.g., "OPEN", "CLOSED"
 }

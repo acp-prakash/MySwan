@@ -1,18 +1,19 @@
 package org.myswan.service.internal;
 
 import org.myswan.model.collection.Futures;
+import org.myswan.model.collection.Stock;
 import org.myswan.repository.FuturesRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.mongodb.core.BulkOperations;
+import org.springframework.beans.BeanUtils;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class FuturesService {
@@ -26,7 +27,72 @@ public class FuturesService {
         this.mongoTemplate = mongoTemplate;
     }
 
-    public Optional<Futures> getByTicker(String ticker) {
+    public List<Futures> getFuturesHistory(String ticker, LocalDate from, LocalDate to) {
+        Query query = Query.query(Criteria.where("ticker").is(ticker));
+        if (from != null) query.addCriteria(Criteria.where("histDate").gte(from));
+        if (to != null) query.addCriteria(Criteria.where("histDate").lte(to));
+        return mongoTemplate.find(query, Futures.class, "futuresHistory");
+    }
+
+    public List<Futures> list() {
+        try {
+            List<Futures> all = repository.findAll();
+            if (all != null && !all.isEmpty()) return all;
+        } catch (Exception ignored) {
+            // fall through to empty result
+        }
+        return new ArrayList<>();
+    }
+
+    /**
+     * Bulk delete existing futures by tickers and insert new ones
+     */
+    public void bulkReplaceByTickers(List<Futures> futuresList) {
+        if (futuresList == null || futuresList.isEmpty()) {
+            log.warn("No futures to insert");
+            return;
+        }
+
+        // Extract all tickers to delete
+        List<String> tickers = futuresList.stream()
+                .map(Futures::getTicker)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+
+        // Delete existing futures with these tickers
+        if (!tickers.isEmpty()) {
+            Query deleteQuery = Query.query(Criteria.where("ticker").in(tickers));
+            long deletedCount = mongoTemplate.remove(deleteQuery, Futures.class).getDeletedCount();
+            log.info("Deleted {} existing futures records", deletedCount);
+        }
+
+        // Insert all new futures
+        try {
+            mongoTemplate.insert(futuresList, Futures.class);
+            log.info("Inserted {} new futures records", futuresList.size());
+        } catch (Exception e) {
+            log.error("Failed to bulk insert futures", e);
+        }
+    }
+
+    public void syncFuturesHistory() {
+        List<Futures> futuresList = list();
+        if(futuresList != null && !futuresList.isEmpty()) {
+            deleteHistoryByDate(futuresList.getFirst().getHistDate());
+            futuresList.forEach(future -> {
+                future.setId(null);
+            });
+            mongoTemplate.insert(futuresList, "futuresHistory");
+        }
+    }
+
+    public void deleteHistoryByDate(LocalDate histDate) {
+        Query query = Query.query(Criteria.where("histDate").is(histDate));
+        mongoTemplate.remove(query, "futuresHistory");
+    }
+
+    /*public Optional<Futures> getByTicker(String ticker) {
         try {
             return repository.findById(ticker);
         } catch (Exception e) {
@@ -57,16 +123,6 @@ public class FuturesService {
         return repository.existsById(ticker);
     }
 
-    public List<Futures> list() {
-        try {
-            List<Futures> all = repository.findAll();
-            if (all != null && !all.isEmpty()) return all;
-        } catch (Exception ignored) {
-            // fall through to empty result
-        }
-        return new ArrayList<>();
-    }
-
     public void deleteHistoryByTicker(String ticker) {
         Query query = Query.query(Criteria.where("ticker").is(ticker));
         mongoTemplate.remove(query, "futuresHistory");
@@ -82,27 +138,9 @@ public class FuturesService {
         mongoTemplate.remove(query, "futuresHistory");
     }
 
-    public List<Futures> getFuturesHistory(String ticker, LocalDate from, LocalDate to) {
-        Query query = Query.query(Criteria.where("ticker").is(ticker));
-        if (from != null) query.addCriteria(Criteria.where("histDate").gte(from));
-        if (to != null) query.addCriteria(Criteria.where("histDate").lte(to));
-        return mongoTemplate.find(query, Futures.class, "futuresHistory");
-    }
-
     public List<Futures> getHistoryByDate(LocalDate histDate) {
         Query query = Query.query(Criteria.where("histDate").is(histDate));
         return mongoTemplate.find(query, Futures.class, "futuresHistory");
-    }
-
-    public void syncFuturesHistory() {
-        List<Futures> futuresList = list();
-        if (futuresList != null && !futuresList.isEmpty()) {
-            deleteHistoryByDate(futuresList.get(0).getHistDate());
-            futuresList.forEach(futures -> {
-                futures.setId(null);
-            });
-            mongoTemplate.insert(futuresList, "futuresHistory");
-        }
     }
 
     public void bulkPatch(List<Futures> futuresList, Set<String> fields) {
@@ -145,6 +183,5 @@ public class FuturesService {
         }
 
         syncFuturesHistory();
-    }
+    }*/
 }
-
