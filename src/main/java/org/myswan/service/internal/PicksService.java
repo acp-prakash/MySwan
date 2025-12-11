@@ -85,49 +85,53 @@ public class PicksService {
 
     public void syncWithStockData(List<Stock> allStocks) {
         log.info("Starting picks sync with current stock data...");
-        List<Picks> allPicks = list();
-        for (Picks pick : allPicks) {
-            try {
-                pick.setHistoryDate(LocalDate.now().toString());
-                for (Stock stock : allStocks) {
-                    if (stock.getTicker().equalsIgnoreCase(pick.getTicker())) {
-                        pick.setStock(stock);
-                        break;
-                    }
-                }
-                if (pick.getTicker() == null || "CLOSED".equalsIgnoreCase(pick.getStatus())) continue;
-
-                if (pick.getStock() != null) {
-
-                    // If pick has target/stop values (non-zero), check hits
-                    try {
-                        double price = pick.getStock().getPrice();
-                        if (pick.getTarget() != 0 && price >= pick.getTarget() && !pick.isTargetMet()) {
-                            pick.setTargetMet(true);
-                            pick.setTargetMetDate(LocalDate.now());
-                            pick.setStatus("CLOSED");
-                            log.info("Target hit for {}: {} >= {}", pick.getTicker(), price, pick.getTarget());
+        try {
+            List<Picks> allPicks = list();
+            for (Picks pick : allPicks) {
+                try {
+                    pick.setHistoryDate(LocalDate.now().toString());
+                    for (Stock stock : allStocks) {
+                        if (stock.getTicker().equalsIgnoreCase(pick.getTicker())) {
+                            pick.setStock(stock);
+                            break;
                         }
-
-                        if (pick.getStopLoss() != 0 && price <= pick.getStopLoss() && !pick.isStopLossMet()) {
-                            pick.setStopLossMet(true);
-                            pick.setStopLossMetDate(LocalDate.now());
-                            pick.setStatus("CLOSED");
-                            log.info("Stop loss hit for {}: {} <= {}", pick.getTicker(), price, pick.getStopLoss());
-                        }
-                    } catch (Exception ex) {
-                        log.warn("Error while evaluating target/stop for {}: {}", pick.getTicker(), ex.getMessage());
                     }
-                } else {
-                    log.warn("Stock not found for pick ticker: {}", pick.getTicker());
+                    if (pick.getTicker() == null || "CLOSED".equalsIgnoreCase(pick.getStatus())) continue;
+
+                    if (pick.getStock() != null) {
+
+                        // If pick has target/stop values (non-zero), check hits
+                        try {
+                            double price = pick.getStock().getPrice();
+                            if (pick.getTarget() != 0 && price >= pick.getTarget() && !pick.isTargetMet()) {
+                                pick.setTargetMet(true);
+                                pick.setTargetMetDate(LocalDate.now());
+                                pick.setStatus("CLOSED");
+                                log.info("Target hit for {}: {} >= {}", pick.getTicker(), price, pick.getTarget());
+                            }
+
+                            if (pick.getStopLoss() != 0 && price <= pick.getStopLoss() && !pick.isStopLossMet()) {
+                                pick.setStopLossMet(true);
+                                pick.setStopLossMetDate(LocalDate.now());
+                                pick.setStatus("CLOSED");
+                                log.info("Stop loss hit for {}: {} <= {}", pick.getTicker(), price, pick.getStopLoss());
+                            }
+                        } catch (Exception ex) {
+                            log.warn("Error while evaluating target/stop for {}: {}", pick.getTicker(), ex.getMessage());
+                        }
+                    } else {
+                        log.warn("Stock not found for pick ticker: {}", pick.getTicker());
+                    }
+                } catch (Exception e) {
+                    log.error("Error syncing pick for ticker: {}", pick.getTicker(), e);
                 }
-            } catch (Exception e) {
-                log.error("Error syncing pick for ticker: {}", pick.getTicker(), e);
             }
+            if (!allPicks.isEmpty())
+                picksRepository.saveAll(allPicks);
+            log.info("Picks sync completed. Updated {} picks", allPicks.size());
+        } catch (Exception e) {
+            log.error("Error during picks sync: {}", e.getMessage(), e);
         }
-        if(!allPicks.isEmpty())
-            picksRepository.saveAll(allPicks);
-        log.info("Picks sync completed. Updated {} picks", allPicks.size());
     }
 
     public void syncPicksHistory() {

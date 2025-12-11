@@ -31,7 +31,7 @@ public class ComputeService {
     private final FilterCategoryDetect filterCategoryDetect;
     private final ConsecutiveDaysCalculator consecutiveDaysCalculator;
     private final DailyRanking dailyRanking;
-    private final SyncupService syncupService;
+    private final SyncService syncService;
     private final PicksService picksService;
 
     public ComputeService(StockService stockService, PatternService patternService,
@@ -40,7 +40,7 @@ public class ComputeService {
                           SpikeDetect spikeDetect, OversoldBounceDetect oversoldBounceDetect,
                           MomentumPopDetect momentumPopDetect, FilterCategoryDetect filterCategoryDetect,
                           ConsecutiveDaysCalculator consecutiveDaysCalculator, DailyRanking dailyRanking,
-                          SyncupService syncupService, PicksService picksService) {
+                          SyncService syncService, PicksService picksService) {
         this.stockService = stockService;
         this.patternService = patternService;
         this.dayTrading = dayTrading;
@@ -55,7 +55,7 @@ public class ComputeService {
         this.filterCategoryDetect = filterCategoryDetect;
         this.consecutiveDaysCalculator = consecutiveDaysCalculator;
         this.dailyRanking = dailyRanking;
-        this.syncupService = syncupService;
+        this.syncService = syncService;
         this.picksService = picksService;
     }
 
@@ -151,45 +151,65 @@ public class ComputeService {
 
             // Calculate consecutive up/down days first (before scoring)
             allList.parallelStream().forEach(consecutiveDaysCalculator::calculateConsecutiveDays);
+            log.info("calculateConsecutiveDays completed");
             allList.parallelStream().forEach(dayTrading::calculateScore);//DayTrading Setup
+            log.info("dayTrading::calculateScore completed");
             allList.parallelStream().forEach(swingTrading::calculateScore);//SwingTrading Setup
+            log.info("swingTrading::calculateScore completed");
             allList.parallelStream().forEach(reversal::calculateScore);// Reversal Setup
+            log.info("reversal::calculateScore completed");
             allList.parallelStream().forEach(breakout::calculateScore);//Breakout Setup
+            log.info("breakout::calculateScore completed");
             allList.parallelStream().forEach(pattern::calculateScore);//Pattern Setup
+            log.info("pattern::calculateScore completed");
             allList.parallelStream().forEach(this::calculateOverAllScore);//Overall Score
+            log.info("calculateOverAllScore completed");
             allList.parallelStream().forEach(this::calculateSignal);//Overall Signal
+            log.info("calculateSignal completed");
+
             //Detecting Bottomed stocks
             allList.parallelStream().forEach(stock -> {
                 Stock previousDayStock = historyMap.get(stock.getTicker());
                 bottomDetect.detectBottomSignal(stock, previousDayStock);
             });
+            log.info("detectBottomSignal completed");
+
             //Detecting Spike probables
             allList.parallelStream().forEach(stock -> {
                 Stock previousDayStock = historyMap.get(stock.getTicker());
                 spikeDetect.detectSpikeSignal(stock, previousDayStock);
             });
-            //Detecting OverSOld Bounces
+            log.info("detectSpikeSignal completed");
+
+            //Detecting OverSold Bounces
             allList.parallelStream().forEach(stock -> {
                 Stock previousDayStock = historyMap.get(stock.getTicker());
                 oversoldBounceDetect.detectOversoldBounce(stock, previousDayStock);
             });
+            log.info("detectOversoldBounce completed");
 
             //Detecting Momentum Pops
             allList.parallelStream().forEach(stock -> {
                 Stock previousDayStock = historyMap.get(stock.getTicker());
                 momentumPopDetect.detectMomentumPop(stock, previousDayStock);
             });
+            log.info("detectMomentumPop completed");
 
             //Categorize and assign filter category each stock daily
             allList.parallelStream().forEach(stock -> {
                 Stock previousDayStock = historyMap.get(stock.getTicker());
                 filterCategoryDetect.filterCategory(stock, previousDayStock);
             });
+            log.info("filterCategory completed");
 
             allList.parallelStream().forEach(dailyRanking::dailyRanking);//DailyRanking Setup
+            log.info("dailyRanking completed");
             stockService.replaceStocks(allList);
+            log.info("replaceStocks completed");
             picksService.syncWithStockData(allList);
-            syncupService.syncupAllHistory();
+            log.info("syncWithStockData completed");
+            syncService.syncAllHistory();
+            log.info("syncAllHistory completed");
             return "Scoring calculation complete: " + allList.size() + " stocks processed";
         } catch (Exception e) {
             return "Error during scoring calculation: " + e.getMessage();

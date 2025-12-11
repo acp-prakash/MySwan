@@ -3,7 +3,6 @@ package org.myswan.controller.internal;
 import lombok.extern.slf4j.Slf4j;
 import org.myswan.model.collection.Stock;
 import org.myswan.model.collection.Watchlist;
-import org.myswan.service.internal.StockService;
 import org.myswan.service.internal.WatchlistService;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -12,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -21,14 +21,11 @@ import java.util.Map;
 public class WatchlistController {
 
     private final WatchlistService watchlistService;
-    private final StockService stockService;
     private final MongoTemplate mongoTemplate;
 
     public WatchlistController(WatchlistService watchlistService,
-                               StockService stockService,
                                MongoTemplate mongoTemplate) {
         this.watchlistService = watchlistService;
-        this.stockService = stockService;
         this.mongoTemplate = mongoTemplate;
     }
 
@@ -53,11 +50,14 @@ public class WatchlistController {
 
             // Fetch stocks for watchlist tickers using case-insensitive regex
             List<Stock> stocks = new ArrayList<>();
+            List<String> optionList = Arrays.asList("TSLA", "NVDA", "AMZN", "SPY", "QQQ", "PLTR");
             for (String ticker : tickers) {
                 Query query = new Query(Criteria.where("ticker").regex("^" + ticker + "$", "i"));
                 List<Stock> found = mongoTemplate.find(query, Stock.class);
                 if (!found.isEmpty()) {
-                    stocks.add(found.get(0));
+                    if(optionList.contains(ticker))
+                        found.getFirst().setOptionPref("Y");
+                    stocks.add(found.getFirst());
                 } else {
                     log.warn("Stock not found for watchlist ticker: {}", ticker);
                 }

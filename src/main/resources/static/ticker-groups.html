@@ -523,6 +523,12 @@
                         field: "relatedTickers",
                         width: 100,
                         headerFilter: "input",
+                        headerFilterFunc: (headerValue, rowValue) => {
+                            if (!headerValue) return true;
+                            if (!rowValue || rowValue.length === 0) return false;
+                            const ticker = (rowValue[0].ticker || '').toString().toLowerCase();
+                            return ticker.includes(headerValue.toLowerCase());
+                        },
                         formatter: (cell) => {
                             const related = cell.getValue();
                             if (!related || related.length === 0) return '-';
@@ -658,4 +664,3 @@
     </script>
 </body>
 </html>
-

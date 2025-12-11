@@ -5,7 +5,7 @@ import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
-public class SyncupService {
+public class SyncService {
 
     private final FuturesService futuresService;
     private final StockService stockService;
@@ -13,9 +13,9 @@ public class SyncupService {
     private final PicksService picksService;
     private final GuaranteedExplosiveService guaranteedExplosiveService;
 
-    public SyncupService(FuturesService futuresService, StockService stockService,
-                         PatternService patternService, PicksService picksService,
-                         GuaranteedExplosiveService guaranteedExplosiveService) {
+    public SyncService(FuturesService futuresService, StockService stockService,
+                       PatternService patternService, PicksService picksService,
+                       GuaranteedExplosiveService guaranteedExplosiveService) {
         this.futuresService = futuresService;
         this.stockService = stockService;
         this.patternService = patternService;
@@ -23,15 +23,15 @@ public class SyncupService {
         this.guaranteedExplosiveService = guaranteedExplosiveService;
     }
 
-    public String syncupAllHistory() {
+    public String syncAllHistory() {
         try {
-            log.info("Syncing all futures history data...");
+            log.info("Syncing all history data...");
             futuresService.syncFuturesHistory();
             stockService.syncStockHistory();
             patternService.syncPatternHistory();
             picksService.syncPicksHistory();
             //guaranteedExplosiveService.syncGuaranteedPicksHistory();
-            log.info("All Futures history data sync completed.");
+            log.info("All history data sync completed.");
             return "SUCCESS";
         }
         catch(Exception ex)
@@ -41,7 +41,7 @@ public class SyncupService {
         }
     }
 
-    public String syncupFutureHistory() {
+    public String syncFutureHistory() {
         try {
             log.info("Syncing futures history data...");
             futuresService.syncFuturesHistory();
@@ -55,7 +55,7 @@ public class SyncupService {
         }
     }
 
-    public String syncupStockHistory() {
+    public String syncStockHistory() {
         try {
             log.info("Syncing Stocks history data...");
             stockService.syncStockHistory();
@@ -69,7 +69,7 @@ public class SyncupService {
         }
     }
 
-    public String syncupPatternHistory() {
+    public String syncPatternHistory() {
         try {
             log.info("Syncing Patterns history data...");
             patternService.syncPatternHistory();

@@ -34,27 +34,27 @@ public class StockService {
      * Bulk delete existing stocks by tickers and insert new ones
      */
     public void replaceStocks(List<Stock> stockList) {
-        if (stockList == null || stockList.isEmpty()) {
-            log.warn("No Stocks to insert");
-            return;
-        }
-
-        // Extract all tickers to delete
-        List<String> tickers = stockList.stream()
-                .map(Stock::getTicker)
-                .filter(Objects::nonNull)
-                .distinct()
-                .collect(Collectors.toList());
-
-        // Delete existing stocks with these tickers
-        if (!tickers.isEmpty()) {
-            Query deleteQuery = Query.query(Criteria.where("ticker").in(tickers));
-            long deletedCount = mongoTemplate.remove(deleteQuery, Stock.class).getDeletedCount();
-            log.info("Deleted {} existing stocks records", deletedCount);
-        }
-
-        // Insert all new stocks
         try {
+            if (stockList == null || stockList.isEmpty()) {
+                log.warn("No Stocks to insert");
+                return;
+            }
+
+            // Extract all tickers to delete
+            List<String> tickers = stockList.stream()
+                    .map(Stock::getTicker)
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .collect(Collectors.toList());
+
+            // Delete existing stocks with these tickers
+            if (!tickers.isEmpty()) {
+                Query deleteQuery = Query.query(Criteria.where("ticker").in(tickers));
+                long deletedCount = mongoTemplate.remove(deleteQuery, Stock.class).getDeletedCount();
+                log.info("Deleted {} existing stocks records", deletedCount);
+            }
+
+            // Insert all new stocks
             mongoTemplate.insert(stockList, Stock.class);
             log.info("Inserted {} new stocks records", stockList.size());
         } catch (Exception e) {

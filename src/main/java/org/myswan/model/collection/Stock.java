@@ -71,6 +71,7 @@ public class Stock {
     private double vwap;
     private int noOfLongPatterns;
     private int noOfShortPatterns;
+    private String optionPref;
 
     // Transient field - not persisted to DB, populated at runtime for API responses
     @Transient

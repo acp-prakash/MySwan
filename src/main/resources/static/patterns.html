@@ -314,7 +314,25 @@
             width: 65,
             formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(2) : '-'; }
         },
-
+        {
+            title: "Diff",
+            field: "diff",
+            width: 65,
+            sorter: "number",
+            headerFilter: "input",
+            headerFilterPlaceholder: "<=1",
+            headerFilterFunc: customNumberFilter,
+            mutator: function(value, data){
+                const entry = parseFloat(data.entry);
+                const price = parseFloat(data.price);
+                if (isNaN(entry) || isNaN(price)) return null;
+                return Math.abs(price - entry);
+            },
+            formatter: function(cell){
+                const v = cell.getValue();
+                return (v || v === 0) ? v.toFixed(2) : '-';
+            }
+        },
         {
             title: "Min Target",
             field: "minPT",

@@ -729,6 +729,126 @@
         .preset-badge i {
             font-size: 0.75rem;
         }
+
+        /* Slider Controls */
+        .slider-controls {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 0.8rem;
+            margin-top: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            border-top: 1px solid var(--border-color);
+            overflow-x: auto;
+            background: rgba(15, 23, 42, 0.3);
+            border-radius: 4px;
+        }
+
+        .slider-group {
+            display: inline-flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 0.3rem;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+
+        .slider-group label {
+            font-size: 0.65rem;
+            color: #88c0d0;
+            font-weight: 600;
+            margin: 0;
+            padding: 0;
+        }
+
+        .slider-group .slider-value {
+            font-weight: 700;
+            color: #ffd700;
+            background: rgba(30, 41, 59, 0.8);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.6rem;
+            min-width: 28px;
+            text-align: center;
+            border: 1px solid rgba(136, 192, 208, 0.3);
+            display: inline-block;
+        }
+
+        .slider-group input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 70px;
+            height: 5px;
+            background: linear-gradient(to right, #1e293b 0%, #334155 100%);
+            border-radius: 3px;
+            outline: none;
+            padding: 0;
+            margin: 0;
+            border: 1px solid #5e81ac;
+            cursor: pointer;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .slider-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            background: #88c0d0;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 2px solid #5e81ac;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .slider-group input[type="range"]::-moz-range-thumb {
+            width: 12px;
+            height: 12px;
+            background: #88c0d0;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 2px solid #5e81ac;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .slider-group input[type="range"]:hover::-webkit-slider-thumb {
+            background: #81a1c1;
+            transform: scale(1.1);
+            box-shadow: 0 3px 6px rgba(136, 192, 208, 0.5);
+        }
+
+        .slider-group input[type="range"]:hover::-moz-range-thumb {
+            background: #81a1c1;
+            transform: scale(1.1);
+            box-shadow: 0 3px 6px rgba(136, 192, 208, 0.5);
+        }
+
+        /* Price slider longer span */
+        #priceSlider {
+            width: 200px;
+        }
+
+        /* Scrollbar for slider container */
+        .slider-controls::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .slider-controls::-webkit-scrollbar-track {
+            background: #1a1f2e;
+            border-radius: 3px;
+        }
+
+        .slider-controls::-webkit-scrollbar-thumb {
+            background: #5e81ac;
+            border-radius: 3px;
+        }
+
+        .slider-controls::-webkit-scrollbar-thumb:hover {
+            background: #81a1c1;
+        }
     </style>
 </head>
 <body>
@@ -873,6 +993,60 @@
                 <button class="btn btn-secondary" id="exportBtn">
                     <i class="fas fa-download"></i> Export Excel
                 </button>
+            </div>
+
+            <!-- Slider Controls -->
+            <div id="slider-controls-container" class="slider-controls" style="display: none;">
+                <div class="slider-group">
+                    <label for="priceSlider">Price</label>
+                    <span class="slider-value" id="priceValue">1000</span>
+                    <input type="range" id="priceSlider" min="0" max="1000" value="1000" step="1" data-default="1000">
+                </div>
+                <div class="slider-group">
+                    <label for="pickScoreSlider">Pick Score</label>
+                    <span class="slider-value" id="pickScoreValue">0</span>
+                    <input type="range" id="pickScoreSlider" min="0" max="100" value="0" step="1">
+                </div>
+                <div class="slider-group">
+                    <label for="rankSlider">Rank</label>
+                    <span class="slider-value" id="rankValue">0</span>
+                    <input type="range" id="rankSlider" min="0" max="1000" value="0" step="10">
+                </div>
+                <div class="slider-group">
+                    <label for="safeSlider">Safe</label>
+                    <span class="slider-value" id="safeValue">0</span>
+                    <input type="range" id="safeSlider" min="0" max="100" value="0" step="1">
+                </div>
+                <div class="slider-group">
+                    <label for="bottomMetSlider">BotMet</label>
+                    <span class="slider-value" id="bottomMetValue">0</span>
+                    <input type="range" id="bottomMetSlider" min="0" max="10" value="0" step="1">
+                </div>
+                <div class="slider-group">
+                    <label for="spikeScoreSlider">Spike</label>
+                    <span class="slider-value" id="spikeScoreValue">0</span>
+                    <input type="range" id="spikeScoreSlider" min="0" max="100" value="0" step="1">
+                </div>
+                <div class="slider-group">
+                    <label for="longPatternsSlider">Long</label>
+                    <span class="slider-value" id="longPatternsValue">0</span>
+                    <input type="range" id="longPatternsSlider" min="0" max="20" value="0" step="1">
+                </div>
+                <div class="slider-group">
+                    <label for="shortPatternsSlider">Short</label>
+                    <span class="slider-value" id="shortPatternsValue">0</span>
+                    <input type="range" id="shortPatternsSlider" min="0" max="20" value="0" step="1">
+                </div>
+                <div class="slider-group">
+                    <label for="upDaysSlider">Up↑</label>
+                    <span class="slider-value" id="upDaysValue">0</span>
+                    <input type="range" id="upDaysSlider" min="0" max="20" value="0" step="1">
+                </div>
+                <div class="slider-group">
+                    <label for="downDaysSlider">Dn↓</label>
+                    <span class="slider-value" id="downDaysValue">0</span>
+                    <input type="range" id="downDaysSlider" min="0" max="20" value="0" step="1">
+                </div>
             </div>
 
             <!-- Update Actions -->
@@ -1158,6 +1332,58 @@
             {title: "HistDate", field: "histDate", headerFilter: "input", width: 100},
         ];
 
+        // Slider Filter Logic
+        const sliderConfig = {
+            pickScore: { path: 'dailyRank.pickScore', el: 'pickScoreSlider' },
+            rank: { path: 'dailyRank.finalRank', el: 'rankSlider' },
+            safe: { path: 'dailyRank.safetyRank', el: 'safeSlider' },
+            bottomMet: { path: 'bottom.conditionsMet', el: 'bottomMetSlider' },
+            spikeScore: { path: 'spike.spikeScore', el: 'spikeScoreSlider' },
+            longPatterns: { path: 'noOfLongPatterns', el: 'longPatternsSlider' },
+            shortPatterns: { path: 'noOfShortPatterns', el: 'shortPatternsSlider' },
+            upDays: { path: 'upDays', el: 'upDaysSlider' },
+            downDays: { path: 'downDays', el: 'downDaysSlider' },
+            price: { path: 'price', el: 'priceSlider' }
+        };
+
+        function sliderFilter(data) {
+            if (currentCollection !== 'stocks') return true; // Only apply to stocks
+
+            const sliderValues = {};
+            for (const key in sliderConfig) {
+                sliderValues[key] = Number(document.getElementById(sliderConfig[key].el).value);
+            }
+
+            const rowValues = {};
+            for (const key in sliderConfig) {
+                rowValues[key] = Number(getNested(data, sliderConfig[key].path) || 0);
+            }
+
+            return rowValues.pickScore >= sliderValues.pickScore &&
+                   (sliderValues.rank === 0 || rowValues.rank <= sliderValues.rank) &&
+                   rowValues.safe >= sliderValues.safe &&
+                   rowValues.bottomMet >= sliderValues.bottomMet &&
+                   rowValues.spikeScore >= sliderValues.spikeScore &&
+                   rowValues.longPatterns >= sliderValues.longPatterns &&
+                   rowValues.shortPatterns >= sliderValues.shortPatterns &&
+                   rowValues.upDays >= sliderValues.upDays &&
+                   rowValues.downDays >= sliderValues.downDays &&
+                   rowValues.price <= sliderValues.price;
+        }
+
+        function applySliderFilter() {
+            if (!table) return;
+            table.addFilter(sliderFilter);
+        }
+
+        function resetSliders() {
+            document.querySelectorAll('.slider-group input[type="range"]').forEach(slider => {
+                slider.value = slider.min;
+                const event = new Event('input');
+                slider.dispatchEvent(event);
+            });
+        }
+
         // Preset filter functions
         function filterExplosive(row) {
             const spikeScore = Number(getNested(row, 'spike.spikeScore')) || 0;
@@ -1294,6 +1520,14 @@
         async function loadData() {
             const collection = document.getElementById('collectionSelect').value;
             currentCollection = collection;
+
+            // Show/hide sliders based on collection
+            const sliderContainer = document.getElementById('slider-controls-container');
+            if (collection === 'stocks') {
+                sliderContainer.style.display = 'flex';
+            } else {
+                sliderContainer.style.display = 'none';
+            }
 
             let url, columns, title;
             if (collection === 'masters') {
@@ -1469,6 +1703,8 @@
                 table.clearFilter(true);
                 table.clearHeaderFilter();
                 clearActivePreset();
+                resetSliders(); // Reset sliders to their minimum values
+                table.removeFilter(sliderFilter); // Ensure slider filter is removed
                 filteredTotal = loadedTotal;
                 updateGridInfo();
             }
@@ -1836,6 +2072,15 @@
         document.getElementById('updateScoringBtn').addEventListener('click', updateScoring);
         document.getElementById('updateFuturesBtn').addEventListener('click', updateFutures);
         document.getElementById('fetchPatternsBtn').addEventListener('click', fetchPatterns);
+
+        // Slider Event Listeners
+        document.querySelectorAll('.slider-group input[type="range"]').forEach(slider => {
+            const valueEl = document.getElementById(slider.id.replace('Slider', 'Value'));
+            slider.addEventListener('input', (e) => {
+                if (valueEl) valueEl.textContent = e.target.value;
+            });
+            slider.addEventListener('change', applySliderFilter); // Apply filter on release
+        });
 
         // Initialize
         window.addEventListener('DOMContentLoaded', () => {

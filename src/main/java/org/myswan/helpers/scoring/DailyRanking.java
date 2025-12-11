@@ -2,21 +2,28 @@ package org.myswan.helpers.scoring;
 
 import org.myswan.model.collection.Stock;
 import org.myswan.model.compute.DailyRank;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 @Component
 public class DailyRanking {
 
+    private static final Logger log = LoggerFactory.getLogger(DailyRanking.class);
     public DailyRanking() {
         super();
     }
 
     public void dailyRanking(Stock s) {
 
-       s.setDailyRank(new DailyRank());
+        try {
+            s.setDailyRank(new DailyRank());
 
-        if(isValidSetup(s)) {
-            evaluateStock(s);
+            if (isValidSetup(s)) {
+                evaluateStock(s);
+            }
+        } catch (Exception ex) {
+            log.error("Error in DailyRanking.dailyRanking for ticker {}: ", s.getTicker(), ex);
         }
     }
 
@@ -68,21 +75,21 @@ public class DailyRanking {
         boolean bottom = s.getBottom() != null && s.getBottom().getConditionsMet() >= 4;
 
         if (mom) {
-            return (int)round(
+            return (int) round(
                     s.getMomPop().getPopScore() * 0.70 +
                             s.getScore().getOverallScore() * 0.30
             );
         }
 
         if (spike) {
-            return (int)round(
+            return (int) round(
                     s.getSpike().getSpikeScore() * 0.70 +
                             s.getScore().getReversalScore() * 0.30
             );
         }
 
         if (bottom) {
-            return (int)round(
+            return (int) round(
                     (s.getBottom().getConditionsMet() * 12) +
                             (s.getScore().getReversalScore() * 0.50)
             );
@@ -107,7 +114,8 @@ public class DailyRanking {
         try {
             if (s.getVolume() > s.getAvgVolume10D())
                 safety += 10;
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
 
         // 3. RSI 45–60 ideal zone
         double rsi = s.getRsi14();

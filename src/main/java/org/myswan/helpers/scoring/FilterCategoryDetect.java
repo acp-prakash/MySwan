@@ -2,6 +2,8 @@ package org.myswan.helpers.scoring;
 
 import org.myswan.model.collection.Stock;
 import org.myswan.model.compute.FilterCategory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -9,67 +11,78 @@ import java.util.ArrayList;
 @Component
 public class FilterCategoryDetect {
 
+    private static final Logger log = LoggerFactory.getLogger(FilterCategoryDetect.class);
     public FilterCategoryDetect() {
         super();
     }
 
     public void filterCategory(Stock s, Stock history) {
-        FilterCategory result = new FilterCategory();
-        result.setCriteria(new ArrayList<>());
-        result.setCategory(new ArrayList<>());
-        String primary = "99-NO-SETUP";
+        try {
+            FilterCategory result = new FilterCategory();
+            result.setCriteria(new ArrayList<>());
+            result.setCategory(new ArrayList<>());
+            String primary = "99-NO-SETUP";
 
-        // 1 Explosive Spike Candidate
-        if (isExplosiveSpike(s)) {
-            result.getCategory().add("1-Explosive Spike");
-            result.getCriteria().add("Bottom true;Bottom Strength Strong;Oversold Bounce Score >= 40;Down Days >= 3;Spike Score >= 60;Spike Likely true;No of Long Patterns >= 1");
-            primary = "1-Explosive Spike";
+            if (history == null) {
+                result.setPrimaryCategory(primary);
+                s.setFilterCategory(result);
+                return;
+            }
+
+            // 1 Explosive Spike Candidate
+            if (isExplosiveSpike(s)) {
+                result.getCategory().add("1-Explosive Spike");
+                result.getCriteria().add("Bottom true;Bottom Strength Strong;Oversold Bounce Score >= 40;Down Days >= 3;Spike Score >= 60;Spike Likely true;No of Long Patterns >= 1");
+                primary = "1-Explosive Spike";
+            }
+
+            // 2 Oversold Bounce (Reversal)
+            if (isOversoldBounce(s)) {
+                result.getCategory().add("2-Oversold Bounce");
+                result.getCriteria().add("oversoldBounce true;Oversold Bounce Score >= 40;Bottom true;Down Days >= 4;Spike Score < 40;No of Long Patterns >= 1;Signal not SELL");
+                if (primary.equals("99-NO-SETUP")) primary = "2-Oversold Bounce";
+            }
+
+            // 3 High-Probability Downtrend Reversal
+            if (isDowntrendReversal(s)) {
+                result.getCategory().add("3-Downtrend Reversal");
+                result.getCriteria().add("Down Days >= 5;Down Low within 2% of Price;Bottom Strength Reversal;Oversold Bounce Score >= 30;No of Long Patterns >= 1");
+                if (primary.equals("99-NO-SETUP")) primary = "3-Downtrend Reversal";
+            }
+
+            // 4 isMomentumPop
+            if (isMomentumPop(s)) {
+                result.getCategory().add("4-MomentumPop");
+                result.getCriteria().add("MomentumPop true;Pop Score >= 60");
+                if (primary.equals("99-NO-SETUP")) primary = "4-MomentumPop";
+            }
+
+            // 5 Breakout Watchlist
+            if (isBreakoutWatch(s, history)) {
+                result.getCategory().add("5-Breakout Watch");
+                result.getCriteria().add("Up Days 1-2;Up High > Previous High;No of Long Patterns >= 1;Spike Score 20-60;Overall Score >= 40");
+                if (primary.equals("99-NO-SETUP")) primary = "5-Breakout Watch";
+            }
+
+            // 6 Trend Continuation (Uptrend Momentum)
+            if (isTrendContinuation(s)) {
+                result.getCategory().add("6-Trend Continuation");
+                result.getCriteria().add("Up Days >= 3;Up High within 2% of Price;No of Long Patterns >= 2;Spike Score < 40;Overall Score >= 60;Signal BUY or HOLD");
+                if (primary.equals("99-NO-SETUP")) primary = "6-Trend Continuation";
+            }
+
+            // 7 Danger: Overextended
+            if (isOverextended(s)) {
+                result.getCategory().add("7-Overextended Warning");
+                result.getCriteria().add("Up Days >= 4;Up High within 5% of Price;Daily Change % > 3%;Spike Score < 20;Signal SELL");
+                if (primary.equals("99-NO-SETUP")) primary = "7-Overextended Warning";
+            }
+
+            result.setPrimaryCategory(primary);
+            s.setFilterCategory(result);
+        } catch (Exception ex) {
+            log.error("Error in FilterCategoryDetect.filterCategory for ticker {}: ", s.getTicker(), ex);
         }
-
-        // 2 Oversold Bounce (Reversal)
-        if (isOversoldBounce(s)) {
-            result.getCategory().add("2-Oversold Bounce");
-            result.getCriteria().add("oversoldBounce true;Oversold Bounce Score >= 40;Bottom true;Down Days >= 4;Spike Score < 40;No of Long Patterns >= 1;Signal not SELL");
-            if (primary.equals("99-NO-SETUP")) primary = "2-Oversold Bounce";
-        }
-
-        // 3 High-Probability Downtrend Reversal
-        if (isDowntrendReversal(s)) {
-            result.getCategory().add("3-Downtrend Reversal");
-            result.getCriteria().add("Down Days >= 5;Down Low within 2% of Price;Bottom Strength Reversal;Oversold Bounce Score >= 30;No of Long Patterns >= 1");
-            if (primary.equals("99-NO-SETUP")) primary = "3-Downtrend Reversal";
-        }
-
-        // 4 isMomentumPop
-        if (isMomentumPop(s)) {
-            result.getCategory().add("4-MomentumPop");
-            result.getCriteria().add("MomentumPop true;Pop Score >= 60");
-            if (primary.equals("99-NO-SETUP")) primary = "4-MomentumPop";
-        }
-
-        // 5 Breakout Watchlist
-        if (isBreakoutWatch(s, history)) {
-            result.getCategory().add("5-Breakout Watch");
-            result.getCriteria().add("Up Days 1-2;Up High > Previous High;No of Long Patterns >= 1;Spike Score 20-60;Overall Score >= 40");
-            if (primary.equals("99-NO-SETUP")) primary = "5-Breakout Watch";
-        }
-
-        // 6 Trend Continuation (Uptrend Momentum)
-        if (isTrendContinuation(s)) {
-            result.getCategory().add("6-Trend Continuation");
-            result.getCriteria().add("Up Days >= 3;Up High within 2% of Price;No of Long Patterns >= 2;Spike Score < 40;Overall Score >= 60;Signal BUY or HOLD");
-            if (primary.equals("99-NO-SETUP")) primary = "6-Trend Continuation";
-        }
-
-        // 7 Danger: Overextended
-        if (isOverextended(s)) {
-            result.getCategory().add("7-Overextended Warning");
-            result.getCriteria().add("Up Days >= 4;Up High within 5% of Price;Daily Change % > 3%;Spike Score < 20;Signal SELL");
-            if (primary.equals("99-NO-SETUP")) primary = "7-Overextended Warning";
-        }
-
-        result.setPrimaryCategory(primary);
-        s.setFilterCategory(result);
     }
 
     // ---------------------------------------------------------
