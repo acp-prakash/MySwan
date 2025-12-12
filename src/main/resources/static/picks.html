@@ -325,6 +325,71 @@
             <button class="btn btn-danger" onclick="deleteSelectedPicks()">
                 <i class="fas fa-trash"></i> Delete Selected
             </button>
+            <button class="btn btn-secondary" onclick="clearAllFilters()">
+                <i class="fas fa-filter-circle-xmark"></i> Clear All Filters
+            </button>
+        </div>
+
+        <!-- Slider Filters -->
+        <div style="background: #094b92; padding: 8px; border-radius: 8px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;">
+                <div style="padding: 2px; margin: 0;">
+                    <label style="display: block; font-size: 10px; font-weight: 600; color: #ffffff; margin-bottom: 2px;">
+                        Progress: <span id="progressValue" style="color: #fbbf24;">-100+</span>
+                    </label>
+                    <input type="range" id="progressSlider" min="-100" max="200" value="-100"
+                           style="width: 80px; accent-color: #fbbf24;">
+                </div>
+                <div style="padding: 2px; margin: 0;">
+                    <label style="display: block; font-size: 10px; font-weight: 600; color: #ffffff; margin-bottom: 2px;">
+                        Pick: <span id="pickScoreValue" style="color: #fbbf24;">0+</span>
+                    </label>
+                    <input type="range" id="pickScoreSlider" min="0" max="100" value="0"
+                           style="width: 80px; accent-color: #fbbf24;">
+                </div>
+                <div style="padding: 2px; margin: 0;">
+                    <label style="display: block; font-size: 10px; font-weight: 600; color: #ffffff; margin-bottom: 2px;">
+                        Rank: <span id="rankValue" style="color: #fbbf24;">0+</span>
+                    </label>
+                    <input type="range" id="rankSlider" min="0" max="100" value="0"
+                           style="width: 80px; accent-color: #fbbf24;">
+                </div>
+                <div style="padding: 2px; margin: 0;">
+                    <label style="display: block; font-size: 10px; font-weight: 600; color: #ffffff; margin-bottom: 2px;">
+                        Safe: <span id="safeValue" style="color: #fbbf24;">0+</span>
+                    </label>
+                    <input type="range" id="safeSlider" min="0" max="100" value="0"
+                           style="width: 80px; accent-color: #fbbf24;">
+                </div>
+                <div style="padding: 2px; margin: 0;">
+                    <label style="display: block; font-size: 10px; font-weight: 600; color: #ffffff; margin-bottom: 2px;">
+                        Spike: <span id="spikeScoreValue" style="color: #fbbf24;">0+</span>
+                    </label>
+                    <input type="range" id="spikeScoreSlider" min="0" max="100" value="0"
+                           style="width: 80px; accent-color: #fbbf24;">
+                </div>
+                <div style="padding: 2px; margin: 0;">
+                    <label style="display: block; font-size: 10px; font-weight: 600; color: #ffffff; margin-bottom: 2px;">
+                        Long#: <span id="longPatternsValue" style="color: #fbbf24;">0+</span>
+                    </label>
+                    <input type="range" id="longPatternsSlider" min="0" max="10" value="0"
+                           style="width: 80px; accent-color: #fbbf24;">
+                </div>
+                <div style="padding: 2px; margin: 0;">
+                    <label style="display: block; font-size: 10px; font-weight: 600; color: #ffffff; margin-bottom: 2px;">
+                        Short#: <span id="shortPatternsValue" style="color: #fbbf24;">0+</span>
+                    </label>
+                    <input type="range" id="shortPatternsSlider" min="0" max="10" value="0"
+                           style="width: 80px; accent-color: #fbbf24;">
+                </div>
+                <div style="padding: 2px; margin: 0;">
+                    <label style="display: block; font-size: 10px; font-weight: 600; color: #ffffff; margin-bottom: 2px;">
+                        DaysLeft: <span id="daysLeftValue" style="color: #fbbf24;">&lt; 60</span>
+                    </label>
+                    <input type="range" id="daysLeftSlider" min="0" max="60" value="60"
+                           style="width: 80px; accent-color: #fbbf24;">
+                </div>
+            </div>
         </div>
 
         <div id="picksTable"></div>
@@ -392,6 +457,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             initTable();
             loadPicks();
+            setupSliderListeners();
 
             // Handle form submission
             document.getElementById('pickForm').addEventListener('submit', handleFormSubmit);
@@ -579,6 +645,121 @@
                         }
                     },
                     {
+                        title: "Progress",
+                        field: "progress",
+                        width: 150,
+                        sorter: function(a, b, aRow, bRow, column, dir, sorterParams) {
+                            // Calculate progress for row a
+                            const aData = aRow.getData();
+                            const aAddedPrice = parseFloat(aData.addedPrice);
+                            const aTarget = parseFloat(aData.target);
+                            const aCurrentPrice = parseFloat(aData.stock?.price);
+                            const aProgress = (isNaN(aAddedPrice) || isNaN(aTarget) || isNaN(aCurrentPrice) || aAddedPrice === aTarget)
+                                ? -999999
+                                : ((aCurrentPrice - aAddedPrice) / (aTarget - aAddedPrice)) * 100;
+
+                            // Calculate progress for row b
+                            const bData = bRow.getData();
+                            const bAddedPrice = parseFloat(bData.addedPrice);
+                            const bTarget = parseFloat(bData.target);
+                            const bCurrentPrice = parseFloat(bData.stock?.price);
+                            const bProgress = (isNaN(bAddedPrice) || isNaN(bTarget) || isNaN(bCurrentPrice) || bAddedPrice === bTarget)
+                                ? -999999
+                                : ((bCurrentPrice - bAddedPrice) / (bTarget - bAddedPrice)) * 100;
+
+                            return aProgress - bProgress;
+                        },
+                        headerFilter: "input",
+                        headerFilterPlaceholder: ">50",
+                        headerFilterFunc: function(headerValue, rowValue, rowData, filterParams) {
+                            if (!headerValue || headerValue.trim() === '') {
+                                return true;
+                            }
+
+                            // Calculate progress for this row
+                            const addedPrice = parseFloat(rowData.addedPrice);
+                            const target = parseFloat(rowData.target);
+                            const currentPrice = parseFloat(rowData.stock?.price);
+
+                            if (isNaN(addedPrice) || isNaN(target) || isNaN(currentPrice) || addedPrice === target) {
+                                return false;
+                            }
+
+                            const progress = ((currentPrice - addedPrice) / (target - addedPrice)) * 100;
+
+                            // Apply filter comparison
+                            const filterStr = headerValue.trim();
+
+                            if (filterStr.startsWith('>=')) {
+                                const threshold = parseFloat(filterStr.substring(2));
+                                return !isNaN(threshold) && progress >= threshold;
+                            } else if (filterStr.startsWith('<=')) {
+                                const threshold = parseFloat(filterStr.substring(2));
+                                return !isNaN(threshold) && progress <= threshold;
+                            } else if (filterStr.startsWith('>')) {
+                                const threshold = parseFloat(filterStr.substring(1));
+                                return !isNaN(threshold) && progress > threshold;
+                            } else if (filterStr.startsWith('<')) {
+                                const threshold = parseFloat(filterStr.substring(1));
+                                return !isNaN(threshold) && progress < threshold;
+                            } else if (filterStr.startsWith('=')) {
+                                const threshold = parseFloat(filterStr.substring(1));
+                                return !isNaN(threshold) && Math.abs(progress - threshold) < 0.1;
+                            } else {
+                                const threshold = parseFloat(filterStr);
+                                if (!isNaN(threshold)) {
+                                    return Math.abs(progress - threshold) < 0.1;
+                                }
+                                return true;
+                            }
+                        },
+                        formatter: function(cell) {
+                            const rowData = cell.getRow().getData();
+                            const addedPrice = parseFloat(rowData.addedPrice);
+                            const target = parseFloat(rowData.target);
+                            const currentPrice = parseFloat(rowData.stock?.price);
+
+                            // Validate we have all required values
+                            if (isNaN(addedPrice) || isNaN(target) || isNaN(currentPrice) || addedPrice === target) {
+                                return '-';
+                            }
+
+                            // Calculate percentage progress from addedPrice to target
+                            const progress = ((currentPrice - addedPrice) / (target - addedPrice)) * 100;
+                            const percentage = progress.toFixed(1);
+
+                            // Determine color based on progress
+                            let barColor;
+                            if (progress >= 100) {
+                                barColor = '#10b981'; // Green - target reached or exceeded
+                            } else if (progress >= 75) {
+                                barColor = '#22c55e'; // Light green
+                            } else if (progress >= 50) {
+                                barColor = '#eab308'; // Yellow
+                            } else if (progress >= 25) {
+                                barColor = '#f97316'; // Orange
+                            } else if (progress >= 0) {
+                                barColor = '#fb923c'; // Light orange
+                            } else {
+                                barColor = '#ef4444'; // Red - below addedPrice
+                            }
+
+                            // Clamp progress bar width between 0 and 100
+                            const barWidth = Math.min(Math.max(Math.abs(progress), 0), 100);
+
+                            return `
+                                <div style="display: flex; align-items: center; width: 100%;">
+                                    <div style="flex: 1; background: #1e293b; border-radius: 4px; height: 20px; position: relative; overflow: hidden; border: 1px solid #334155;">
+                                        <div style="width: ${barWidth}%; height: 100%; background: ${barColor}; transition: width 0.3s;"></div>
+                                        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 11px; font-weight: 600; color: #f1f5f9; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">
+                                            ${percentage}%
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    },
+                    {
                         title: "Stop",
                         field: "stopLoss",
                         width: 68,
@@ -598,6 +779,60 @@
                         editor: "date",
                         headerFilter: "input",
                         headerFilterPlaceholder: "2025-12"
+                    },
+                    {
+                        title: "DaysLeft",
+                        field: "daysLeft",
+                        width: 80,
+                        headerFilter: "input",
+                        headerFilterPlaceholder: "<30",
+                        headerFilterFunc: customNumberFilter,
+                        formatter: function(cell, formatterParams, onRendered) {
+                            const rowData = cell.getRow().getData();
+                            const targetDate = rowData.targetDate;
+                            if (!targetDate) {
+                                return "-";
+                            }
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            const target = new Date(targetDate);
+                            target.setHours(0, 0, 0, 0);
+                            const diffTime = target - today;
+                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                            if (diffDays < 0) {
+                                return `<span style="color: #ef4444;">${diffDays}</span>`;
+                            } else if (diffDays <= 7) {
+                                return `<span style="color: #f97316;">${diffDays}</span>`;
+                            }
+                            return diffDays;
+                        },
+                        sorter: function(a, b, aRow, bRow, column, dir, sorterParams){
+                            const aData = aRow.getData();
+                            const bData = bRow.getData();
+
+                            const aTargetDate = aData.targetDate;
+                            let aDiffDays = -Infinity;
+                            if (aTargetDate) {
+                                const aTarget = new Date(aTargetDate);
+                                aTarget.setHours(0, 0, 0, 0);
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                aDiffDays = Math.ceil((aTarget - today) / (1000 * 60 * 60 * 24));
+                            }
+
+                            const bTargetDate = bData.targetDate;
+                            let bDiffDays = -Infinity;
+                            if (bTargetDate) {
+                                const bTarget = new Date(bTargetDate);
+                                bTarget.setHours(0, 0, 0, 0);
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                bDiffDays = Math.ceil((bTarget - today) / (1000 * 60 * 60 * 24));
+                            }
+
+                            return aDiffDays - bDiffDays;
+                        }
                     },
                     {
                         title: "T✓",
@@ -856,9 +1091,23 @@
         async function loadPicks() {
             try {
                 const response = await fetch(`${API_BASE}/picks/list`);
-                const data = await response.json();
+                let data = await response.json();
 
                 console.log('Loaded picks:', data.length);
+
+                // Pre-calculate daysLeft for each pick
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                data.forEach(pick => {
+                    if (pick.targetDate) {
+                        const target = new Date(pick.targetDate);
+                        target.setHours(0, 0, 0, 0);
+                        const diffTime = target - today;
+                        pick.daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    } else {
+                        pick.daysLeft = null;
+                    }
+                });
 
                 table.setData(data);
                 updateInfo();
@@ -1065,6 +1314,221 @@
 
             openAddPickModal();
         };
+
+        // Slider filter functions
+        function applySliderFilters() {
+            if (!table) {
+                console.warn('Table not initialized yet');
+                return;
+            }
+
+            const filters = [];
+
+            // Progress filter (special handling with custom function)
+            const progressThreshold = parseInt(document.getElementById('progressSlider').value);
+            console.log('Progress threshold:', progressThreshold);
+
+            // Always add progress filter (even at -100 to ensure it works)
+            filters.push(function(data) {
+                const addedPrice = parseFloat(data.addedPrice);
+                const target = parseFloat(data.target);
+                const currentPrice = parseFloat(data.stock?.price);
+
+                // If invalid data, only show if threshold is very low
+                if (isNaN(addedPrice) || isNaN(target) || isNaN(currentPrice) || addedPrice === target) {
+                    return progressThreshold <= -100;
+                }
+
+                const progress = ((currentPrice - addedPrice) / (target - addedPrice)) * 100;
+                const result = progress >= progressThreshold;
+                return result;
+            });
+
+            // PickScore filter
+            const pickScore = parseInt(document.getElementById('pickScoreSlider').value);
+            if (pickScore > 0) {
+                filters.push({ field: 'stock.dailyRank.pickScore', type: '>=', value: pickScore });
+            }
+
+            // Rank filter
+            const rank = parseInt(document.getElementById('rankSlider').value);
+            if (rank > 0) {
+                filters.push({ field: 'stock.dailyRank.finalRank', type: '>=', value: rank });
+            }
+
+            // Safety filter
+            const safe = parseInt(document.getElementById('safeSlider').value);
+            if (safe > 0) {
+                filters.push({ field: 'stock.dailyRank.safetyRank', type: '>=', value: safe });
+            }
+
+            // Spike Score filter
+            const spikeScore = parseInt(document.getElementById('spikeScoreSlider').value);
+            if (spikeScore > 0) {
+                filters.push({ field: 'stock.spike.spikeScore', type: '>=', value: spikeScore });
+            }
+
+            // Long Patterns filter
+            const longPatterns = parseInt(document.getElementById('longPatternsSlider').value);
+            if (longPatterns > 0) {
+                filters.push({ field: 'stock.noOfLongPatterns', type: '>=', value: longPatterns });
+            }
+
+            // Short Patterns filter
+            const shortPatterns = parseInt(document.getElementById('shortPatternsSlider').value);
+            if (shortPatterns > 0) {
+                filters.push({ field: 'stock.noOfShortPatterns', type: '>=', value: shortPatterns });
+            }
+
+            // Days Left filter
+            const daysLeftThreshold = parseInt(document.getElementById('daysLeftSlider').value);
+
+            // Only apply the filter if the slider is not at its maximum value
+            if (daysLeftThreshold < 60) {
+                filters.push(function(data) {
+                    // If a pick has no calculated daysLeft, it should not be shown unless the filter is at max
+                    if (data.daysLeft === null || data.daysLeft === undefined) {
+                        return false;
+                    }
+                    // Show picks that are expiring within the threshold (from today up to X days)
+                    return data.daysLeft >= 0 && data.daysLeft <= daysLeftThreshold;
+                });
+            }
+
+            console.log('Applying filters:', filters.length);
+
+            if (filters.length > 0) {
+                table.setFilter(filters);
+            } else {
+                table.clearFilter();
+            }
+
+            updateInfo();
+        }
+
+        function setupSliderListeners() {
+            console.log('Setting up slider listeners...');
+
+            // Progress slider
+            const progressSlider = document.getElementById('progressSlider');
+            const progressValue = document.getElementById('progressValue');
+            if (progressSlider && progressValue) {
+                console.log('Progress slider found, attaching listener');
+                progressSlider.addEventListener('input', function() {
+                    const value = this.value;
+                    console.log('Progress slider moved to:', value);
+                    progressValue.textContent = value + '+';
+                    progressValue.style.fontWeight = '700';
+                    progressValue.style.fontSize = '12px';
+                    console.log('Calling applySliderFilters...');
+                    applySliderFilters();
+                });
+                // Test that slider is interactive
+                progressSlider.addEventListener('change', function() {
+                    console.log('Progress slider change event fired:', this.value);
+                });
+            } else {
+                console.error('Progress slider elements not found', { progressSlider, progressValue });
+            }
+
+            // PickScore slider
+            const pickScoreSlider = document.getElementById('pickScoreSlider');
+            const pickScoreValue = document.getElementById('pickScoreValue');
+            if (pickScoreSlider && pickScoreValue) {
+                pickScoreSlider.addEventListener('input', function() {
+                    pickScoreValue.textContent = this.value + '+';
+                    applySliderFilters();
+                });
+            }
+
+            // Rank slider
+            const rankSlider = document.getElementById('rankSlider');
+            const rankValue = document.getElementById('rankValue');
+            if (rankSlider && rankValue) {
+                rankSlider.addEventListener('input', function() {
+                    rankValue.textContent = this.value + '+';
+                    applySliderFilters();
+                });
+            }
+
+            // Safety slider
+            const safeSlider = document.getElementById('safeSlider');
+            const safeValue = document.getElementById('safeValue');
+            if (safeSlider && safeValue) {
+                safeSlider.addEventListener('input', function() {
+                    safeValue.textContent = this.value + '+';
+                    applySliderFilters();
+                });
+            }
+
+            // Spike Score slider
+            const spikeScoreSlider = document.getElementById('spikeScoreSlider');
+            const spikeScoreValue = document.getElementById('spikeScoreValue');
+            if (spikeScoreSlider && spikeScoreValue) {
+                spikeScoreSlider.addEventListener('input', function() {
+                    spikeScoreValue.textContent = this.value + '+';
+                    applySliderFilters();
+                });
+            }
+
+            // Long Patterns slider
+            const longPatternsSlider = document.getElementById('longPatternsSlider');
+            const longPatternsValue = document.getElementById('longPatternsValue');
+            if (longPatternsSlider && longPatternsValue) {
+                longPatternsSlider.addEventListener('input', function() {
+                    longPatternsValue.textContent = this.value + '+';
+                    applySliderFilters();
+                });
+            }
+
+            // Short Patterns slider
+            const shortPatternsSlider = document.getElementById('shortPatternsSlider');
+            const shortPatternsValue = document.getElementById('shortPatternsValue');
+            if (shortPatternsSlider && shortPatternsValue) {
+                shortPatternsSlider.addEventListener('input', function() {
+                    shortPatternsValue.textContent = this.value + '+';
+                    applySliderFilters();
+                });
+            }
+
+            // Days Left slider
+            const daysLeftSlider = document.getElementById('daysLeftSlider');
+            const daysLeftValue = document.getElementById('daysLeftValue');
+            if (daysLeftSlider && daysLeftValue) {
+                daysLeftSlider.addEventListener('input', function() {
+                    daysLeftValue.textContent = `< ${this.value}`;
+                    applySliderFilters();
+                });
+            }
+
+            console.log('Slider listeners setup complete');
+        }
+
+        function resetSliders() {
+            document.getElementById('progressSlider').value = -100;
+            document.getElementById('progressValue').textContent = '-100+';
+            document.getElementById('pickScoreSlider').value = 0;
+            document.getElementById('pickScoreValue').textContent = '0+';
+            document.getElementById('rankSlider').value = 0;
+            document.getElementById('rankValue').textContent = '0+';
+            document.getElementById('safeSlider').value = 0;
+            document.getElementById('safeValue').textContent = '0+';
+            document.getElementById('spikeScoreSlider').value = 0;
+            document.getElementById('spikeScoreValue').textContent = '0+';
+            document.getElementById('longPatternsSlider').value = 0;
+            document.getElementById('longPatternsValue').textContent = '0+';
+            document.getElementById('shortPatternsSlider').value = 0;
+            document.getElementById('shortPatternsValue').textContent = '0+';
+            document.getElementById('daysLeftSlider').value = 60;
+            document.getElementById('daysLeftValue').innerHTML = '&lt; 60';
+
+            if (table) table.clearFilter();
+        }
+
+        function clearAllFilters() {
+            if (table) table.clearHeaderFilter();
+            resetSliders();
+        }
     </script>
 </body>
 </html>

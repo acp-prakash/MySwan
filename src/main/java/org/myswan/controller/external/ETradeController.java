@@ -8,6 +8,7 @@ import org.myswan.model.collection.Stock;
 import org.myswan.service.external.EtradeClient;
 import org.myswan.service.internal.MasterService;
 import org.myswan.service.internal.PatternService;
+import org.myswan.service.internal.StockService;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -31,16 +32,38 @@ public class ETradeController {
     private final MasterService masterService;
     private final EtradeClient etradePatternClient;
     private final MongoTemplate mongoTemplate;
+    private final StockService stockService;
 
     public ETradeController(PatternService patternService,
                             MasterService masterService,
                             EtradeClient etradePatternClient,
-                            MongoTemplate mongoTemplate) {
+                            MongoTemplate mongoTemplate,
+                            StockService stockService){
         this.patternService = patternService;
         this.masterService = masterService;
         this.etradePatternClient = etradePatternClient;
         this.mongoTemplate = mongoTemplate;
+        this.stockService = stockService;
     }
+
+    @GetMapping("/pattern/fetch-etrade-pattern/{ticker}")
+    public ResponseEntity<List<Pattern>> fetchETradePattern(@PathVariable String ticker) {
+        try {
+            log.info("Fetching eTrade pattern for ticker: {}", ticker);
+            List<Pattern> list = etradePatternClient.fetchPatterns(ticker.toUpperCase());
+            Optional<Stock> stock = stockService.getByTicker(ticker.toUpperCase());
+            if(stock.isPresent()) {
+                for (Pattern pattern : list) {
+                    pattern.setStock(stock.get());
+                }
+            }
+            return ResponseEntity.ok(list);
+        } catch (Exception e) {
+            log.error("Error fetching eTrade pattern for ticker: {}", ticker, e);
+            return ResponseEntity.status(500).body(new ArrayList<>());
+        }
+    }
+
 
     @PostMapping("/pattern/fetch-etrade")
     public ResponseEntity<String> fetchETradePatterns() {

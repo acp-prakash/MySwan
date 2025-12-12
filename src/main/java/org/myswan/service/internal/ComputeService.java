@@ -63,15 +63,15 @@ public class ComputeService {
 
         try {
             List<Stock> allList = stockService.list();
-            updatePatternAndStockCounts(allList);
-            calculateScore(allList);
+            List<org.myswan.model.collection.Pattern> allPatterns = updatePatternAndStockCounts(allList);
+            calculateScore(allList, allPatterns);
             return "Compute and Scoring calculation complete: " + allList.size() + " stocks processed";
         } catch (Exception e) {
             return "Error during Compute and Scoring calculation: " + e.getMessage();
         }
     }
 
-    private void updatePatternAndStockCounts(List<Stock> allStocks) {
+    private List<org.myswan.model.collection.Pattern> updatePatternAndStockCounts(List<Stock> allStocks) {
 
         // 1. Fetch all patterns
         List<org.myswan.model.collection.Pattern> allPatterns = patternService.list();
@@ -120,12 +120,10 @@ public class ComputeService {
                 stock.setNoOfShortPatterns(0);
             }
         }
-        patternService.deleteAll();
-        patternService.saveAll(allPatterns);
-        log.info("Updated {} patterns and {} stocks", allPatterns.size(), allStocks.size());
+        return allPatterns;
     }
 
-    public String calculateScore(List<Stock> allList) {
+    public String calculateScore(List<Stock> allList, List<org.myswan.model.collection.Pattern> allPatterns) {
         try {
 
             List<Stock> historyList = stockService.getHistoryByDate(LocalDate.now().minusDays(1));
@@ -206,6 +204,20 @@ public class ComputeService {
             log.info("dailyRanking completed");
             stockService.replaceStocks(allList);
             log.info("replaceStocks completed");
+
+            allPatterns.parallelStream().forEach(pattern -> {
+                String ticker = pattern.getTicker() != null ? pattern.getTicker().toUpperCase() : "";
+                Stock stock = allList.stream()
+                        .filter(s -> ticker.equalsIgnoreCase(s.getTicker()))
+                        .findFirst()
+                        .orElse(null);
+                if (stock != null) {
+                    pattern.setStock(stock);
+                }
+            });
+            patternService.deleteAll();
+            patternService.saveAll(allPatterns);
+
             picksService.syncWithStockData(allList);
             log.info("syncWithStockData completed");
             syncService.syncAllHistory();
