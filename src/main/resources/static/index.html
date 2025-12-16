@@ -187,6 +187,26 @@
             background: rgba(239, 68, 68, 0.1);
             color: var(--danger-color);
         }
+        /* Pattern count badges */
+        .pattern-counts {
+            display: inline-flex;
+            gap: 2px;
+            margin-left: 4px;
+            vertical-align: middle;
+        }
+        .pattern-counts .badge {
+            font-size: 0.65rem;
+            padding: 0 4px;
+            border-radius: 999px;
+            font-weight: 700;
+            color: #fff;
+        }
+        .pattern-counts .badge.long {
+            background: rgba(34, 197, 94, 0.9);
+        }
+        .pattern-counts .badge.short {
+            background: rgba(239, 68, 68, 0.9);
+        }
 
         /* Control Panel - Ultra Compact */
         .control-panel {
@@ -1233,15 +1253,22 @@
                     addStockToWatchlist(rowData);
                 }
             },
-            {title: "Ticker", field: "ticker", headerFilter: "input", headerFilterPlaceholder: "AAPL", width: 85, formatter:function(cell){
+            {title: "Ticker", field: "ticker", headerFilter: "input", headerFilterPlaceholder: "AAPL", width: 110, formatter:function(cell){
                 const ticker = cell.getValue();
                 if(!ticker) return "";
-                const longCount = cell.getRow().getData().noOfLongPatterns || 0;
-                const shortCount = cell.getRow().getData().noOfShortPatterns || 0;
-                const hasPatterns = longCount > 0 || shortCount > 0;
+                const rowData = cell.getRow().getData();
+                const longCount = rowData.noOfLongPatterns || 0;
+                const shortCount = rowData.noOfShortPatterns || 0;
                 let html = `<a href="stock-history.html?ticker=${encodeURIComponent(ticker)}" target="_blank" style="color: #3b82f6; text-decoration: none; font-weight: 600;">${ticker}</a>`;
-                if(hasPatterns) {
-                    html += ` <a href="patterns.html?ticker=${encodeURIComponent(ticker)}" target="_blank" style="color: #a78bfa; text-decoration: none; font-size: 0.85em; margin-left: 3px;" title="View ${longCount} long, ${shortCount} short patterns"><i class="fas fa-chart-area"></i></a>`;
+                if(longCount > 0 || shortCount > 0) {
+                    html += ` <a href="patterns.html?ticker=${encodeURIComponent(ticker)}" target="_blank" style="text-decoration: none;" title="View ${longCount} long / ${shortCount} short patterns">`;
+                    if(longCount > 0) {
+                        html += `<span style="display: inline-block; background: #10b981; color: white; font-size: 9px; padding: 2px 5px; border-radius: 3px; font-weight: 700; margin-left: 3px;">L${longCount}</span>`;
+                    }
+                    if(shortCount > 0) {
+                        html += `<span style="display: inline-block; background: #ef4444; color: white; font-size: 9px; padding: 2px 5px; border-radius: 3px; font-weight: 700; margin-left: 2px;">S${shortCount}</span>`;
+                    }
+                    html += `</a>`;
                 }
                 return html;
             }},

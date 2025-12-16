@@ -14,6 +14,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -94,6 +95,7 @@ public class EtradeClient {
         List<Pattern> patterns = new ArrayList<>();
         int longCount = 0;
         int shortCount = 0;
+        final LocalDate today = LocalDate.now();
 
         try {
             JSONObject json = new JSONObject(response);
@@ -141,11 +143,44 @@ public class EtradeClient {
                         pattern.setStop(UtilHelper.stripStringToTwoDecimals(
                             UtilHelper.checkForPresence(event, "deactivationPrice"), false));
                         pattern.setId(UtilHelper.checkForPresence(event, "eventId"));
+                        pattern.setEventId(UtilHelper.checkForPresence(event, "eventId"));
                         pattern.setName(UtilHelper.checkForPresence(event, "eventLabel"));
+
+                        // Parse dates from the event
+                        JSONObject dates = event.optJSONObject("dates");
+                        String eventBeginDate = null;
+                        String eventEndDate = null;
+                        if (dates != null) {
+                            String eventBegin = UtilHelper.checkForPresence(dates, "eventBegin");
+                            String eventEnd = UtilHelper.checkForPresence(dates, "eventEnd");
+
+                            // Extract YYYY-MM-DD from ISO timestamp
+                            if (StringUtils.hasText(eventBegin) && eventBegin.length() >= 10) {
+                                eventBeginDate = eventBegin.substring(0, 10);
+                            }
+                            if (StringUtils.hasText(eventEnd) && eventEnd.length() >= 10) {
+                                eventEndDate = eventEnd.substring(0, 10);
+                            }
+                        }
+                        pattern.setEventBeginDate(eventBeginDate);
+                        pattern.setEventEndDate(eventEndDate);
+                        // Pattern emergence date is when it was confirmed (eventEnd)
+                        pattern.setPatternEmergenceDate(eventEndDate);
 
                         String targetDate = UtilHelper.checkForPresence(event, "lastPossibleActive");
                         if (StringUtils.hasText(targetDate) && targetDate.length() > 10) {
                             targetDate = targetDate.substring(0, 10);
+                        }
+                        LocalDate parsedTargetDate = null;
+                        if (StringUtils.hasText(targetDate)) {
+                            try {
+                                parsedTargetDate = LocalDate.parse(targetDate);
+                            } catch (DateTimeParseException ex) {
+                                log.debug("Unable to parse target date '{}' for ticker {}", targetDate, ticker, ex);
+                            }
+                        }
+                        if (parsedTargetDate != null && parsedTargetDate.isBefore(today)) {
+                            continue;
                         }
                         pattern.setTargetDate(targetDate);
                         pattern.setStatus("Y");
@@ -197,4 +232,3 @@ public class EtradeClient {
         return patterns;
     }
 }
-

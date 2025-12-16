@@ -182,6 +182,59 @@
     const API_BASE = "http://jpmaxtricks.com:8070/api";
     let table;
 
+    const sliderFilters = [
+        { sliderId: "piScoreSlider", labelId: "piScoreValue", field: "piScore", compare: "min", defaultValue: 0, format: (v) => `${v}+` },
+        { sliderId: "safeSlider", labelId: "safeValue", field: "safe", compare: "min", defaultValue: 0, format: (v) => `${v}+` },
+        { sliderId: "RankSlider", labelId: "RankValue", field: "Rank", compare: "min", defaultValue: 0, format: (v) => `${v}+` },
+        { sliderId: "bottomConditionsMetSlider", labelId: "bottomConditionsMetValue", field: "bottomConditionsMet", compare: "min", defaultValue: 0, format: (v) => `${v}+` },
+        { sliderId: "spikeScoreSlider", labelId: "spikeScoreValue", field: "spikeScore", compare: "min", defaultValue: 0, format: (v) => `${v}+` },
+        { sliderId: "noOfLongPatternsSlider", labelId: "noOfLongPatternsValue", field: "noOfLongPatterns", compare: "min", defaultValue: 0, format: (v) => `${v}+` },
+        { sliderId: "noOfShortPatternsSlider", labelId: "noOfShortPatternsValue", field: "noOfShortPatterns", compare: "min", defaultValue: 0, format: (v) => `${v}+` },
+        { sliderId: "daysLeftSlider", labelId: "daysLeftValue", field: "daysLeft", compare: "max", defaultValue: 60, format: (v) => `<= ${v}` }
+    ];
+
+    function updateSliderLabel(labelEl, formatter, value) {
+        if (labelEl) {
+            labelEl.textContent = formatter(value);
+        }
+    }
+
+    function initSliderControls() {
+        sliderFilters.forEach((config) => {
+            const slider = document.getElementById(config.sliderId);
+            const label = document.getElementById(config.labelId);
+            if (!slider || !label) {
+                return;
+            }
+
+            slider.value = config.defaultValue;
+            updateSliderLabel(label, config.format, config.defaultValue);
+
+            const handleSliderInput = () => {
+                const rawValue = Number(slider.value);
+                const numericValue = Number.isNaN(rawValue) ? config.defaultValue : rawValue;
+                updateSliderLabel(label, config.format, numericValue);
+                applySliderFilters();
+            };
+
+            slider.addEventListener('input', handleSliderInput);
+            slider.addEventListener('change', handleSliderInput);
+        });
+    }
+
+    function resetSliderControls() {
+        sliderFilters.forEach((config) => {
+            const slider = document.getElementById(config.sliderId);
+            const label = document.getElementById(config.labelId);
+            if (!slider || !label) {
+                return;
+            }
+            slider.value = config.defaultValue;
+            updateSliderLabel(label, config.format, config.defaultValue);
+        });
+        applySliderFilters();
+    }
+
     // Custom filter function for numeric comparisons
     function customNumberFilter(headerValue, rowValue, rowData, filterParams) {
         // If no filter value, show all
@@ -244,11 +297,26 @@
             field: "ticker",
             headerFilter: "input",
             headerFilterPlaceholder: "Filter...",
-            width: 75,
+            width: 110,
             formatter: function(cell) {
                 const ticker = cell.getValue();
-                return `<a href="pattern-history.html?ticker=${encodeURIComponent(ticker)}"
+                if (!ticker) return "";
+                const rowData = cell.getRow().getData();
+                const longCount = rowData.noOfLongPatterns || 0;
+                const shortCount = rowData.noOfShortPatterns || 0;
+                let html = `<a href="pattern-history.html?ticker=${encodeURIComponent(ticker)}"
                            style="color: #2563eb; text-decoration: none; font-weight: 600;">${ticker}</a>`;
+                if (longCount > 0 || shortCount > 0) {
+                    html += `<span style="display: inline-flex; gap: 2px; margin-left: 4px; vertical-align: middle;" title="${longCount} long / ${shortCount} short patterns">`;
+                    if (longCount > 0) {
+                        html += `<span style="font-size: 0.65rem; padding: 0 4px; border-radius: 999px; font-weight: 700; color: #fff; background: rgba(34, 197, 94, 0.9);">L${longCount}</span>`;
+                    }
+                    if (shortCount > 0) {
+                        html += `<span style="font-size: 0.65rem; padding: 0 4px; border-radius: 999px; font-weight: 700; color: #fff; background: rgba(239, 68, 68, 0.9);">S${shortCount}</span>`;
+                    }
+                    html += `</span>`;
+                }
+                return html;
             }
         },
         {
@@ -384,6 +452,14 @@
                 }
                 return value;
             }
+        },
+        {title: "Met",field: "patternMet",headerFilter: "input",width: 50},
+        {
+            title: "PatDate",
+            field: "patternEmergenceDate",
+            headerFilter: "input",
+            headerFilterPlaceholder: "2025-12",
+            width: 100
         },
         {
             title: "Stop",
@@ -612,12 +688,24 @@
 
                 // Flatten patterns from stocks and filter by ticker
                 const allPatterns = [];
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
                 stocks.forEach(stock => {
                     if (stock.patterns && stock.patterns.length > 0) {
                         stock.patterns.forEach(pattern => {
+                            let daysLeft = null;
+                            if (pattern.targetDate) {
+                                const target = new Date(pattern.targetDate);
+                                target.setHours(0, 0, 0, 0);
+                                const diffTime = target - today;
+                                daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                            }
+
                             // Enrich pattern with stock data
                             allPatterns.push({
                                 ...pattern,
+                                daysLeft: daysLeft,
                                 price: stock.price,
                                 change: stock.change,
                                 high: stock.high,
@@ -902,27 +990,22 @@
     }
 
     function applySliderFilters() {
-        const piScore = parseInt(document.getElementById('piScoreSlider').value);
-        const safe = parseInt(document.getElementById('safeSlider').value);
-        const rank = parseInt(document.getElementById('RankSlider').value);
-        const bottomConditionsMet = parseInt(document.getElementById('bottomConditionsMetSlider').value);
-        const spikeScore = parseInt(document.getElementById('spikeScoreSlider').value);
-        const noOfLongPatterns = parseInt(document.getElementById('noOfLongPatternsSlider').value);
-        const noOfShortPatterns = parseInt(document.getElementById('noOfShortPatternsSlider').value);
-        const daysLeft = parseInt(document.getElementById('daysLeftSlider').value);
-
-        if (table) {
-            table.setFilter([
-                {field: "piScore", op: ">=", value: piScore},
-                {field: "safe", op: ">=", value: safe},
-                {field: "Rank", op: ">=", value: rank},
-                {field: "bottomConditionsMet", op: ">=", value: bottomConditionsMet},
-                {field: "spikeScore", op: ">=", value: spikeScore},
-                {field: "noOfLongPatterns", op: ">=", value: noOfLongPatterns},
-                {field: "noOfShortPatterns", op: ">=", value: noOfShortPatterns},
-                {field: "daysLeft", op: "<=", value: daysLeft}
-            ]);
+        if (!table) {
+            return;
         }
+
+        const filters = sliderFilters.map((config) => {
+            const slider = document.getElementById(config.sliderId);
+            if (!slider) {
+                return null;
+            }
+            const rawValue = Number(slider.value);
+            const value = Number.isNaN(rawValue) ? config.defaultValue : rawValue;
+            const type = config.compare === "max" ? "<=" : ">=";
+            return { field: config.field, type, value };
+        }).filter(Boolean);
+
+        table.setFilter(filters);
     }
 
     // Event Listeners
@@ -934,9 +1017,27 @@
             fetchPatternsForTicker();
         }
     });
+    const reloadBtn = document.getElementById('reloadBtn');
+    if (reloadBtn) {
+        reloadBtn.addEventListener('click', () => {
+            loadData().then(() => applySliderFilters());
+        });
+    }
+    const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', () => {
+            if (table) {
+                table.clearFilter();
+            }
+            resetSliderControls();
+        });
+    }
 
     // Initialize
-    loadData();
+    loadData().then(() => {
+        initSliderControls();
+        applySliderFilters();
+    });
 </script>
 </body>
 </html>

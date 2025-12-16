@@ -401,6 +401,24 @@
                         }
                     },
                     {
+                        title: "Final $",
+                        field: "finalPrice",
+                        width: 100,
+                        formatter: function(cell) {
+                            const val = cell.getValue();
+                            return val ? '$' + val.toFixed(2) : '-';
+                        }
+                    },
+                    {
+                        title: "Cx $",
+                        field: "stock.price",
+                        width: 100,
+                        formatter: function(cell) {
+                            const val = cell.getValue();
+                            return val ? '$' + val.toFixed(2) : '-';
+                        }
+                    },
+                    {
                         title: "Max Gain %",
                         field: "maxGainPct",
                         width: 120,
@@ -411,15 +429,7 @@
                             return `<span class="${cls}">${val.toFixed(1)}%</span>`;
                         }
                     },
-                    {
-                        title: "Final $",
-                        field: "finalPrice",
-                        width: 100,
-                        formatter: function(cell) {
-                            const val = cell.getValue();
-                            return val ? '$' + val.toFixed(2) : '-';
-                        }
-                    },
+
                     {
                         title: "Final Gain %",
                         field: "finalGainPct",

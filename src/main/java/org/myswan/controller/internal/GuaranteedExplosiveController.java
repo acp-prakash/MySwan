@@ -205,7 +205,7 @@ public class GuaranteedExplosiveController {
         log.info("Getting all guaranteed picks");
 
         try {
-            List<GuaranteedPick> allPicks = guaranteedExplosiveService.getGuaranteedPickRepository().findAll();
+            List<GuaranteedPick> allPicks = guaranteedExplosiveService.getGuaranteedPicks();
 
             // Sort by date descending (newest first)
             allPicks.sort((a, b) -> b.getDate().compareTo(a.getDate()));

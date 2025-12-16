@@ -120,6 +120,45 @@ public class ComputeService {
                 stock.setNoOfShortPatterns(0);
             }
         }
+
+        Map<String, Stock> stockByTicker = allStocks.stream()
+                .filter(stock -> stock.getTicker() != null && !stock.getTicker().isBlank())
+                .collect(Collectors.toMap(stock -> stock.getTicker().toUpperCase(), stock -> stock, (existing, replacement) -> existing));
+
+        for (org.myswan.model.collection.Pattern pat : allPatterns) {
+            String ticker = pat.getTicker();
+            if (ticker == null || ticker.isBlank()) {
+                continue;
+            }
+
+            Stock stock = stockByTicker.get(ticker.toUpperCase());
+            if (stock == null) {
+                continue;
+            }
+
+            pat.setStock(stock);
+
+            if ("long".equalsIgnoreCase(pat.getTrend())) {
+                Double target = parseDoubleSafe(pat.getMinPT());
+                if (target != null && (
+                        isGreaterOrEqual(stock.getLow(), target) ||
+                        isGreaterOrEqual(stock.getPrice(), target) ||
+                        isGreaterOrEqual(stock.getHigh(), target)
+                )) {
+                    pat.setPatternMet(true);
+                }
+            } else if ("short".equalsIgnoreCase(pat.getTrend())) {
+                Double target = parseDoubleSafe(pat.getMaxPT());
+                if (target != null && (
+                        isLessOrEqual(stock.getHigh(), target) ||
+                        isLessOrEqual(stock.getPrice(), target) ||
+                        isLessOrEqual(stock.getLow(), target)
+                )) {
+                    pat.setPatternMet(true);
+                }
+            }
+        }
+
         return allPatterns;
     }
 
@@ -328,5 +367,31 @@ public class ComputeService {
             log.warn("Failed to compute signalDays for {}: {}", stock.getTicker(), e.getMessage());
             // leave signalDays as default (0) if failure
         }
+    }
+
+    private Double parseDoubleSafe(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Double.parseDouble(value.trim());
+        } catch (NumberFormatException ex) {
+            log.warn("Unable to parse double from '{}': {}", value, ex.getMessage());
+            return null;
+        }
+    }
+
+    private boolean isGreaterOrEqual(Double actual, Double target) {
+        if (actual == null || target == null) {
+            return false;
+        }
+        return actual >= target;
+    }
+
+    private boolean isLessOrEqual(Double actual, Double target) {
+        if (actual == null || target == null) {
+            return false;
+        }
+        return actual <= target;
     }
 }

@@ -13,6 +13,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class Pattern {
     @Id
     private String id;
+    private String eventId;
     private String ticker;
     private String histDate;
     private String entry;
@@ -20,11 +21,15 @@ public class Pattern {
     private String maxPT;
     private String stop;
     private String targetDate;
+    private String patternEmergenceDate;
+    private String eventBeginDate;
+    private String eventEndDate;
     private String name;
     private String trend;
     private String status;
     private int noOfLongPatterns;
     private int noOfShortPatterns;
+    private boolean patternMet = false;
 
     // Stock snapshot (only populated in patternHistory collection)
     private Stock stock;

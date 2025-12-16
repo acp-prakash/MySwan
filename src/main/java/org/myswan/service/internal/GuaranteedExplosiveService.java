@@ -1,5 +1,6 @@
 package org.myswan.service.internal;
 
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.myswan.model.collection.GuaranteedPick;
 import org.myswan.model.collection.Stock;
@@ -16,10 +17,15 @@ import java.util.stream.Collectors;
 /**
  * Service for detecting guaranteed explosive stocks using multi-factor convergence
  */
+@Getter
 @Slf4j
 @Service
 public class GuaranteedExplosiveService {
 
+    /**
+     * -- GETTER --
+     *  Get stock service (for performance tracking service)
+     */
     private final StockService stockService;
     private final GuaranteedPickRepository guaranteedPickRepository;
 
@@ -521,15 +527,18 @@ public class GuaranteedExplosiveService {
     /**
      * Get repository (for performance tracking service)
      */
-    public GuaranteedPickRepository getGuaranteedPickRepository() {
-        return guaranteedPickRepository;
-    }
-
-    /**
-     * Get stock service (for performance tracking service)
-     */
-    public StockService getStockService() {
-        return stockService;
+    public List<GuaranteedPick> getGuaranteedPicks() {
+        List<Stock> stocks = stockService.list();
+        List<GuaranteedPick> list = guaranteedPickRepository.findAll();
+        for( GuaranteedPick pick : list){
+            for (Stock stock : stocks) {
+                if(pick.getTicker().equals(stock.getTicker())){
+                    pick.setStock(stock);
+                    break;
+                }
+            }
+        }
+        return list;
     }
 
     /**

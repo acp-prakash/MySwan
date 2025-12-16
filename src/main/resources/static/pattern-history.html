@@ -91,7 +91,26 @@
 
     const columns = [
         {title: "Date", field: "histDate", headerFilter: "input", width: 85, sorter: customDateSorter},
-        {title: "Tick", field: "ticker", headerFilter: "input", headerFilterPlaceholder: "Filter...", width: 75},
+        {title: "ID", field: "eventId", headerFilter: "input", width: 90},
+        {title: "Tick", field: "ticker", headerFilter: "input", headerFilterPlaceholder: "Filter...", width: 110, formatter: function(cell) {
+            const ticker = cell.getValue();
+            if (!ticker) return "";
+            const rowData = cell.getRow().getData();
+            const longCount = rowData.noOfLongPatterns || 0;
+            const shortCount = rowData.noOfShortPatterns || 0;
+            let html = `<span style="color: #2563eb; font-weight: 600;">${ticker}</span>`;
+            if (longCount > 0 || shortCount > 0) {
+                html += `<span style="display: inline-flex; gap: 2px; margin-left: 4px; vertical-align: middle;" title="${longCount} long / ${shortCount} short patterns">`;
+                if (longCount > 0) {
+                    html += `<span style="font-size: 0.65rem; padding: 0 4px; border-radius: 999px; font-weight: 700; color: #fff; background: rgba(34, 197, 94, 0.9);">L${longCount}</span>`;
+                }
+                if (shortCount > 0) {
+                    html += `<span style="font-size: 0.65rem; padding: 0 4px; border-radius: 999px; font-weight: 700; color: #fff; background: rgba(239, 68, 68, 0.9);">S${shortCount}</span>`;
+                }
+                html += `</span>`;
+            }
+            return html;
+        }},
         {title: "Pattern", field: "name", headerFilter: "input", headerFilterPlaceholder: "Filter...", width: 130},
         {title: "Trend", field: "trend", headerFilter: "input", headerFilterPlaceholder: "long", width: 65, formatter: function(cell) { const val = cell.getValue(); if (val === 'long') return '<span class="trend-long">LONG</span>'; if (val === 'short') return '<span class="trend-short">SHORT</span>'; return val; }},
         {title: "Chg", field: "change", headerFilter: "input", headerFilterPlaceholder: ">2", width: 65, formatter: function(cell){ const v = cell.getValue(); if (!v) return '-'; const formatted = v.toFixed(2); if (v > 0) return `<span style="color: #22c55e;">▲ ${formatted}</span>`; if (v < 0) return `<span style="color: #ef4444;">▼ ${formatted}</span>`; return formatted; }},
@@ -102,6 +121,8 @@
         {title: "Min Target", field: "minPT", headerFilter: "input", headerFilterPlaceholder: ">100", width: 65},
         {title: "Max Target", field: "maxPT", headerFilter: "input", headerFilterPlaceholder: ">150", width: 60},
         {title: "Target Date", field: "targetDate", headerFilter: "input", headerFilterPlaceholder: "2025-12", width: 100},
+        {title: "Met",field: "patternMet",headerFilter: "input",width: 50},
+        {title: "PatDate", field: "patternEmergenceDate", headerFilter: "input", headerFilterPlaceholder: "2025-12", width: 100},
         {title: "Stop", field: "stop", headerFilter: "input", headerFilterPlaceholder: "<100", width: 65},
         {title: "Dn↓", field: "downDays", headerFilter: "input", headerFilterPlaceholder: ">=3", width: 60, hozAlign: "center", formatter: function(cell) { const val = cell.getValue(); if (val > 0) return `<span style="color: #ef4444; font-weight: 600;">${val}</span>`; return val || '-'; }},
         {title: "UpHi", field: "upHigh", headerFilter: "input", headerFilterPlaceholder: ">100", width: 70, formatter: function(cell) { const val = cell.getValue(); if (val > 0) return `<span style="color: #22c55e;">${val.toFixed(2)}</span>`; return '-'; }},

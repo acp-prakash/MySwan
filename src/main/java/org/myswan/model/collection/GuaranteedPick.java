@@ -16,6 +16,7 @@ public class GuaranteedPick {
 
     @Id
     private String id;
+    private Stock stock;
 
     private String date;
     private String ticker;
