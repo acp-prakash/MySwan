@@ -1,5 +1,6 @@
 package org.myswan.controller.internal;
 
+import org.myswan.model.dto.MLTrainingData;
 import org.myswan.model.collection.Stock;
 import org.myswan.model.dto.TickerGroupDTO;
 import org.myswan.service.internal.StockService;
@@ -113,5 +114,33 @@ public class StockController {
     public ResponseEntity<List<TickerGroupDTO>> getGroupedTickers() {
         List<TickerGroupDTO> groups = stockService.getGroupedTickers();
         return ResponseEntity.ok(groups);
+    }
+
+
+
+    @Operation(
+            summary = "Export ML training data",
+            description = "Exports historical stock data in ML-friendly format for model training. " +
+                    "Includes all features (scores, technical indicators) and calculated target variables (future returns)."
+    )
+    @ApiResponse(responseCode = "200", description = "Successfully exported training data")
+    @GetMapping("/stock/ml-export")
+    public ResponseEntity<List<MLTrainingData>> exportMLTrainingData(
+            @Parameter(description = "Number of days to export (default: 35)")
+            @RequestParam(defaultValue = "35") int days,
+            @Parameter(description = "Specific tickers to export (optional, exports all if not provided)")
+            @RequestParam(required = false) List<String> tickers
+    ) {
+        LocalDate fromDate = LocalDate.now().minusDays(days);
+        List<Stock> historicalData;
+
+        if (tickers != null && !tickers.isEmpty()) {
+            historicalData = stockService.getStocksByTickersAndDateRange(tickers, fromDate, LocalDate.now());
+        } else {
+            historicalData = stockService.getStocksByDateRange(fromDate, LocalDate.now());
+        }
+
+        List<MLTrainingData> mlData = stockService.convertToMLFormat(historicalData);
+        return ResponseEntity.ok(mlData);
     }
 }

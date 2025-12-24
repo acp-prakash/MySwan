@@ -1,5 +1,6 @@
 package org.myswan.service.internal;
 
+import org.myswan.model.dto.MLTrainingData;
 import org.myswan.model.collection.Master;
 import org.myswan.model.collection.Stock;
 import org.myswan.model.collection.Pattern;
@@ -396,5 +397,150 @@ public class StockService {
             log.error("Error getting grouped tickers", e);
             return new ArrayList<>();
         }
+    }
+
+
+    // ========== ML EXPORT METHODS ==========
+
+    public List<Stock> getStocksByDateRange(LocalDate from, LocalDate to) {
+        Query query = Query.query(
+                Criteria.where("histDate").gte(from).lte(to)
+        );
+        query.with(Sort.by(Sort.Direction.ASC, "histDate"));
+        return mongoTemplate.find(query, Stock.class, "stockHistory");
+    }
+
+    public List<Stock> getStocksByTickersAndDateRange(List<String> tickers, LocalDate from, LocalDate to) {
+        Query query = Query.query(
+                Criteria.where("ticker").in(tickers)
+                        .and("histDate").gte(from).lte(to)
+        );
+        query.with(Sort.by(Sort.Direction.ASC, "ticker", "histDate"));
+        return mongoTemplate.find(query, Stock.class, "stockHistory");
+    }
+
+    public List<MLTrainingData> convertToMLFormat(List<Stock> historicalData) {
+        log.info("Converting {} stock records to ML format", historicalData.size());
+
+        // Group by ticker to calculate future returns
+        Map<String, List<Stock>> byTicker = historicalData.stream()
+                .collect(Collectors.groupingBy(Stock::getTicker));
+
+        List<MLTrainingData> mlDataList = new ArrayList<>();
+
+        for (Map.Entry<String, List<Stock>> entry : byTicker.entrySet()) {
+            String ticker = entry.getKey();
+            List<Stock> tickerHistory = entry.getValue();
+
+            // Sort by date
+            tickerHistory.sort(Comparator.comparing(Stock::getHistDate));
+
+            for (int i = 0; i < tickerHistory.size(); i++) {
+                Stock current = tickerHistory.get(i);
+
+                // Skip if missing critical data
+                if (current.getPrice() == 0) continue;
+
+                // Calculate future returns (if we have future data)
+                Double return1d = null, return3d = null, return7d = null;
+                Boolean hitTarget = null;
+                Double maxDrawdown7d = null;
+
+                if (i + 1 < tickerHistory.size()) {
+                    Stock next1d = tickerHistory.get(i + 1);
+                    if (next1d.getPrice() > 0) {
+                        return1d = (next1d.getPrice() - current.getPrice()) / current.getPrice();
+                    }
+                }
+
+                if (i + 3 < tickerHistory.size()) {
+                    Stock next3d = tickerHistory.get(i + 3);
+                    if (next3d.getPrice() > 0) {
+                        return3d = (next3d.getPrice() - current.getPrice()) / current.getPrice();
+                        hitTarget = return3d >= 0.02; // 2% gain
+                    }
+                }
+
+                if (i + 7 < tickerHistory.size()) {
+                    Stock next7d = tickerHistory.get(i + 7);
+                    if (next7d.getPrice() > 0) {
+                        return7d = (next7d.getPrice() - current.getPrice()) / current.getPrice();
+
+                        // Calculate max drawdown in next 7 days
+                        double minPrice = current.getPrice();
+                        for (int j = i + 1; j <= Math.min(i + 7, tickerHistory.size() - 1); j++) {
+                            if (tickerHistory.get(j).getPrice() > 0) {
+                                minPrice = Math.min(minPrice, tickerHistory.get(j).getPrice());
+                            }
+                        }
+                        maxDrawdown7d = (minPrice - current.getPrice()) / current.getPrice();
+                    }
+                }
+
+                // Build ML training data
+                MLTrainingData mlData = MLTrainingData.builder()
+                        .ticker(current.getTicker())
+                        .date(current.getHistDate())
+                        .price(current.getPrice())
+                        .open(current.getOpen())
+                        .high(current.getHigh())
+                        .low(current.getLow())
+                        .change(current.getChange())
+                        .volume(current.getVolume())
+                        .volumeChange(current.getVolumeChange())
+                        .overallScore(current.getScore() != null ? current.getScore().getOverallScore() : 0)
+                        .pickScore(current.getDailyRank() != null ? current.getDailyRank().getPickScore() : 0)
+                        .safetyRank(current.getDailyRank() != null ? current.getDailyRank().getSafetyRank() : 0)
+                        .finalRank(current.getDailyRank() != null ? current.getDailyRank().getFinalRank() : 0)
+                        .allocation(current.getDailyRank() != null ? current.getDailyRank().getAllocation() : 0)
+                        .dayTradingScore(current.getScore() != null ? current.getScore().getDayTradingScore() : 0)
+                        .swingTradingScore(current.getScore() != null ? current.getScore().getSwingTradingScore() : 0)
+                        .reversalScore(current.getScore() != null ? current.getScore().getReversalScore() : 0)
+                        .breakoutScore(current.getScore() != null ? current.getScore().getBreakoutScore() : 0)
+                        .patternScore(current.getScore() != null ? current.getScore().getPatternScore() : 0)
+                        .rsi14(current.getRsi14())
+                        .macd1226(current.getMacd1226())
+                        .atr14(current.getAtr14())
+                        .momentum(current.getMomentum())
+                        .sma9(current.getSma9())
+                        .sma20(current.getSma20())
+                        .sma50(current.getSma50())
+                        .sma200(current.getSma200())
+                        .ema9(current.getEma9())
+                        .ema20(current.getEma20())
+                        .ema50(current.getEma50())
+                        .ema200(current.getEma200())
+                        .vwap(current.getVwap())
+                        .priceChg5D(current.getPriceChg5D())
+                        .priceChg10D(current.getPriceChg10D())
+                        .priceChg20D(current.getPriceChg20D())
+                        .low52(current.getLow52())
+                        .high52(current.getHigh52())
+                        .noOfLongPatterns(current.getNoOfLongPatterns())
+                        .noOfShortPatterns(current.getNoOfShortPatterns())
+                        .signal(current.getScore() != null ? current.getScore().getSignal() : null)
+                        .signalDays(current.getScore() != null ? current.getScore().getSignalDays() : 0)
+                        .upDays(current.getUpDays())
+                        .downDays(current.getDownDays())
+                        .upHigh(current.getUpHigh())
+                        .downLow(current.getDownLow())
+                        .bottomConditionsMet(current.getBottom() != null ? current.getBottom().getConditionsMet() : null)
+                        .bottomStrength(current.getBottom() != null ? current.getBottom().getStrength() : null)
+                        .spikeScore(current.getSpike() != null ? current.getSpike().getSpikeScore() : null)
+                        .spikeType(current.getSpike() != null ? current.getSpike().getSpikeType() : null)
+                        // Target variables
+                        .return1d(return1d)
+                        .return3d(return3d)
+                        .return7d(return7d)
+                        .hitTarget(hitTarget)
+                        .maxDrawdown7d(maxDrawdown7d)
+                        .build();
+
+                mlDataList.add(mlData);
+            }
+        }
+
+        log.info("Converted to {} ML training records", mlDataList.size());
+        return mlDataList;
     }
 }

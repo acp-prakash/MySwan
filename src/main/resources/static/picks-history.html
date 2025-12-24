@@ -349,6 +349,40 @@
                         }
                     },
                     {
+                        title: "TGT",
+                        field: "target",
+                        width: 70,
+                        headerFilter: "input",
+                        formatter: function(cell) {
+                            const v = cell.getValue();
+                            return v ? v.toFixed(2) : '-';
+                        }
+                    },
+
+                    {
+                        title: "Min",
+                        field: "min",
+                        width: 80,
+                        editor: "number",
+                        headerFilter: "input",
+                        formatter: function(cell) {
+                            const v = cell.getValue();
+                            return v ? v.toFixed(2) : '-';
+                        }
+                    },
+
+                    {
+                        title: "Max",
+                        field: "max",
+                        width: 80,
+                        editor: "number",
+                        headerFilter: "input",
+                        formatter: function(cell) {
+                            const v = cell.getValue();
+                            return v ? v.toFixed(2) : '-';
+                        }
+                    },
+                    {
                         title: "Cux",
                         field: "stock.price",
                         width: 70,
@@ -360,16 +394,7 @@
                             return isNaN(num) ? v : num.toFixed(2);
                         }
                     },
-                    {
-                        title: "TGT",
-                        field: "target",
-                        width: 70,
-                        headerFilter: "input",
-                        formatter: function(cell) {
-                            const v = cell.getValue();
-                            return v ? v.toFixed(2) : '-';
-                        }
-                    },
+
                     {
                         title: "Stop",
                         field: "stopLoss",

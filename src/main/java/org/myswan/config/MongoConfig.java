@@ -33,5 +33,18 @@ public class MongoConfig {
         mongoTemplate.indexOps("stockHistory")
                 .ensureIndex(new Index()
                         .on("histDate", Sort.Direction.ASC));
+
+
+        // 4. Compound index for efficient latest picks query
+        mongoTemplate.indexOps("picksHistory")
+                .ensureIndex(new Index()
+                        .on("ticker", Sort.Direction.ASC)
+                        .on("historyDate", Sort.Direction.DESC)
+                );
+
+        // 5. historyDate index for sorting
+        mongoTemplate.indexOps("picksHistory")
+                .ensureIndex(new Index()
+                        .on("historyDate", Sort.Direction.DESC));
     }
 }

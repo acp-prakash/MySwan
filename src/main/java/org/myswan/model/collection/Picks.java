@@ -30,4 +30,6 @@ public class Picks {
     private String historyDate;
     private Stock stock;
     private String status;// e.g., "OPEN", "CLOSED"
+    private double max;
+    private double min;
 }

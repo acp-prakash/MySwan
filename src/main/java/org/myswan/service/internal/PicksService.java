@@ -4,13 +4,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.myswan.model.collection.Picks;
 import org.myswan.model.collection.Stock;
 import org.myswan.repository.PicksRepository;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -87,13 +91,50 @@ public class PicksService {
         log.info("Starting picks sync with current stock data...");
         try {
             List<Picks> allPicks = list();
+            List<Picks> latestHistoryPicks = getLatestPicksHistoryForAllTickers();
+
+            // Create a map for O(1) lookup of historical picks by ticker
+            Map<String, Picks> historyPicksMap = new HashMap<>();
+            for (Picks histPick : latestHistoryPicks) {
+                historyPicksMap.put(histPick.getTicker().toUpperCase(), histPick);
+            }
+
+            // Create a map for O(1) lookup of stocks by ticker
+            Map<String, Stock> stocksMap = new HashMap<>();
+            for (Stock stock : allStocks) {
+                stocksMap.put(stock.getTicker().toUpperCase(), stock);
+            }
+
             for (Picks pick : allPicks) {
                 try {
                     pick.setHistoryDate(LocalDate.now().toString());
-                    for (Stock stock : allStocks) {
-                        if (stock.getTicker().equalsIgnoreCase(pick.getTicker())) {
-                            pick.setStock(stock);
-                            break;
+
+                    // Find matching stock
+                    Stock stock = stocksMap.get(pick.getTicker().toUpperCase());
+                    if (stock != null) {
+                        pick.setStock(stock);
+
+                        // Initialize min/max if not set (first time)
+                        if (pick.getMin() == 0) {
+                            pick.setMin(stock.getLow());
+                        }
+                        if (pick.getMax() == 0) {
+                            pick.setMax(stock.getHigh());
+                        }
+
+                        // Update min/max with today's values
+                        pick.setMin(Math.min(pick.getMin(), stock.getLow()));
+                        pick.setMax(Math.max(pick.getMax(), stock.getHigh()));
+
+                        // Update min/max with historical values
+                        Picks histPick = historyPicksMap.get(pick.getTicker().toUpperCase());
+                        if (histPick != null) {
+                            if (histPick.getMin() != 0) {
+                                pick.setMin(Math.min(pick.getMin(), histPick.getMin()));
+                            }
+                            if (histPick.getMax() != 0) {
+                                pick.setMax(Math.max(pick.getMax(), histPick.getMax()));
+                            }
                         }
                     }
                     if (pick.getTicker() == null || "CLOSED".equalsIgnoreCase(pick.getStatus())) continue;
@@ -163,5 +204,36 @@ public class PicksService {
         Query query = new Query(Criteria.where("addedDate").is(date));
         mongoTemplate.remove(query, "picksHistory");
         log.info("Deleted picks history for date: {}", date);
+    }
+
+    public List<Picks> getLatestPicksHistoryForAllTickers() {
+        log.info("Fetching latest picks history for all tickers using aggregation...");
+
+        try {
+            // MongoDB aggregation pipeline optimized for performance:
+            // 1. Sort by historyDate DESC (YYYY-MM-DD format sorts correctly as strings)
+            //    Uses index on historyDate for fast sorting
+            // 2. Group by ticker and take the first (latest) document using $first with $$ROOT
+            //    This preserves the entire document structure
+            // 3. Replace root with the full document to return proper Picks objects
+            Aggregation aggregation = Aggregation.newAggregation(
+                    Aggregation.sort(Sort.Direction.DESC, "historyDate"),
+                    Aggregation.group("ticker")
+                            .first("$$ROOT").as("latestPick"),
+                    Aggregation.replaceRoot("latestPick")
+            );
+
+            List<Picks> latestPicks = mongoTemplate.aggregate(
+                    aggregation,
+                    "picksHistory",
+                    Picks.class
+            ).getMappedResults();
+
+            log.info("Found {} latest picks from history (optimized query)", latestPicks.size());
+            return latestPicks;
+        } catch (Exception e) {
+            log.error("Error fetching latest picks history: {}", e.getMessage(), e);
+            return List.of();
+        }
     }
 }

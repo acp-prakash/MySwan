@@ -616,7 +616,19 @@
                             return v ? v.toFixed(2) : '-';
                         }
                     },
-
+                     {
+                        title: "TGT",
+                        field: "target",
+                        width: 70,
+                        editor: "number",
+                        headerFilter: "input",
+                        headerFilterPlaceholder: ">150",
+                        headerFilterFunc: customNumberFilter,
+                        formatter: function(cell) {
+                            const v = cell.getValue();
+                            return v ? v.toFixed(2) : '-';
+                        }
+                    },
                     {
                         title: "Cx",
                         field: "stock.price",
@@ -631,19 +643,37 @@
                             return isNaN(num) ? v : num.toFixed(2);
                         }
                     },
+
+
                     {
-                        title: "TGT",
-                        field: "target",
-                        width: 70,
+                        title: "Min",
+                        field: "min",
+                        width: 80,
                         editor: "number",
                         headerFilter: "input",
-                        headerFilterPlaceholder: ">150",
+                        headerFilterPlaceholder: ">50",
                         headerFilterFunc: customNumberFilter,
                         formatter: function(cell) {
                             const v = cell.getValue();
                             return v ? v.toFixed(2) : '-';
                         }
                     },
+
+                    {
+                        title: "Max",
+                        field: "max",
+                        width: 80,
+                        editor: "number",
+                        headerFilter: "input",
+                        headerFilterPlaceholder: ">50",
+                        headerFilterFunc: customNumberFilter,
+                        formatter: function(cell) {
+                            const v = cell.getValue();
+                            return v ? v.toFixed(2) : '-';
+                        }
+                    },
+
+
                     {
                         title: "Progress",
                         field: "progress",
@@ -1088,6 +1118,18 @@
             }
         }
 
+        /**
+         * Get current date in YYYY-MM-DD format using local timezone
+         * This avoids the timezone offset issue with toISOString() which returns UTC
+         */
+        function getLocalDateString() {
+            const date = new Date();
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
         async function loadPicks() {
             try {
                 const response = await fetch(`${API_BASE}/picks/list`);
@@ -1165,7 +1207,7 @@
             document.getElementById('pickId').value = '';
 
             // Set today's date as default added date
-            const today = new Date().toISOString().split('T')[0];
+            const today = getLocalDateString();
 
             document.getElementById('pickModal').style.display = 'block';
         }
@@ -1187,7 +1229,7 @@
                 target: parseFloat(document.getElementById('target').value),
                 stopLoss: parseFloat(document.getElementById('stopLoss').value),
                 targetDate: document.getElementById('targetDate').value || null,
-                addedDate: new Date().toISOString().split('T')[0],
+                addedDate: getLocalDateString(),
                 addedPrice: parseFloat(document.getElementById('entry').value), // Default to entry price
                 targetMet: false,
                 stopLossMet: false
