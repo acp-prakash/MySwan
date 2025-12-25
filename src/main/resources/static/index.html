@@ -1095,6 +1095,11 @@
                     <i class="fas fa-chart-area"></i> Fetch Patterns
                 </button>
 
+                <label style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; font-size: 13px; cursor: pointer; margin-left: 8px;">
+                    <input type="checkbox" id="onlyMyFavCheckboxIndex" style="cursor: pointer; width: 16px; height: 16px;">
+                    <span style="color: var(--text-primary); font-weight: 500;">Only My Favorites</span>
+                </label>
+
                 <button class="btn btn-success" id="updateScoringBtn">
                     <i class="fas fa-calculator"></i> Calculate Scoring
                 </button>
@@ -1220,6 +1225,28 @@
                             ${label}
                         </label>
                     `;
+                }
+            },
+            {
+                title: "MyFav",
+                field: "myFavorite",
+                width: 80,
+                hozAlign: "center",
+                editor: "list",
+                editorParams: {
+                    values: ["Y", "N"]
+                },
+                headerFilter: "list",
+                headerFilterParams: {
+                    values: {"": "All", "Y": "Y", "N": "N"}
+                },
+                formatter: function(cell) {
+                    const val = cell.getValue();
+                    if (val === "Y") {
+                        return '<span style="color: #10b981; font-weight: 700;">Y</span>';
+                    } else {
+                        return '<span style="color: #94a3b8;">N</span>';
+                    }
                 }
             }
         ];
@@ -1539,6 +1566,19 @@
                             filteredTotal = Array.isArray(rows) ? rows.length : table.getData(true).length;
                         } catch (e) { }
                         updateGridInfo();
+                    });
+
+                    // Cell edited handler for myFavorite column
+                    table.on('cellEdited', function(cell){
+                        const field = cell.getField();
+                        const rowData = cell.getRow().getData();
+
+                        // Only handle myFavorite field for masters collection
+                        if (field === 'myFavorite' && currentCollection === 'masters') {
+                            const ticker = rowData.ticker;
+                            const value = cell.getValue();
+                            updateMyFavorite(ticker, value);
+                        }
                     });
                 } catch (e) { }
             }
@@ -1936,6 +1976,28 @@
             }
         }
 
+        // Update MyFavorite Function
+        async function updateMyFavorite(ticker, value) {
+            try {
+                const response = await fetch(`${API_BASE}/master/${encodeURIComponent(ticker)}/my-favorite?value=${encodeURIComponent(value)}`, {
+                    method: 'PATCH'
+                });
+
+                if (response.ok) {
+                    console.log(`MyFavorite for ${ticker} updated to: ${value}`);
+                } else {
+                    alert(`Failed to update MyFavorite for ${ticker}`);
+                    // Reload to revert the value
+                    loadData();
+                }
+            } catch (error) {
+                console.error('Error updating MyFavorite:', error);
+                alert(`Error: ${error.message}`);
+                // Reload to revert the value
+                loadData();
+            }
+        }
+
         // Update Action Functions
         async function updateTradingView() {
             if (!confirm('Update TradingView data for all stocks? This may take several minutes.')) return;
@@ -2058,14 +2120,20 @@
         }
 
         async function fetchPatterns() {
-            if (!confirm('Fetch eTrade patterns for all enabled stocks? This will process stocks in parallel batches of 50. May take several minutes.')) return;
+            const onlyMyFavCheckbox = document.getElementById('onlyMyFavCheckboxIndex');
+            const onlyMyFav = onlyMyFavCheckbox && onlyMyFavCheckbox.checked ? 'Y' : 'N';
+            const message = onlyMyFav === 'Y'
+                ? 'Fetch eTrade patterns for favorite stocks only? This will process stocks in parallel batches of 50. May take several minutes.'
+                : 'Fetch eTrade patterns for all enabled stocks? This will process stocks in parallel batches of 50. May take several minutes.';
+
+            if (!confirm(message)) return;
 
             const btn = document.getElementById('fetchPatternsBtn');
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fetching...';
 
             try {
-                const response = await fetch(`${API_BASE}/external/pattern/fetch-etrade`, { method: 'POST' });
+                const response = await fetch(`${API_BASE}/external/pattern/fetch-etrade?onlyMyFav=${onlyMyFav}`, { method: 'POST' });
                 if (response.ok) {
                     const result = await response.text();
                     alert('Patterns fetched successfully!\n' + result);

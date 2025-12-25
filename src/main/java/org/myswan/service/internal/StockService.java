@@ -41,6 +41,17 @@ public class StockService {
                 return;
             }
 
+            // Get all masters
+            List<Master> allMasters = mongoTemplate.findAll(Master.class, "master");
+            for(Master mas : allMasters) {
+                for(Stock st : stockList) {
+                    if(mas.getTicker().equals(st.getTicker())) {
+                        st.setMyFavorite(mas.getMyFavorite());
+                        break;
+                    }
+                }
+            }
+
             // Extract all tickers to delete
             List<String> tickers = stockList.stream()
                     .map(Stock::getTicker)

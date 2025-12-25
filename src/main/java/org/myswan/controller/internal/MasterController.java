@@ -65,6 +65,16 @@ public class MasterController {
         return ResponseEntity.ok(saved);
     }
 
+    @PatchMapping("/master/{ticker:.+}/my-favorite")
+    public ResponseEntity<Master> updateMyFavorite(@PathVariable String ticker, @RequestParam String value) {
+        Master master = masterService.getByTicker(ticker).orElse(null);
+        if (master == null) return ResponseEntity.notFound().build();
+
+        master.setMyFavorite(value);
+        Master saved = masterService.update(ticker, master);
+        return ResponseEntity.ok(saved);
+    }
+
     @PostMapping("/master/etrade-pattern/enable-all")
     public ResponseEntity<String> enableAllEtradePatternLookup() {
         List<Master> allMasters = masterService.list();

@@ -72,6 +72,7 @@ public class Stock {
     private int noOfLongPatterns;
     private int noOfShortPatterns;
     private String optionPref;
+    private String myFavorite ="N";
 
     // Transient field - not persisted to DB, populated at runtime for API responses
     @Transient

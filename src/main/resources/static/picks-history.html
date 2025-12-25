@@ -329,6 +329,24 @@
                     },
                     {title: "Added", field: "addedDate", width: 85, sorter: customDateSorter, headerFilter: "input"},
                     {
+                        title: "Monitor",
+                        field: "monitor",
+                        width: 70,
+                        hozAlign: "center",
+                        headerFilter: "list",
+                        headerFilterParams: {
+                            values: ["", "Y", "N"]
+                        },
+                        formatter: function(cell) {
+                            const val = cell.getValue();
+                            if (val === "Y") {
+                                return '<span style="color: #10b981; font-weight: 700;">Y</span>';
+                            } else {
+                                return '<span style="color: #94a3b8;">N</span>';
+                            }
+                        }
+                    },
+                    {
                         title: "Entry",
                         field: "entry",
                         width: 70,

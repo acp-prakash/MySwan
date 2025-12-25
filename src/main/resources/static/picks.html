@@ -446,6 +446,30 @@
         </div>
     </div>
 
+    <script>
+        // Minimal luxon shim - just enough to prevent Tabulator errors
+        if (!window.luxon) {
+            window.luxon = {
+                DateTime: {
+                    isDateTime: function(obj) {
+                        return false; // We don't use luxon DateTime objects
+                    },
+                    fromISO: function(str) {
+                        return { isValid: false };
+                    },
+                    fromMillis: function(ms) {
+                        return { isValid: false };
+                    },
+                    fromSeconds: function(sec) {
+                        return { isValid: false };
+                    },
+                    fromFormat: function(str, fmt) {
+                        return { isValid: false };
+                    }
+                }
+            };
+        }
+    </script>
     <script src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>
@@ -530,6 +554,9 @@
                 paginationSize: 100,
                 paginationSizeSelector: [50, 100, 200, 500],
                 selectable: true,
+                initialSort: [
+                    {column: "addedDate", dir: "desc"} // Sort by added date, newest first
+                ],
                 columns: [
                     {
                         title: "Tick",
@@ -586,9 +613,37 @@
                         title: "Added",
                         field: "addedDate",
                         width: 85,
-                        sorter: "date",
+                        editor: "input",
+                        sorter: function(a, b, aRow, bRow, column, dir, sorterParams) {
+                            // Custom date sorter to ensure proper sorting
+                            const aDate = a ? new Date(a) : new Date(0);
+                            const bDate = b ? new Date(b) : new Date(0);
+                            return aDate - bDate;
+                        },
                         headerFilter: "input",
                         headerFilterPlaceholder: "2025-11"
+                    },
+                    {
+                        title: "Monitor",
+                        field: "monitor",
+                        width: 70,
+                        hozAlign: "center",
+                        editor: "list",
+                        editorParams: {
+                            values: ["Y", "N"]
+                        },
+                        headerFilter: "list",
+                        headerFilterParams: {
+                            values: ["", "Y", "N"]
+                        },
+                        formatter: function(cell) {
+                            const val = cell.getValue();
+                            if (val === "Y") {
+                                return '<span style="color: #10b981; font-weight: 700;">Y</span>';
+                            } else {
+                                return '<span style="color: #94a3b8;">N</span>';
+                            }
+                        }
                     },
                     {
                         title: "Entry",
@@ -806,7 +861,12 @@
                         title: "TgtDt",
                         field: "targetDate",
                         width: 85,
-                        editor: "date",
+                        editor: "input",
+                        sorter: function(a, b, aRow, bRow, column, dir, sorterParams) {
+                            const aDate = a ? new Date(a) : new Date(0);
+                            const bDate = b ? new Date(b) : new Date(0);
+                            return aDate - bDate;
+                        },
                         headerFilter: "input",
                         headerFilterPlaceholder: "2025-12"
                     },
@@ -894,7 +954,12 @@
                         title: "TMDt",
                         field: "targetMetDate",
                         width: 85,
-                        editor: "date",
+                        editor: "input",
+                        sorter: function(a, b, aRow, bRow, column, dir, sorterParams) {
+                            const aDate = a ? new Date(a) : new Date(0);
+                            const bDate = b ? new Date(b) : new Date(0);
+                            return aDate - bDate;
+                        },
                         headerFilter: "input",
                         headerFilterPlaceholder: "2025-11"
                     },
@@ -902,7 +967,12 @@
                         title: "STDt",
                         field: "stopLossMetDate",
                         width: 85,
-                        editor: "date",
+                        editor: "input",
+                        sorter: function(a, b, aRow, bRow, column, dir, sorterParams) {
+                            const aDate = a ? new Date(a) : new Date(0);
+                            const bDate = b ? new Date(b) : new Date(0);
+                            return aDate - bDate;
+                        },
                         headerFilter: "input",
                         headerFilterPlaceholder: "2025-11"
                     },
@@ -1137,6 +1207,14 @@
 
                 console.log('Loaded picks:', data.length);
 
+                // Debug: Check first few addedDate values
+                if (data.length > 0) {
+                    console.log('Sample addedDate values:', data.slice(0, 5).map(p => ({
+                        ticker: p.ticker,
+                        addedDate: p.addedDate
+                    })));
+                }
+
                 // Pre-calculate daysLeft for each pick
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
@@ -1152,6 +1230,20 @@
                 });
 
                 table.setData(data);
+
+                // Explicitly apply sort by addedDate descending (newest first)
+                table.setSort([{column: "addedDate", dir: "desc"}]);
+                console.log('Sort applied: addedDate desc');
+
+                // Debug: Check if sort was applied
+                const sortedData = table.getData();
+                if (sortedData.length > 0) {
+                    console.log('After sort - first 5 addedDates:', sortedData.slice(0, 5).map(p => ({
+                        ticker: p.ticker,
+                        addedDate: p.addedDate
+                    })));
+                }
+
                 updateInfo();
             } catch (error) {
                 console.error('Error loading picks:', error);
@@ -1232,7 +1324,8 @@
                 addedDate: getLocalDateString(),
                 addedPrice: parseFloat(document.getElementById('entry').value), // Default to entry price
                 targetMet: false,
-                stopLossMet: false
+                stopLossMet: false,
+                monitor: "N" // Default monitor to N
             };
 
             // Try to enrich pick with current stock details

@@ -32,4 +32,5 @@ public class Picks {
     private String status;// e.g., "OPEN", "CLOSED"
     private double max;
     private double min;
+    private String monitor = "N";
 }

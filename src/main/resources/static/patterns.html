@@ -103,6 +103,10 @@
         <!-- Toolbar -->
         <div class="toolbar">
             <button id="fetchPatternsBtn" class="success">Fetch Patterns (Parallel)</button>
+            <label style="display: inline-flex; align-items: center; gap: 5px; padding: 6px 10px; background: rgba(59, 130, 246, 0.1); border-radius: 12px; font-size: 13px; cursor: pointer;">
+                <input type="checkbox" id="onlyMyFavCheckbox" style="cursor: pointer;">
+                <span>Only My Favorites</span>
+            </label>
             <button id="reloadBtn">Reload</button>
             <button id="clearFiltersBtn" class="secondary">Clear Filters</button>
             <button id="exportExcelBtn" class="secondary">Export Excel</button>
@@ -169,6 +173,13 @@
                     <input type="range" id="daysLeftSlider" min="0" max="60" value="60"
                            style="width: 80px; accent-color: #fbbf24;">
                 </div>
+                <div style="padding: 2px; margin: 0;">
+                    <label style="display: block; font-size: 10px; font-weight: 600; color: #ffffff; margin-bottom: 2px;">
+                        MyFav: <span id="myFavValue" style="color: #fbbf24;">All</span>
+                    </label>
+                    <input type="range" id="myFavSlider" min="0" max="2" value="0"
+                           style="width: 80px; accent-color: #fbbf24;">
+                </div>
             </div>
         </div>
 
@@ -190,7 +201,8 @@
         { sliderId: "spikeScoreSlider", labelId: "spikeScoreValue", field: "spikeScore", compare: "min", defaultValue: 0, format: (v) => `${v}+` },
         { sliderId: "noOfLongPatternsSlider", labelId: "noOfLongPatternsValue", field: "noOfLongPatterns", compare: "min", defaultValue: 0, format: (v) => `${v}+` },
         { sliderId: "noOfShortPatternsSlider", labelId: "noOfShortPatternsValue", field: "noOfShortPatterns", compare: "min", defaultValue: 0, format: (v) => `${v}+` },
-        { sliderId: "daysLeftSlider", labelId: "daysLeftValue", field: "daysLeft", compare: "max", defaultValue: 60, format: (v) => `<= ${v}` }
+        { sliderId: "daysLeftSlider", labelId: "daysLeftValue", field: "daysLeft", compare: "max", defaultValue: 60, format: (v) => `<= ${v}` },
+        { sliderId: "myFavSlider", labelId: "myFavValue", field: "myFav", compare: "custom", defaultValue: 0, format: (v) => v === 0 ? "All" : v === 1 ? "Y" : "N" }
     ];
 
     function updateSliderLabel(labelEl, formatter, value) {
@@ -639,6 +651,12 @@
             headerFilter: "input",
             headerFilterPlaceholder: "2025-11",
             width: 110
+        },
+        {
+            title: "MyFav",
+            field: "myFav",
+            headerFilter: "input",
+            width: 110
         }
     ];
 
@@ -732,7 +750,8 @@
                                 btLongRating: stock.rating?.btLongRating,
                                 btTrend: stock.rating?.btTrend,
                                 tradingViewTechRating: stock.rating?.tradingViewTechRating,
-                                tradingViewMARating: stock.rating?.tradingViewMARating
+                                tradingViewMARating: stock.rating?.tradingViewMARating,
+                                myFav: stock.myFavorite
                             });
                         });
                     }
@@ -823,7 +842,8 @@
                                 btLongRating: stock.rating?.btLongRating,
                                 btTrend: stock.rating?.btTrend,
                                 tradingViewTechRating: stock.rating?.tradingViewTechRating,
-                                tradingViewMARating: stock.rating?.tradingViewMARating
+                                tradingViewMARating: stock.rating?.tradingViewMARating,
+                                myFav: stock.myFavorite
                             });
                         });
                     }
@@ -861,14 +881,20 @@
     }
 
     async function fetchPatterns() {
-        if (!confirm('Fetch eTrade patterns for all enabled stocks? This will process stocks in parallel batches of 50.')) return;
+        const onlyMyFavCheckbox = document.getElementById('onlyMyFavCheckbox');
+        const onlyMyFav = onlyMyFavCheckbox && onlyMyFavCheckbox.checked ? 'Y' : 'N';
+        const message = onlyMyFav === 'Y'
+            ? 'Fetch eTrade patterns for favorite stocks only? This will process stocks in parallel batches of 50.'
+            : 'Fetch eTrade patterns for all enabled stocks? This will process stocks in parallel batches of 50.';
+
+        if (!confirm(message)) return;
 
         const btn = document.getElementById('fetchPatternsBtn');
         btn.disabled = true;
         btn.textContent = 'Fetching...';
 
         try {
-            const response = await fetch(`${API_BASE}/pattern/fetch-etrade`, { method: 'POST' });
+            const response = await fetch(`${API_BASE}/pattern/fetch-etrade?onlyMyFav=${onlyMyFav}`, { method: 'POST' });
             if (response.ok) {
                 const result = await response.text();
                 alert('Patterns fetched successfully!\n' + result);
@@ -994,16 +1020,32 @@
             return;
         }
 
-        const filters = sliderFilters.map((config) => {
+        const filters = [];
+
+        sliderFilters.forEach((config) => {
             const slider = document.getElementById(config.sliderId);
             if (!slider) {
-                return null;
+                return;
             }
             const rawValue = Number(slider.value);
             const value = Number.isNaN(rawValue) ? config.defaultValue : rawValue;
-            const type = config.compare === "max" ? "<=" : ">=";
-            return { field: config.field, type, value };
-        }).filter(Boolean);
+
+            // Handle custom myFav filter
+            if (config.field === "myFav" && config.compare === "custom") {
+                if (value === 1) {
+                    // Filter for Y (favorites only)
+                    filters.push({field: "myFav", type: "=", value: "Y"});
+                } else if (value === 2) {
+                    // Filter for N (non-favorites only)
+                    filters.push({field: "myFav", type: "=", value: "N"});
+                }
+                // value === 0 means "All", so no filter is added
+            } else {
+                // Handle regular numeric filters
+                const type = config.compare === "max" ? "<=" : ">=";
+                filters.push({ field: config.field, type, value });
+            }
+        });
 
         table.setFilter(filters);
     }

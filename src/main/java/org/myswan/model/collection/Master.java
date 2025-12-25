@@ -23,4 +23,5 @@ public class Master {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate addedDate;
     private boolean etradePatternLookup; // Default to false (disabled) - explicitly enable in DB
+    private String myFavorite ="N";
 }

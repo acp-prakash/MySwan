@@ -66,9 +66,9 @@ public class ETradeController {
 
 
     @PostMapping("/pattern/fetch-etrade")
-    public ResponseEntity<String> fetchETradePatterns() {
+    public ResponseEntity<String> fetchETradePatterns(@RequestParam(required = false, defaultValue = "N") String onlyMyFav) {
         try {
-            log.info("Starting eTrade pattern fetch with parallel processing...");
+            log.info("Starting eTrade pattern fetch with parallel processing (onlyMyFav: {})...", onlyMyFav);
 
             // Get all masters with etradePatternLookup = true
             List<Master> masters = masterService.list();
@@ -80,11 +80,22 @@ public class ETradeController {
                     if (enabled) {
                         log.debug("Ticker {} - etradePatternLookup: true", m.getTicker());
                     }
+
+                    // If onlyMyFav is "Y", also filter by myFavorite = "Y"
+                    if ("Y".equalsIgnoreCase(onlyMyFav)) {
+                        boolean isFavorite = "Y".equals(m.getMyFavorite());
+                        log.debug("Ticker {} - myFavorite: {}", m.getTicker(), m.getMyFavorite());
+                        return enabled && isFavorite;
+                    }
+
+                    // Otherwise, only check etradePatternLookup
                     return enabled;
                 })
                 .toList();
 
-            log.info("Found {} masters with eTrade pattern enabled (etradePatternLookup = true)", enabledMasters.size());
+            log.info("Found {} masters with eTrade pattern enabled (etradePatternLookup = true{})",
+                enabledMasters.size(),
+                "Y".equalsIgnoreCase(onlyMyFav) ? " and myFavorite = Y" : "");
 
             if (!enabledMasters.isEmpty() && enabledMasters.size() <= 10) {
                 log.info("Enabled tickers: {}", enabledMasters.stream()
