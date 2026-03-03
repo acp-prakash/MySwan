@@ -332,6 +332,24 @@
             }
         },
         {
+            title: "Trade?",
+            field: "stock.confidenceTier.tradeable",
+            width: 60,
+            hozAlign: "center",
+            headerFilter: "list",
+            headerFilterParams: {values: {"": "All", "true": "✓"}},
+            formatter: function(cell) {
+                const tradeable = cell.getValue();
+                const rowData = cell.getRow().getData();
+                const gatePass = rowData?.stock?.gateSignal?.gatePass;
+                const gateType = rowData?.stock?.gateSignal?.gateType;
+                if (gatePass && gateType === 'DAY_1_ENTRY' && tradeable === true) {
+                    return '<span style="background: #22c55e; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 700;">TRADE</span>';
+                }
+                return '';
+            }
+        },
+        {
             title: "Pattern",
             field: "name",
             headerFilter: "input",
@@ -387,23 +405,6 @@
             formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(2) : '-'; }
         },
         {
-            title: "Entry",
-            field: "entry",
-            headerFilter: "input",
-            headerFilterPlaceholder: ">100",
-            headerFilterFunc: customNumberFilter,
-            width: 65
-        },
-        {
-            title: "Price",
-            field: "price",
-            headerFilter: "input",
-            headerFilterPlaceholder: ">100",
-            headerFilterFunc: customNumberFilter,
-            width: 65,
-            formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(2) : '-'; }
-        },
-        {
             title: "Diff",
             field: "diff",
             width: 65,
@@ -422,6 +423,24 @@
                 return (v || v === 0) ? v.toFixed(2) : '-';
             }
         },
+        {
+            title: "Entry",
+            field: "entry",
+            headerFilter: "input",
+            headerFilterPlaceholder: ">100",
+            headerFilterFunc: customNumberFilter,
+            width: 65
+        },
+        {
+            title: "Price",
+            field: "price",
+            headerFilter: "input",
+            headerFilterPlaceholder: ">100",
+            headerFilterFunc: customNumberFilter,
+            width: 65,
+            formatter: function(cell){ const v = cell.getValue(); return v ? v.toFixed(2) : '-'; }
+        },
+
         {
             title: "Min Target",
             field: "minPT",

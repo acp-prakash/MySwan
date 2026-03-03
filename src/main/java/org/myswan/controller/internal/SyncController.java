@@ -45,4 +45,9 @@ public class SyncController {
     public ResponseEntity<String> syncGuranteedPicksHistory() {
         return ResponseEntity.ok(syncService.syncGuaranteedPicksHistory());
     }
+
+    @PostMapping("/syncup/history/options")
+    public ResponseEntity<String> syncOptionsHistory() {
+        return ResponseEntity.ok(syncService.syncOptionsHistory());
+    }
 }

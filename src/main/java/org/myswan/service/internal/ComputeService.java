@@ -33,6 +33,8 @@ public class ComputeService {
     private final DailyRanking dailyRanking;
     private final SyncService syncService;
     private final PicksService picksService;
+    private final GateSignalDetect gateSignalDetect;
+    private final ConfidenceTierDetect confidenceTierDetect;
 
     public ComputeService(StockService stockService, PatternService patternService,
                           DayTrading dayTrading, SwingTrading swingTrading, Reversal reversal,
@@ -40,7 +42,8 @@ public class ComputeService {
                           SpikeDetect spikeDetect, OversoldBounceDetect oversoldBounceDetect,
                           MomentumPopDetect momentumPopDetect, FilterCategoryDetect filterCategoryDetect,
                           ConsecutiveDaysCalculator consecutiveDaysCalculator, DailyRanking dailyRanking,
-                          SyncService syncService, PicksService picksService) {
+                          SyncService syncService, PicksService picksService,
+                          GateSignalDetect gateSignalDetect, ConfidenceTierDetect confidenceTierDetect) {
         this.stockService = stockService;
         this.patternService = patternService;
         this.dayTrading = dayTrading;
@@ -57,6 +60,8 @@ public class ComputeService {
         this.dailyRanking = dailyRanking;
         this.syncService = syncService;
         this.picksService = picksService;
+        this.gateSignalDetect = gateSignalDetect;
+        this.confidenceTierDetect = confidenceTierDetect;
     }
 
     public String compute() {
@@ -173,6 +178,10 @@ public class ComputeService {
                 {
                     historyList = stockService.getHistoryByDate(LocalDate.now().minusDays(3));
                 }
+                if(historyList == null || historyList.isEmpty())
+                {
+                    historyList = stockService.getHistoryByDate(LocalDate.now().minusDays(4));
+                }
             }
 
             log.info("Loaded {} history records for previous business day: {}", historyList.size(),
@@ -238,6 +247,17 @@ public class ComputeService {
                 filterCategoryDetect.filterCategory(stock, previousDayStock);
             });
             log.info("filterCategory completed");
+
+            //Layer 1: Gate Signal Detection (GPT-4 Hybrid System)
+            allList.parallelStream().forEach(stock -> {
+                Stock previousDayStock = historyMap.get(stock.getTicker());
+                gateSignalDetect.detectGateSignal(stock, previousDayStock);
+            });
+            log.info("detectGateSignal completed");
+
+            //Layer 2: Confidence Tier Detection (Only after other signals calculated)
+            allList.parallelStream().forEach(confidenceTierDetect::detectConfidenceTier);
+            log.info("detectConfidenceTier completed");
 
             allList.parallelStream().forEach(dailyRanking::dailyRanking);//DailyRanking Setup
             log.info("dailyRanking completed");

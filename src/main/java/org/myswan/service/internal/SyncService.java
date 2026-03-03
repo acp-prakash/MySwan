@@ -12,15 +12,18 @@ public class SyncService {
     private final PatternService patternService;
     private final PicksService picksService;
     private final GuaranteedExplosiveService guaranteedExplosiveService;
+    private final OptionsService optionsService;
 
     public SyncService(FuturesService futuresService, StockService stockService,
                        PatternService patternService, PicksService picksService,
-                       GuaranteedExplosiveService guaranteedExplosiveService) {
+                       GuaranteedExplosiveService guaranteedExplosiveService,
+                       OptionsService optionsService) {
         this.futuresService = futuresService;
         this.stockService = stockService;
         this.patternService = patternService;
         this.picksService = picksService;
         this.guaranteedExplosiveService = guaranteedExplosiveService;
+        this.optionsService = optionsService;
     }
 
     public String syncAllHistory() {
@@ -30,7 +33,7 @@ public class SyncService {
             stockService.syncStockHistory();
             patternService.syncPatternHistory();
             picksService.syncPicksHistory();
-            //guaranteedExplosiveService.syncGuaranteedPicksHistory();
+            optionsService.syncOptionsHistory();
             log.info("All history data sync completed.");
             return "SUCCESS";
         }
@@ -105,6 +108,16 @@ public class SyncService {
         catch(Exception ex)
         {
             log.error("GuaranteedPicks history data sync failed.", ex);
+            return "FAILURE";
+        }
+    }
+
+    public String syncOptionsHistory() {
+        try {
+            optionsService.syncOptionsHistory();
+            return "SUCCESS";
+        } catch (Exception ex) {
+            log.error("Options history data sync failed.", ex);
             return "FAILURE";
         }
     }

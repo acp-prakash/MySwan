@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Slider Test</title>
+</head>
+<body style="padding: 20px; background: #1e293b; color: white;">
+    <h1>Progress Slider Test</h1>
+
+    <div style="background: #094b92; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 10px;">
+            Progress: <span id="progressValue" style="color: #fbbf24; font-size: 20px;">-100+</span>
+        </label>
+        <input type="range" id="progressSlider" min="-100" max="200" value="-100"
+               style="width: 300px; accent-color: #fbbf24; height: 30px;">
+    </div>
+
+    <div style="background: #094b92; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 10px;">
+            Days Left: <span id="daysLeftValue" style="color: #fbbf24; font-size: 20px;">0+</span>
+        </label>
+        <input type="range" id="daysLeftSlider" min="0" max="365" value="0"
+               style="width: 300px; accent-color: #fbbf24; height: 30px;">
+    </div>
+
+    <div id="output" style="margin-top: 20px; padding: 20px; background: #0f172a; border-radius: 8px;">
+        <h3>Console Output:</h3>
+        <pre id="console" style="color: #10b981;"></pre>
+    </div>
+
+    <script>
+        const consoleDiv = document.getElementById('console');
+
+        function log(message) {
+            console.log(message);
+            consoleDiv.textContent += message + '\n';
+        }
+
+        log('Page loaded');
+
+        document.addEventListener('DOMContentLoaded', function() {
+            log('DOMContentLoaded fired');
+
+            const progressSlider = document.getElementById('progressSlider');
+            const progressValue = document.getElementById('progressValue');
+            const daysLeftSlider = document.getElementById('daysLeftSlider');
+            const daysLeftValue = document.getElementById('daysLeftValue');
+
+            log('Slider element: ' + (progressSlider ? 'FOUND' : 'NOT FOUND'));
+            log('Value element: ' + (progressValue ? 'FOUND' : 'NOT FOUND'));
+            log('Days Left slider element: ' + (daysLeftSlider ? 'FOUND' : 'NOT FOUND'));
+            log('Days Left value element: ' + (daysLeftValue ? 'FOUND' : 'NOT FOUND'));
+
+            if (progressSlider && progressValue) {
+                progressSlider.addEventListener('input', function() {
+                    const value = this.value;
+                    log('Slider moved to: ' + value);
+                    progressValue.textContent = value + '+';
+                });
+
+                progressSlider.addEventListener('change', function() {
+                    log('Slider change event: ' + this.value);
+                });
+
+                log('Progress event listeners attached successfully');
+            } else {
+                log('ERROR: Could not find progress slider elements!');
+            }
+
+            if (daysLeftSlider && daysLeftValue) {
+                daysLeftSlider.addEventListener('input', function() {
+                    const value = this.value;
+                    log('Days Left slider moved to: ' + value);
+                    daysLeftValue.textContent = value + '+';
+                });
+
+                daysLeftSlider.addEventListener('change', function() {
+                    log('Days Left slider change event: ' + this.value);
+                });
+
+                log('Days Left event listeners attached successfully');
+            } else {
+                log('ERROR: Could not find days left slider elements!');
+            }
+        });
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MySwan - Options Dashboard</title>
+    <link href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: radial-gradient(circle at top, #0f172a 0%, #0b1120 45%, #070b16 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+            padding: 12px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 {
+            font-size: 1.8rem;
+            color: #38bdf8;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #60a5fa;
+            text-decoration: none;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        .back-link:hover { color: #93c5fd; }
+        .panel {
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(59, 130, 246, 0.25);
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 12px;
+            backdrop-filter: blur(10px);
+        }
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: flex-end;
+        }
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        label {
+            font-size: 0.75rem;
+            color: #a5b4fc;
+            font-weight: 600;
+        }
+        input, select {
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(148, 163, 184, 0.4);
+            background: rgba(15, 23, 42, 0.8);
+            color: #f8fafc;
+            min-width: 160px;
+            font-size: 0.9rem;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #38bdf8;
+            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25);
+        }
+        .btn {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #0f172a;
+        }
+        .btn-primary { background: #38bdf8; color: #081229; }
+        .btn-primary:hover { background: #0ea5e9; }
+        .btn-secondary { background: rgba(94, 234, 212, 0.2); color: #5eead4; border: 1px solid rgba(94, 234, 212, 0.4); }
+        .btn-danger { background: #f97316; color: #0b1120; }
+        .btn-ghost { background: transparent; color: #cbd5f5; border: 1px solid rgba(148, 163, 184, 0.5); }
+        .stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 12px;
+            font-size: 0.85rem;
+            color: #cbd5f5;
+        }
+        .stats span { display: inline-flex; align-items: center; gap: 6px; }
+        .hint { font-size: 0.8rem; color: #94a3b8; margin-top: 4px; }
+        .status-bar {
+            margin-top: 10px;
+            font-size: 0.85rem;
+            color: #c4b5fd;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .status-bar i { color: #fbbf24; }
+        .tabulator {
+            background: rgba(15, 23, 42, 0.95) !important;
+            border: 1px solid rgba(59, 130, 246, 0.3) !important;
+            font-size: 11px;
+        }
+        .tabulator .tabulator-header {
+            background: rgba(23, 37, 84, 0.9) !important;
+            border-bottom: 2px solid rgba(59, 130, 246, 0.6) !important;
+        }
+        .tabulator-row { min-height: 30px; }
+        .badge {
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: rgba(63, 81, 181, 0.3);
+            color: #c7d2fe;
+            font-size: 0.75rem;
+        }
+        @media (max-width: 768px) {
+            .toolbar { flex-direction: column; align-items: stretch; }
+            input, select { width: 100%; }
+            .btn { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a class="back-link" href="index.html"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+    <h1><i class="fas fa-square-poll-horizontal"></i> Options Intelligence Hub</h1>
+
+    <div class="panel">
+        <div class="toolbar">
+            <div class="field">
+                <label for="tickerInput">Ticker (optional)</label>
+                <input id="tickerInput" placeholder="AAPL" autocomplete="off">
+            </div>
+            <div class="field">
+                <label for="datasetSelect">Dataset</label>
+                <select id="datasetSelect">
+                    <option value="latest">Latest Options</option>
+                    <option value="history">Historical Snapshot</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" id="loadBtn"><i class="fas fa-sync"></i>Load Data</button>
+            <button class="btn btn-secondary" id="refreshBtn"><i class="fas fa-arrows-rotate"></i>Refresh Options</button>
+            <button class="btn btn-secondary" id="syncHistoryBtn"><i class="fas fa-database"></i>Sync History</button>
+            <button class="btn btn-ghost" id="clearBtn"><i class="fas fa-eraser"></i>Clear Filters</button>
+            <button class="btn btn-danger" id="exportBtn"><i class="fas fa-file-export"></i>Export</button>
+        </div>
+        <p class="hint" id="datasetHint">Load every option currently tracked. Add a ticker to focus the grid.</p>
+        <div class="status-bar" id="statusBar">
+            <i class="fas fa-circle-notch fa-spin" style="display:none" id="spinner"></i>
+            <span id="statusMessage">Waiting for the first load...</span>
+        </div>
+        <div class="stats">
+            <span><i class="fas fa-list-ol"></i> Rows: <strong id="rowCount">0</strong></span>
+            <span><i class="fas fa-clock"></i> Last load: <strong id="lastLoad">Never</strong></span>
+            <span><i class="fas fa-bolt"></i> Source: <strong id="activeSource">-</strong></span>
+        </div>
+    </div>
+
+    <div class="panel" style="padding: 0;">
+        <div id="optionsTable"></div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+    const API_BASE = 'http://jpmaxtricks.com:8070/api';
+    let table;
+
+    function initTable() {
+        table = new Tabulator('#optionsTable', {
+            layout: 'fitColumns',
+            height: '75vh',
+            placeholder: 'Click "Load Data" to fetch options',
+            pagination: true,
+            paginationSize: 50,
+            paginationSizeSelector: [25, 50, 100, 200],
+            columns: [
+                { title: 'Date', field: 'histDate', width: 110, headerFilter: 'input' },
+                { title: 'Ticker', field: 'ticker', width: 90, headerFilter: 'input', formatter: tickerFormatter },
+                { title: 'Type', field: 'type', width: 80, headerFilter: 'list', headerFilterParams: { values: { '': 'All', CALL: 'CALL', PUT: 'PUT' } }, formatter: badgeFormatter },
+                { title: 'Instrument', field: 'instrumentId', width: 180, headerFilter: 'input' },
+                { title: 'Price', field: 'price', width: 90, formatter: numFormatter, headerFilter: 'input' },
+                { title: 'High', field: 'high', width: 90, formatter: numFormatter, headerFilter: 'input' },
+                { title: 'Low', field: 'low', width: 90, formatter: numFormatter, headerFilter: 'input' },
+                { title: 'Volume', field: 'volume', width: 90, formatter: intFormatter, headerFilter: 'input' },
+                { title: 'Open Int', field: 'openInterest', width: 100, formatter: intFormatter, headerFilter: 'input' },
+                { title: 'Delta', field: 'delta', width: 80, formatter: numFormatter, headerFilter: 'input' },
+                { title: 'Gamma', field: 'gamma', width: 80, formatter: numFormatter, headerFilter: 'input' },
+                { title: 'Theta', field: 'theta', width: 80, formatter: numFormatter, headerFilter: 'input' },
+                { title: 'Vega', field: 'vega', width: 80, formatter: numFormatter, headerFilter: 'input' },
+                { title: 'IV', field: 'iv', width: 80, formatter: numFormatter, headerFilter: 'input' },
+                { title: 'Days +/-', field: 'daysUpDown', width: 90, formatter: signedFormatter, headerFilter: 'input' }
+            ]
+        });
+    }
+
+    function tickerFormatter(cell) {
+        const val = cell.getValue();
+        if (!val) return '';
+        return `<strong>${val}</strong>`;
+    }
+
+    function badgeFormatter(cell) {
+        const val = (cell.getValue() || '').toUpperCase();
+        if (!val) return '';
+        const colors = { CALL: '#22c55e', PUT: '#ef4444' };
+        const color = colors[val] || '#94a3b8';
+        return `<span class="badge" style="background: ${color}33; color: ${color};">${val}</span>`;
+    }
+
+    function numFormatter(cell) {
+        const val = cell.getValue();
+        if (val === null || val === undefined) return '';
+        return Number(val).toFixed(2);
+    }
+
+    function intFormatter(cell) {
+        const val = cell.getValue();
+        if (val === null || val === undefined) return '';
+        return Number(val).toLocaleString();
+    }
+
+    function signedFormatter(cell) {
+        const val = cell.getValue();
+        if (val === null || val === undefined) return '';
+        const color = val > 0 ? '#22c55e' : val < 0 ? '#ef4444' : '#e2e8f0';
+        const prefix = val > 0 ? '+' : '';
+        return `<span style="color:${color}; font-weight:600;">${prefix}${val}</span>`;
+    }
+
+    function setLoading(isLoading, message = '') {
+        document.getElementById('spinner').style.display = isLoading ? 'inline-block' : 'none';
+        if (message) {
+            document.getElementById('statusMessage').textContent = message;
+        }
+    }
+
+    function updateStats(count, sourceLabel) {
+        document.getElementById('rowCount').textContent = count;
+        document.getElementById('activeSource').textContent = sourceLabel;
+        const now = new Date().toLocaleString();
+        document.getElementById('lastLoad').textContent = now;
+    }
+
+    function buildEndpoint() {
+        const ticker = document.getElementById('tickerInput').value.trim();
+        const dataset = document.getElementById('datasetSelect').value;
+        if (dataset === 'history') {
+            if (!ticker) {
+                throw new Error('Enter a ticker to view history.');
+            }
+            return { url: `${API_BASE}/options/history/${encodeURIComponent(ticker)}`, label: `${ticker.toUpperCase()} history` };
+        }
+        if (ticker) {
+            return { url: `${API_BASE}/options/${encodeURIComponent(ticker)}`, label: `${ticker.toUpperCase()} latest` };
+        }
+        return { url: `${API_BASE}/options/list`, label: 'All options' };
+    }
+
+    async function loadOptions() {
+        try {
+            const { url, label } = buildEndpoint();
+            setLoading(true, 'Fetching data...');
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`Request failed (${response.status})`);
+            const data = await response.json();
+            table.replaceData(Array.isArray(data) ? data : []);
+            updateStats(data.length || 0, label);
+            setLoading(false, `Loaded ${data.length || 0} rows from ${label}`);
+        } catch (err) {
+            console.error(err);
+            setLoading(false, err.message);
+            alert(err.message);
+        }
+    }
+
+    async function refreshOptions() {
+        if (!confirm('Refresh options using the stored Robinhood token?')) return;
+        setLoading(true, 'Refreshing options...');
+        try {
+            const res = await fetch(`${API_BASE}/options/refresh`, { method: 'POST' });
+            const message = await res.text();
+            setLoading(false, message);
+            alert(message);
+            await loadOptions();
+        } catch (err) {
+            setLoading(false, err.message);
+            alert('Refresh failed: ' + err.message);
+        }
+    }
+
+    async function syncHistory() {
+        if (!confirm('Create an optionsHistory snapshot for today?')) return;
+        setLoading(true, 'Syncing options history...');
+        try {
+            const res = await fetch(`${API_BASE}/options/sync-history`, { method: 'POST' });
+            const message = await res.text();
+            setLoading(false, message);
+            alert(message);
+        } catch (err) {
+            setLoading(false, err.message);
+            alert('Sync failed: ' + err.message);
+        }
+    }
+
+    function exportOptions() {
+        if (!table) {
+            alert('Table not ready yet.');
+            return;
+        }
+        const data = table.getData?.() || [];
+        if (!data.length) {
+            alert('Nothing to export yet.');
+            return;
+        }
+        table.download('xlsx', `options-${new Date().toISOString().slice(0,10)}.xlsx`, { sheetName: 'Options' });
+    }
+
+    function clearFilters() {
+        document.getElementById('tickerInput').value = '';
+        document.getElementById('datasetSelect').value = 'latest';
+        document.getElementById('datasetHint').textContent = 'Load every option currently tracked. Add a ticker to focus the grid.';
+    }
+
+    function updateDatasetHint() {
+        const dataset = document.getElementById('datasetSelect').value;
+        const hint = dataset === 'history'
+            ? 'History requires a ticker. We will pull its snapshots from optionsHistory.'
+            : 'Load every option currently tracked. Add a ticker to focus the grid.';
+        document.getElementById('datasetHint').textContent = hint;
+    }
+
+    document.getElementById('datasetSelect').addEventListener('change', updateDatasetHint);
+    document.getElementById('loadBtn').addEventListener('click', loadOptions);
+    document.getElementById('refreshBtn').addEventListener('click', refreshOptions);
+    document.getElementById('syncHistoryBtn').addEventListener('click', syncHistory);
+    document.getElementById('exportBtn').addEventListener('click', exportOptions);
+    document.getElementById('clearBtn').addEventListener('click', clearFilters);
+    document.getElementById('tickerInput').addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') loadOptions();
+    });
+
+    initTable();
+    updateDatasetHint();
+    setLoading(false, 'Ready when you are.');
+</script>
+</body>
+</html>
+

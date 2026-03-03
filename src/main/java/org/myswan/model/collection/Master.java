@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDate;
@@ -24,4 +25,10 @@ public class Master {
     private LocalDate addedDate;
     private boolean etradePatternLookup; // Default to false (disabled) - explicitly enable in DB
     private String myFavorite ="N";
+    private String myDayTrade ="N";
+    private String etf2X ="N";
+
+    // Transient field - not persisted to DB, populated at runtime for API responses
+    @Transient
+    private Double currentPrice;
 }

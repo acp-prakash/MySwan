@@ -79,6 +79,16 @@
       columns: [
         {title:'Date', field:'histDate', headerFilter:'input', width:70},
         {title:'Tick', field:'ticker', headerFilter:'input', width:55},
+        {title: "Trade?", field: "confidenceTier.tradeable", headerFilter: "list", headerFilterParams: {values: {"": "All", "true": "✓"}}, width: 60, hozAlign: "center", formatter: function(cell){
+          const tradeable = cell.getValue();
+          const rowData = cell.getRow().getData();
+          const gatePass = rowData?.gateSignal?.gatePass;
+          const gateType = rowData?.gateSignal?.gateType;
+          if (gatePass && gateType === 'DAY_1_ENTRY' && tradeable === true) {
+            return '<span style="background: #22c55e; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 700;">TRADE</span>';
+          }
+          return '';
+        }},
         {title:'Chg', field:'change', headerFilter:'input', formatter:fmt2, width:50},
         {title:'Low', field:'low', headerFilter:'input', formatter:fmt2, width:50},
         {title:'Price', field:'price', headerFilter:'input', formatter:fmt2, width:50},
@@ -86,21 +96,24 @@
         //{title:'Open', field:'open', headerFilter:'input', formatter:fmt2, width:50},
         {title:'L#', field:'noOfLongPatterns', headerFilter:'input', formatter:fmtInt, width:20},
         {title:'S#', field:'noOfShortPatterns', headerFilter:'input', formatter:fmtInt, width:20},
-        {title: "pickScore", field: "dailyRank.pickScore", headerFilter: "input", width: 60},
+        {title: "pick", field: "dailyRank.pickScore", headerFilter: "input", width: 40},
         {title: "Rank", field: "dailyRank.finalRank", headerFilter: "input", width: 40},
         {title: "Safe", field: "dailyRank.safetyRank", headerFilter: "input", width: 40},
-        {title: "PrimCat", field: "filterCategory.primaryCategory", headerFilter: "input", width: 60},
-        {title: "CatList", field: "filterCategory.category", headerFilter: "input", width: 70},
-        {title:'Bottom', field:'bottom.bottom', headerFilter:'input', width:60, hozAlign:'center', formatter:function(cell){ const v = cell.getValue(); if (v === true || v === 'true') return '✅'; if (v === false || v === 'false') return ''; return v; }},
+        {title:'Botm', field:'bottom.bottom', headerFilter:'input', width:60, hozAlign:'center', formatter:function(cell){ const v = cell.getValue(); if (v === true || v === 'true') return '✅'; if (v === false || v === 'false') return ''; return v; }},
+        {title:'spike', field:'spike.spikeLikely', headerFilter:'input', width:60, hozAlign:'center', formatter:function(cell){ const v = cell.getValue(); if (v === true || v === 'true') return '✅'; if (v === false || v === 'false') return ''; return v; }},
+        {title:'OvrSold', field:'oversold.oversoldBounce', headerFilter:'input', width:60, hozAlign:'center', formatter:function(cell){ const v = cell.getValue(); if (v === true || v === 'true') return '✅'; if (v === false || v === 'false') return ''; return v; }},
         {title:'BTMet', field:'bottom.conditionsMet', headerFilter:'input', width:50, hozAlign:'center'},
         {title:'BTStr', field:'bottom.strength', headerFilter:'input', width:80, hozAlign:'center'},
-        {title:'spike', field:'spike.spikeLikely', headerFilter:'input', width:50, hozAlign:'center'},
         {title:'SS', field:'spike.spikeScore', headerFilter:'input', width:20, hozAlign:'center', formatter:function(cell){ const v = cell.getValue(); if (v === true || v === 'true') return '⚡'; if (v === false || v === 'false') return ''; return v; }},
         {title:'spikeType', field:'spike.spikeType', headerFilter:'input', width:80},
-        {title: "OvrSold", field: "oversold.oversoldBounce", headerFilter: "input", width: 50, hozAlign: "center", formatter: function(cell){ const v = cell.getValue(); return (v === true || v === 'true') ? "✅" : ""; }},
         {title: "OSS", field: "oversold.bounceScore", headerFilter: "input", width: 30, hozAlign: "center"},
         {title: "OSType", field: "oversold.bounceType", headerFilter: "input", width: 50, hozAlign: "center"},
         {title:'All', field:'score.overallScore', headerFilter:'input', formatter:fmtInt, width:55},
+        {title:'DT', field:'score.dayTradingScore', headerFilter:'input', formatter:fmtInt, width:55},
+        {title:'ST', field:'score.swingTradingScore', headerFilter:'input', formatter:fmtInt, width:55},
+        {title:'Break', field:'score.breakoutScore', headerFilter:'input', formatter:fmtInt, width:55},
+        {title:'Patt', field:'score.patternScore', headerFilter:'input', formatter:fmtInt, width:55},
+        {title:'Rev', field:'score.reversalScore', headerFilter:'input', formatter:fmtInt, width:55},
         {title:'Sig', field:'score.signal', headerFilter:'input', width:60},
         {title: "SigD", field: "score.signalDays", headerFilter: "input", width: 60, formatter: function(cell) { const val = cell.getValue(); if (val === 'BUY') return `<span style="background: rgba(34, 197, 94, 0.2); color: #22c55e; padding: 2px 4px; border-radius: 4px; font-weight: 600; font-size: 9px;">${val}</span>`; if (val === 'SELL') return `<span style="background: rgba(239, 68, 68, 0.2); color: #ef4444; padding: 2px 4px; border-radius: 4px; font-weight: 600; font-size: 9px;">${val}</span>`; return val; }},
         {title:'BS', field:'rating.btShortRating', headerFilter:'input', width:60},
@@ -110,6 +123,8 @@
         {title:'TVMA', field:'rating.tradingViewMARating', headerFilter:'input', width:65},
         {title:'TVTech', field:'rating.tradingViewTechRating', headerFilter:'input', width:65},
         {title:'TVAnaly', field:'rating.tradingViewAnalystsRating', headerFilter:'input', width:70},
+        {title: "PrimCat", field: "filterCategory.primaryCategory", headerFilter: "input", width: 60},
+        {title: "CatList", field: "filterCategory.category", headerFilter: "input", width: 70},
 
         {title:'BotReasons', field:'bottom.reasons', headerFilter:'input', width:150, hozAlign:'left', formatter:function(cell){ const v = cell.getValue(); if(!v) return ''; if(Array.isArray(v)) return v.join(', '); return v; }},
         {title:'Vol', field:'volume', headerFilter:'input', formatter:fmtVol, width:70},
@@ -126,16 +141,36 @@
         {title:'SigR', field:'score.signalReason', headerFilter:'input', width:80},
 
         {title:'AllR', field:'score.overallReason', headerFilter:'input', width:90},
-        {title:'DT', field:'score.dayTradingScore', headerFilter:'input', formatter:fmtInt, width:55},
         {title:'DTR', field:'score.dayTradingReason', headerFilter:'input', width:90},
-        {title:'ST', field:'score.swingTradingScore', headerFilter:'input', formatter:fmtInt, width:55},
         {title:'STR', field:'score.swingTradingReason', headerFilter:'input', width:90},
-        {title:'Rev', field:'score.reversalScore', headerFilter:'input', formatter:fmtInt, width:55},
         {title:'RevR', field:'score.reversalReason', headerFilter:'input', width:90},
-        {title:'Break', field:'score.breakoutScore', headerFilter:'input', formatter:fmtInt, width:55},
         {title:'BreakR', field:'score.breakoutReason', headerFilter:'input', width:90},
-        {title:'Patt', field:'score.patternScore', headerFilter:'input', formatter:fmtInt, width:55},
         {title:'PattR', field:'score.patternReason', headerFilter:'input', width:90},
+
+        // MetricsInfo columns
+        {title:'Day0Factors', field:'metricsInfo.day0Factors', headerFilter:'input', width:200, hozAlign:'left', formatter:function(cell){ const v = cell.getValue(); if(!v) return ''; if(Array.isArray(v)) return v.join(', '); return v; }},
+
+        // D1-D10 Price Changes
+        {title:'D1Chg%', field:'metricsInfo.d1.priceChgPct', headerFilter:'input', formatter:fmt2, width:60},
+        {title:'D1Diff', field:'metricsInfo.d1.priceDiff', headerFilter:'input', formatter:fmt2, width:60},
+        {title:'D2Chg%', field:'metricsInfo.d2.priceChgPct', headerFilter:'input', formatter:fmt2, width:60},
+        {title:'D2Diff', field:'metricsInfo.d2.priceDiff', headerFilter:'input', formatter:fmt2, width:60},
+        {title:'D3Chg%', field:'metricsInfo.d3.priceChgPct', headerFilter:'input', formatter:fmt2, width:60},
+        {title:'D3Diff', field:'metricsInfo.d3.priceDiff', headerFilter:'input', formatter:fmt2, width:60},
+        {title:'D4Chg%', field:'metricsInfo.d4.priceChgPct', headerFilter:'input', formatter:fmt2, width:60},
+        {title:'D4Diff', field:'metricsInfo.d4.priceDiff', headerFilter:'input', formatter:fmt2, width:60},
+        {title:'D5Chg%', field:'metricsInfo.d5.priceChgPct', headerFilter:'input', formatter:fmt2, width:60},
+        {title:'D5Diff', field:'metricsInfo.d5.priceDiff', headerFilter:'input', formatter:fmt2, width:60},
+        {title:'D6Chg%', field:'metricsInfo.d6.priceChgPct', headerFilter:'input', formatter:fmt2, width:60},
+        {title:'D6Diff', field:'metricsInfo.d6.priceDiff', headerFilter:'input', formatter:fmt2, width:60},
+        {title:'D7Chg%', field:'metricsInfo.d7.priceChgPct', headerFilter:'input', formatter:fmt2, width:60},
+        {title:'D7Diff', field:'metricsInfo.d7.priceDiff', headerFilter:'input', formatter:fmt2, width:60},
+        {title:'D8Chg%', field:'metricsInfo.d8.priceChgPct', headerFilter:'input', formatter:fmt2, width:60},
+        {title:'D8Diff', field:'metricsInfo.d8.priceDiff', headerFilter:'input', formatter:fmt2, width:60},
+        {title:'D9Chg%', field:'metricsInfo.d9.priceChgPct', headerFilter:'input', formatter:fmt2, width:60},
+        {title:'D9Diff', field:'metricsInfo.d9.priceDiff', headerFilter:'input', formatter:fmt2, width:60},
+        {title:'D10Chg%', field:'metricsInfo.d10.priceChgPct', headerFilter:'input', formatter:fmt2, width:60},
+        {title:'D10Diff', field:'metricsInfo.d10.priceDiff', headerFilter:'input', formatter:fmt2, width:60},
 
       ],
       placeholder: 'No history loaded',

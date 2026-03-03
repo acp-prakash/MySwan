@@ -47,6 +47,8 @@ public class StockService {
                 for(Stock st : stockList) {
                     if(mas.getTicker().equals(st.getTicker())) {
                         st.setMyFavorite(mas.getMyFavorite());
+                        st.setMyDayTrade(mas.getMyDayTrade());
+                        st.setEtf2X(mas.getEtf2X());
                         break;
                     }
                 }

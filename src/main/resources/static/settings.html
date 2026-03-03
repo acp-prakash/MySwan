@@ -222,6 +222,23 @@
             <div class="status" id="etradeStatus"></div>
         </div>
 
+        <!-- Robinhood -->
+        <div class="section">
+            <h3>🤖 Robinhood</h3>
+            <div class="current" id="robinhoodCurrent">Token: Loading...</div>
+            <div class="row">
+                <div style="flex: 1;">
+                    <label>Auth Token</label>
+                    <textarea id="robinhoodToken" placeholder="Paste Robinhood token"></textarea>
+                </div>
+            </div>
+            <div class="btn-group">
+                <button class="btn-save" onclick="save('robinhood')">Save</button>
+                <button class="btn-clear" onclick="clear('robinhood')">Clear</button>
+            </div>
+            <div class="status" id="robinhoodStatus"></div>
+        </div>
+
         <!-- Save All -->
         <div style="text-align: center; margin-top: 15px;">
             <button class="btn-save" style="padding: 8px 30px;" onclick="saveAll()">💾 Save All</button>
@@ -251,6 +268,10 @@
                 const etToken = data.etradeToken ? data.etradeToken.substring(0, 15) + '...' : 'Not set';
                 const etCookie = data.etradeCookie ? data.etradeCookie.substring(0, 15) + '...' : 'Not set';
                 document.getElementById('etradeCurrent').textContent = `Token: ${etToken} | Cookie: ${etCookie}`;
+
+                // Robinhood
+                const rhToken = data.robinhoodToken ? data.robinhoodToken.substring(0, 15) + '...' : 'Not set';
+                document.getElementById('robinhoodCurrent').textContent = `Token: ${rhToken}`;
             } catch (err) {
                 console.error('Error loading settings:', err);
             }
@@ -288,6 +309,13 @@
                 }
                 if (token) payload.etradeToken = token;
                 if (cookie) payload.etradeCookie = cookie;
+            } else if (provider === 'robinhood') {
+                const token = document.getElementById('robinhoodToken').value.trim();
+                if (!token) {
+                    showStatus(statusId, 'Enter the token', 'error');
+                    return;
+                }
+                payload.robinhoodToken = token;
             }
 
             await sendSave(payload, statusId, provider);
@@ -303,6 +331,7 @@
             const tvCookie = document.getElementById('tradingViewCookie').value.trim();
             const etToken = document.getElementById('etradeToken').value.trim();
             const etCookie = document.getElementById('etradeCookie').value.trim();
+            const rhToken = document.getElementById('robinhoodToken').value.trim();
 
             if (bcToken) payload.barchartToken = bcToken;
             if (bcCookie) payload.barchartCookie = bcCookie;
@@ -310,6 +339,7 @@
             if (tvCookie) payload.tradingViewCookie = tvCookie;
             if (etToken) payload.etradeToken = etToken;
             if (etCookie) payload.etradeCookie = etCookie;
+            if (rhToken) payload.robinhoodToken = rhToken;
 
             if (Object.keys(payload).length === 0) {
                 alert('Enter at least one field');
@@ -370,6 +400,9 @@
             if (provider === 'etrade' || provider === 'all') {
                 document.getElementById('etradeToken').value = '';
                 document.getElementById('etradeCookie').value = '';
+            }
+            if (provider === 'robinhood' || provider === 'all') {
+                document.getElementById('robinhoodToken').value = '';
             }
         }
 

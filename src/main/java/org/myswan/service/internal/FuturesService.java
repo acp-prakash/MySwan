@@ -1,14 +1,14 @@
 package org.myswan.service.internal;
 
 import org.myswan.model.collection.Futures;
-import org.myswan.model.collection.Stock;
 import org.myswan.repository.FuturesRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.BeanUtils;
+import org.springframework.data.mongodb.core.BulkOperations;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -31,6 +31,7 @@ public class FuturesService {
         Query query = Query.query(Criteria.where("ticker").is(ticker));
         if (from != null) query.addCriteria(Criteria.where("histDate").gte(from));
         if (to != null) query.addCriteria(Criteria.where("histDate").lte(to));
+        query.with(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "histDate"));
         return mongoTemplate.find(query, Futures.class, "futuresHistory");
     }
 
@@ -78,12 +79,58 @@ public class FuturesService {
 
     public void syncFuturesHistory() {
         List<Futures> futuresList = list();
-        if(futuresList != null && !futuresList.isEmpty()) {
-            deleteHistoryByDate(futuresList.getFirst().getHistDate());
-            futuresList.forEach(future -> {
-                future.setId(null);
-            });
-            mongoTemplate.insert(futuresList, "futuresHistory");
+        if (futuresList == null || futuresList.isEmpty()) {
+            log.warn("No futures to sync to history");
+            return;
+        }
+
+        LocalDate histDate = futuresList.getFirst().getHistDate();
+        log.info("Syncing {} futures records to history for date: {}", futuresList.size(), histDate);
+
+        // Use bulk upsert operations to prevent duplicates
+        BulkOperations bulkOps = mongoTemplate.bulkOps(BulkOperations.BulkMode.UNORDERED, "futuresHistory");
+
+        for (Futures future : futuresList) {
+            if (future.getTicker() == null || future.getHistDate() == null) {
+                log.warn("Skipping future with null ticker or histDate");
+                continue;
+            }
+
+            // Query by ticker + histDate (unique compound index)
+            Query query = Query.query(
+                Criteria.where("ticker").is(future.getTicker())
+                    .and("histDate").is(future.getHistDate())
+            );
+
+            // Create update with all fields
+            Update update = new Update()
+                .set("ticker", future.getTicker())
+                .set("type", future.getType())
+                .set("histDate", future.getHistDate())
+                .set("rating", future.getRating())
+                .set("price", future.getPrice())
+                .set("open", future.getOpen())
+                .set("high", future.getHigh())
+                .set("low", future.getLow())
+                .set("change", future.getChange())
+                .set("volume", future.getVolume())
+                .set("openInterest", future.getOpenInterest())
+                .set("expiryDate", future.getExpiryDate())
+                .set("expiryDays", future.getExpiryDays())
+                .set("prevClose", future.getPrevClose())
+                .set("upDays", future.getUpDays())
+                .set("downDays", future.getDownDays())
+                .set("downLow", future.getDownLow())
+                .set("upHigh", future.getUpHigh());
+
+            bulkOps.upsert(query, update);
+        }
+
+        try {
+            bulkOps.execute();
+            log.info("Successfully synced {} futures records to history for date: {}", futuresList.size(), histDate);
+        } catch (Exception e) {
+            log.error("Failed to sync futures history", e);
         }
     }
 

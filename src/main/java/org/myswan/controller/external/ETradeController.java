@@ -148,7 +148,7 @@ public class ETradeController {
                                 }
 
                                 // Small delay to avoid overwhelming the API
-                                Thread.sleep(100);
+                                Thread.sleep(400);
 
                             } catch (org.myswan.service.external.PatternNotFoundException e) {
                                 // 404 - Ticker not found at eTrade, disable it
@@ -175,6 +175,8 @@ public class ETradeController {
 
                     // Wait for batch to complete before starting next batch
                     CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+
+                    Thread.sleep(400);  // 2 second pause between batches
 
                     log.info("Batch complete. Total progress - Success: {}, Not Found: {}, Failed: {}",
                              successCount.get(), notFoundCount.get(), failureCount.get());

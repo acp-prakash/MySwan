@@ -31,6 +31,8 @@ public class Stock {
     private FilterCategory filterCategory;
     private MomentumPopSignal momPop;
     private DailyRank dailyRank;
+    private GateSignal gateSignal;
+    private ConfidenceTier confidenceTier;
     private double price;
     private double open;
     private double high;
@@ -73,6 +75,9 @@ public class Stock {
     private int noOfShortPatterns;
     private String optionPref;
     private String myFavorite ="N";
+    private String myDayTrade ="N";
+    private String etf2X ="N";
+    private MetricsInfo metricsInfo;
 
     // Transient field - not persisted to DB, populated at runtime for API responses
     @Transient

@@ -43,6 +43,80 @@ public class MasterController {
         return deleteMaster(ticker);
     }
 
+    /**
+     * Delete a ticker from all collections
+     */
+    @DeleteMapping("/master/delete-all/{ticker:.+}")
+    public ResponseEntity<String> deleteFromAllCollections(@PathVariable String ticker) {
+        if (!masterService.exists(ticker)) {
+            return ResponseEntity.notFound().build();
+        }
+        try {
+            masterService.deleteFromAllCollections(ticker);
+            return ResponseEntity.ok("Ticker " + ticker + " deleted from all collections successfully");
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Error deleting ticker: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Delete a ticker from specific collections
+     * Expected body: ["master", "stock", "stockHistory", ...]
+     */
+    @DeleteMapping("/master/delete-custom/{ticker:.+}")
+    public ResponseEntity<String> deleteFromCustomCollections(
+            @PathVariable String ticker,
+            @RequestBody List<String> collections) {
+        if (!masterService.exists(ticker)) {
+            return ResponseEntity.notFound().build();
+        }
+        try {
+            masterService.deleteFromSpecificCollections(ticker, collections);
+            return ResponseEntity.ok("Ticker " + ticker + " deleted from " + collections.size() + " collection(s) successfully");
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Error deleting ticker: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Bulk delete multiple tickers from all collections
+     * Expected body: ["AAPL", "TSLA", "MSFT", ...]
+     */
+    @DeleteMapping("/master/delete-bulk")
+    public ResponseEntity<String> deleteBulkFromAllCollections(@RequestBody List<String> tickers) {
+        if (tickers == null || tickers.isEmpty()) {
+            return ResponseEntity.badRequest().body("No tickers provided");
+        }
+        try {
+            int successCount = 0;
+            int failCount = 0;
+            StringBuilder errors = new StringBuilder();
+
+            for (String ticker : tickers) {
+                try {
+                    if (masterService.exists(ticker)) {
+                        masterService.deleteFromAllCollections(ticker);
+                        successCount++;
+                    } else {
+                        failCount++;
+                        errors.append(ticker).append(" (not found), ");
+                    }
+                } catch (Exception e) {
+                    failCount++;
+                    errors.append(ticker).append(" (error: ").append(e.getMessage()).append("), ");
+                }
+            }
+
+            String message = String.format("Deleted %d ticker(s) successfully", successCount);
+            if (failCount > 0) {
+                message += String.format(", %d failed: %s", failCount, errors);
+            }
+            return ResponseEntity.ok(message);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Bulk delete failed: " + e.getMessage());
+        }
+    }
+
     @PutMapping("/master/{ticker:.+}")
     public ResponseEntity<Master> updateMaster(@PathVariable String ticker, @RequestBody Master master) {
         if (!masterService.exists(ticker)) return ResponseEntity.notFound().build();
@@ -53,6 +127,14 @@ public class MasterController {
     @GetMapping("/master/list")
     public ResponseEntity<List<Master>> getAllMaster() {
         return ResponseEntity.ok(masterService.list());
+    }
+
+    /**
+     * Get all masters with current price from stock collection
+     */
+    @GetMapping("/master/list-with-price")
+    public ResponseEntity<List<Master>> getAllMasterWithPrice() {
+        return ResponseEntity.ok(masterService.listWithCurrentPrice());
     }
 
     @PatchMapping("/master/{ticker:.+}/etrade-pattern")
@@ -71,6 +153,26 @@ public class MasterController {
         if (master == null) return ResponseEntity.notFound().build();
 
         master.setMyFavorite(value);
+        Master saved = masterService.update(ticker, master);
+        return ResponseEntity.ok(saved);
+    }
+
+    @PatchMapping("/master/{ticker:.+}/my-daytrade")
+    public ResponseEntity<Master> updateMyDayTrade(@PathVariable String ticker, @RequestParam String value) {
+        Master master = masterService.getByTicker(ticker).orElse(null);
+        if (master == null) return ResponseEntity.notFound().build();
+
+        master.setMyDayTrade(value);
+        Master saved = masterService.update(ticker, master);
+        return ResponseEntity.ok(saved);
+    }
+
+    @PatchMapping("/master/{ticker:.+}/etf2x")
+    public ResponseEntity<Master> updateEtf2X(@PathVariable String ticker, @RequestParam String value) {
+        Master master = masterService.getByTicker(ticker).orElse(null);
+        if (master == null) return ResponseEntity.notFound().build();
+
+        master.setEtf2X(value);
         Master saved = masterService.update(ticker, master);
         return ResponseEntity.ok(saved);
     }

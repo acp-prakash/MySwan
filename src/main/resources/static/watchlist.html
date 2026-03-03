@@ -597,6 +597,24 @@
                         }
                     },
                     {
+                        title: "Trade?",
+                        field: "stock.confidenceTier.tradeable",
+                        width: 60,
+                        hozAlign: "center",
+                        headerFilter: "list",
+                        headerFilterParams: {values: {"": "All", "true": "✓"}},
+                        formatter: function(cell) {
+                            const tradeable = cell.getValue();
+                            const rowData = cell.getRow().getData();
+                            const gatePass = rowData?.stock?.gateSignal?.gatePass;
+                            const gateType = rowData?.stock?.gateSignal?.gateType;
+                            if (gatePass && gateType === 'DAY_1_ENTRY' && tradeable === true) {
+                                return '<span style="background: #22c55e; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 700;">TRADE</span>';
+                            }
+                            return '';
+                        }
+                    },
+                    {
                         title: "Opt",
                         field: "optionPref",
                         width: 65,
