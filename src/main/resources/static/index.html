@@ -1120,18 +1120,14 @@
                     <i class="fas fa-chart-area"></i> Fetch Patterns
                 </button>
 
-                <button class="btn btn-primary" id="refreshOptionsBtn">
-                    <i class="fas fa-arrows-rotate"></i> Refresh Options
-                </button>
-
-                <button class="btn btn-secondary" id="syncOptionsHistoryBtn">
-                    <i class="fas fa-database"></i> Sync Options History
-                </button>
-
                 <label style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; font-size: 13px; cursor: pointer; margin-left: 8px;">
                     <input type="checkbox" id="onlyMyFavCheckboxIndex" style="cursor: pointer; width: 16px; height: 16px;">
                     <span style="color: var(--text-primary); font-weight: 500;">Only My Favorites</span>
                 </label>
+
+                <button class="btn btn-primary" id="refreshOptionsBtn">
+                    <i class="fas fa-arrows-rotate"></i> Refresh Options
+                </button>
 
                 <button class="btn btn-success" id="updateScoringBtn">
                     <i class="fas fa-calculator"></i> Calculate Scoring
@@ -1694,6 +1690,7 @@
             {title: "BTTrend", field: "rating.btTrend", headerFilter: "input", width: 80},
             {title: "HistDate", field: "histDate", headerFilter: "input", width: 100},
         ];
+
 
         // Slider Filter Logic
         const sliderConfig = {
@@ -2941,7 +2938,7 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
 
             try {
-                const response = await fetch(`${API_BASE}/options/refresh`, { method: 'POST' });
+                const response = await fetch(`${API_BASE}/external/options/getOptions`, { method: 'POST' });
                 const message = await response.text();
                 if (response.ok) {
                     alert(message || 'Options refresh completed successfully.');
@@ -2957,29 +2954,6 @@
             }
         }
 
-        async function syncOptionsHistory() {
-            if (!confirm('Create an options history snapshot for today?')) return;
-
-            const btn = document.getElementById('syncOptionsHistoryBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
-
-            try {
-                const response = await fetch(`${API_BASE}/options/sync-history`, { method: 'POST' });
-                const message = await response.text();
-                if (response.ok) {
-                    alert(message || 'Options history sync completed successfully.');
-                } else {
-                    throw new Error(message || 'Options history sync failed');
-                }
-            } catch (error) {
-                console.error('Error syncing options history:', error);
-                alert('Error: ' + error.message);
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-database"></i> Sync Options History';
-            }
-        }
 
         // Event Listeners
         document.getElementById('collectionSelect').addEventListener('change', loadData);
@@ -3000,7 +2974,6 @@
         document.getElementById('updateFuturesBtn').addEventListener('click', updateFutures);
         document.getElementById('fetchPatternsBtn').addEventListener('click', fetchPatterns);
         document.getElementById('refreshOptionsBtn').addEventListener('click', refreshOptionsData);
-        document.getElementById('syncOptionsHistoryBtn').addEventListener('click', syncOptionsHistory);
         document.getElementById('deleteSelectedBtn').addEventListener('click', deleteSelectedTickers);
 
         // Slider Event Listeners

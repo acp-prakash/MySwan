@@ -225,11 +225,18 @@
         <!-- Robinhood -->
         <div class="section">
             <h3>🤖 Robinhood</h3>
-            <div class="current" id="robinhoodCurrent">Token: Loading...</div>
+            <div class="current" id="robinhoodCurrent">Token: Loading... | URL: Loading...</div>
             <div class="row">
                 <div style="flex: 1;">
                     <label>Auth Token</label>
                     <textarea id="robinhoodToken" placeholder="Paste Robinhood token"></textarea>
+                </div>
+            </div>
+            <div class="row">
+                <div style="flex: 1;">
+                    <label>Options URL (full URL with ids query params)</label>
+                    <textarea id="robinhoodUrl" rows="4" placeholder="https://api.robinhood.com/marketdata/options/?ids=8c169e99-265b-449a-9a4d-cb00dc1c5d36%2C...&include_all_sessions=false" style="min-height: 80px; word-break: break-all;"></textarea>
+                    <span style="font-size: 10px; color: #64748b;">Example: https://api.robinhood.com/marketdata/options/?ids=UUID1%2CUUID2&include_all_sessions=false</span>
                 </div>
             </div>
             <div class="btn-group">
@@ -271,7 +278,8 @@
 
                 // Robinhood
                 const rhToken = data.robinhoodToken ? data.robinhoodToken.substring(0, 15) + '...' : 'Not set';
-                document.getElementById('robinhoodCurrent').textContent = `Token: ${rhToken}`;
+                const rhUrl = data.robinhoodUrl ? data.robinhoodUrl.substring(0, 40) + '...' : 'Not set';
+                document.getElementById('robinhoodCurrent').textContent = `Token: ${rhToken} | URL: ${rhUrl}`;
             } catch (err) {
                 console.error('Error loading settings:', err);
             }
@@ -311,11 +319,13 @@
                 if (cookie) payload.etradeCookie = cookie;
             } else if (provider === 'robinhood') {
                 const token = document.getElementById('robinhoodToken').value.trim();
-                if (!token) {
-                    showStatus(statusId, 'Enter the token', 'error');
+                const url = document.getElementById('robinhoodUrl').value.trim();
+                if (!token && !url) {
+                    showStatus(statusId, 'Enter at least one field', 'error');
                     return;
                 }
-                payload.robinhoodToken = token;
+                if (token) payload.robinhoodToken = token;
+                if (url) payload.robinhoodUrl = url;
             }
 
             await sendSave(payload, statusId, provider);
@@ -332,6 +342,7 @@
             const etToken = document.getElementById('etradeToken').value.trim();
             const etCookie = document.getElementById('etradeCookie').value.trim();
             const rhToken = document.getElementById('robinhoodToken').value.trim();
+            const rhUrl = document.getElementById('robinhoodUrl').value.trim();
 
             if (bcToken) payload.barchartToken = bcToken;
             if (bcCookie) payload.barchartCookie = bcCookie;
@@ -340,6 +351,7 @@
             if (etToken) payload.etradeToken = etToken;
             if (etCookie) payload.etradeCookie = etCookie;
             if (rhToken) payload.robinhoodToken = rhToken;
+            if (rhUrl) payload.robinhoodUrl = rhUrl;
 
             if (Object.keys(payload).length === 0) {
                 alert('Enter at least one field');
@@ -403,6 +415,7 @@
             }
             if (provider === 'robinhood' || provider === 'all') {
                 document.getElementById('robinhoodToken').value = '';
+                document.getElementById('robinhoodUrl').value = '';
             }
         }
 

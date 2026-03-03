@@ -3,11 +3,9 @@ package org.myswan.controller.internal;
 import lombok.extern.slf4j.Slf4j;
 import org.myswan.model.collection.Options;
 import org.myswan.service.internal.OptionsService;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
 import java.util.List;
 
 @Slf4j
@@ -64,23 +62,15 @@ public class OptionsController {
         return ResponseEntity.ok("Option deleted successfully");
     }
 
-    @PostMapping("/options/sync-history")
-    public ResponseEntity<String> syncOptionsHistory() {
-        log.info("Syncing options history snapshot");
-        optionsService.syncOptionsHistory();
-        return ResponseEntity.ok("Options history synced successfully");
-    }
 
     @GetMapping("/options/history/{ticker}")
     public ResponseEntity<List<Options>> getOptionsHistory(@PathVariable String ticker) {
         return ResponseEntity.ok(optionsService.getOptionsHistory(ticker));
     }
 
-    @PostMapping("/options/refresh")
-    public ResponseEntity<String> refreshOptions(@RequestParam(value = "histDate", required = false)
-                                                 @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate histDate) {
-        int count = optionsService.refreshOptions(histDate);
-        return ResponseEntity.ok("Refreshed " + count + " options");
+    @GetMapping("/options/history/byOptionId/{optionId}")
+    public ResponseEntity<List<Options>> getOptionsHistoryByOptionId(@PathVariable String optionId) {
+        return ResponseEntity.ok(optionsService.getOptionsHistoryByOptionId(optionId));
     }
 }
 

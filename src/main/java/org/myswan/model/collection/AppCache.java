@@ -27,4 +27,5 @@ public class AppCache {
     private String tradingViewToken;
     private String tradingViewCookie;
     private String robinhoodToken;
+    private String robinhoodUrl;
 }

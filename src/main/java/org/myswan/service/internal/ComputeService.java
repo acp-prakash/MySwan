@@ -33,6 +33,7 @@ public class ComputeService {
     private final DailyRanking dailyRanking;
     private final SyncService syncService;
     private final PicksService picksService;
+    private final OptionsService optionsService;
     private final GateSignalDetect gateSignalDetect;
     private final ConfidenceTierDetect confidenceTierDetect;
 
@@ -42,7 +43,7 @@ public class ComputeService {
                           SpikeDetect spikeDetect, OversoldBounceDetect oversoldBounceDetect,
                           MomentumPopDetect momentumPopDetect, FilterCategoryDetect filterCategoryDetect,
                           ConsecutiveDaysCalculator consecutiveDaysCalculator, DailyRanking dailyRanking,
-                          SyncService syncService, PicksService picksService,
+                          SyncService syncService, PicksService picksService, OptionsService optionsService,
                           GateSignalDetect gateSignalDetect, ConfidenceTierDetect confidenceTierDetect) {
         this.stockService = stockService;
         this.patternService = patternService;
@@ -60,6 +61,7 @@ public class ComputeService {
         this.dailyRanking = dailyRanking;
         this.syncService = syncService;
         this.picksService = picksService;
+        this.optionsService = optionsService;
         this.gateSignalDetect = gateSignalDetect;
         this.confidenceTierDetect = confidenceTierDetect;
     }
@@ -266,19 +268,19 @@ public class ComputeService {
 
             allPatterns.parallelStream().forEach(pattern -> {
                 String ticker = pattern.getTicker() != null ? pattern.getTicker().toUpperCase() : "";
-                Stock stock = allList.stream()
+                allList.stream()
                         .filter(s -> ticker.equalsIgnoreCase(s.getTicker()))
-                        .findFirst()
-                        .orElse(null);
-                if (stock != null) {
-                    pattern.setStock(stock);
-                }
+                        .findFirst().ifPresent(pattern::setStock);
             });
             patternService.deleteAll();
             patternService.saveAll(allPatterns);
 
             picksService.syncWithStockData(allList);
             log.info("syncWithStockData completed");
+            optionsService.syncWithStockData(allList);
+            log.info("options syncWithStockData completed");
+            optionsService.calculateAllDaysUpDown();
+            log.info("options calculateAllDaysUpDown completed");
             syncService.syncAllHistory();
             log.info("syncAllHistory completed");
             return "Scoring calculation complete: " + allList.size() + " stocks processed";
