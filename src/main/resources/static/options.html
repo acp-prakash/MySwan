@@ -185,7 +185,7 @@
                 { title: 'Name',       field: 'optionName',      width: 110, headerFilter: 'input' },
                 { title: 'Type',       field: 'type',            width: 70,  headerFilter: 'list',
                   headerFilterParams: { values: { '': 'All', CALL: 'CALL', PUT: 'PUT' } }, formatter: badgeFmt },
-                { title: 'D±',      field: 'daysUpDown',      width: 50,  hozAlign: 'center',
+                { title: 'D±',      field: 'daysUpDown',      width: 55,  hozAlign: 'center',
                   headerFilter: 'input', headerFilterFunc: customNumberFilter,
                   formatter: function(cell) {
                     const v = cell.getValue();
@@ -194,20 +194,21 @@
                     return `<span style="color:${color}; font-weight:600;">${v > 0 ? '+' : ''}${v}</span>`;
                   }
                 },
-                { title: 'AddPr', field: 'priceOnAdd',   width: 70, headerFilter: 'input', headerFilterFunc: customNumberFilter, formatter: numFmt },
-                { title: 'Price',      field: 'price',           width: 70,  headerFilter: 'input', headerFilterFunc: customNumberFilter, formatter: numFmt },
                 { title: 'Chg',     field: 'change',          width: 70,  headerFilter: 'input', headerFilterFunc: customNumberFilter, formatter: signedFmt, sorter: 'number' },
-                { title: 'High',       field: 'high',            width: 80,  headerFilter: 'input', headerFilterFunc: customNumberFilter, formatter: numFmt },
+                { title: 'AddPr', field: 'priceOnAdd',   width: 75, headerFilter: 'input', headerFilterFunc: customNumberFilter, formatter: numFmt },
+
                 { title: 'Low',        field: 'low',             width: 80,  headerFilter: 'input', headerFilterFunc: customNumberFilter, formatter: numFmt },
-                { title: 'Vol',     field: 'volume',          width: 80,  headerFilter: 'input', headerFilterFunc: customNumberFilter, formatter: intFmt },
+                { title: 'Price',      field: 'price',           width: 70,  headerFilter: 'input', headerFilterFunc: customNumberFilter, formatter: numFmt },
+                { title: 'High',       field: 'high',            width: 80,  headerFilter: 'input', headerFilterFunc: customNumberFilter, formatter: numFmt },
+                { title: 'Vol',     field: 'volume',          width: 75,  headerFilter: 'input', headerFilterFunc: customNumberFilter, formatter: intFmt },
                 { title: 'OpInt',   field: 'openInterest',    width: 80,  headerFilter: 'input', headerFilterFunc: customNumberFilter, formatter: intFmt },
-                { title: 'Botm',     field: 'stock.bottom.bottom',          width: 55, hozAlign: 'center', headerFilter: 'input', headerFilterPlaceholder: 'true',
+                { title: 'Botm',     field: 'stock.bottom.bottom',          width: 70, hozAlign: 'center', headerFilter: 'input', headerFilterPlaceholder: 'true',
                   formatter: function(cell){ const v = cell.getValue(); return (v === true || v === 'true') ? '✅' : ''; }
                 },
-                { title: 'Spike',    field: 'stock.spike.spikeLikely',      width: 55, hozAlign: 'center', headerFilter: 'input', headerFilterPlaceholder: 'true',
+                { title: 'Spike',    field: 'stock.spike.spikeLikely',      width: 70, hozAlign: 'center', headerFilter: 'input', headerFilterPlaceholder: 'true',
                   formatter: function(cell){ const v = cell.getValue(); return (v === true || v === 'true') ? '✅' : ''; }
                 },
-                { title: 'OvrSold',  field: 'stock.oversold.oversoldBounce', width: 70, hozAlign: 'center', headerFilter: 'input', headerFilterPlaceholder: 'true',
+                { title: 'OvrSold',  field: 'stock.oversold.oversoldBounce', width: 85, hozAlign: 'center', headerFilter: 'input', headerFilterPlaceholder: 'true',
                   formatter: function(cell){ const v = cell.getValue(); return (v === true || v === 'true') ? '✅' : ''; }
                 },
                 { title: 'Delta',      field: 'delta',           width: 70,  headerFilter: 'input', headerFilterFunc: customNumberFilter, formatter: numFmt },
@@ -215,8 +216,8 @@
                 { title: 'Theta',      field: 'theta',           width: 70,  headerFilter: 'input', headerFilterFunc: customNumberFilter, formatter: numFmt },
                 { title: 'Vega',       field: 'vega',            width: 70,  headerFilter: 'input', headerFilterFunc: customNumberFilter, formatter: numFmt },
                 { title: 'IV',         field: 'iv',              width: 65,  headerFilter: 'input', headerFilterFunc: customNumberFilter, formatter: numFmt },
-                { title: 'StkPr',  field: 'stock.price',     width: 65,  headerFilter: 'input', headerFilterFunc: customNumberFilter, formatter: numFmt },
-                { title: 'StkChg',   field: 'stock.change',     width: 65,  headerFilter: 'input', headerFilterFunc: customNumberFilter, formatter: signedFmt },
+                { title: 'StkPr',  field: 'stock.price',     width: 85,  headerFilter: 'input', headerFilterFunc: customNumberFilter, formatter: numFmt },
+                { title: 'StkChg',   field: 'stock.change',     width: 80,  headerFilter: 'input', headerFilterFunc: customNumberFilter, formatter: signedFmt },
             ]
         });
 

@@ -246,6 +246,58 @@
             <div class="status" id="robinhoodStatus"></div>
         </div>
 
+        <!-- Scheduler -->
+        <div class="section">
+            <h3>⏰ Scheduler</h3>
+
+            <!-- Status badge -->
+            <div id="schedulerBadge" style="
+                display:inline-flex; align-items:center; gap:8px;
+                padding:6px 14px; border-radius:20px; font-size:13px; font-weight:700;
+                background:#1a1f2e; border:2px solid #3f4a5f; margin-bottom:10px; cursor:default;">
+                <span id="schedulerBadgeDot">⚫</span>
+                <span id="schedulerBadgeText">Loading…</span>
+            </div>
+
+            <!-- Failed step info (hidden when healthy) -->
+            <div id="schedulerFailInfo" style="
+                display:none; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.4);
+                border-radius:5px; padding:8px 10px; margin-bottom:10px; font-size:11px; color:#ef4444;">
+                <strong>❌ Failed step:</strong> <span id="failStepName"></span><br>
+                <strong>Error:</strong> <span id="failStepError" style="font-family:monospace;word-break:break-all;"></span><br>
+                <span style="color:#94a3b8;font-size:10px;">at <span id="failStepAt"></span></span>
+            </div>
+
+            <!-- Controls -->
+            <div class="row">
+                <div style="flex:1;">
+                    <label>Interval (minutes)</label>
+                    <input type="number" id="schedulerInterval" min="1" max="1440" placeholder="e.g. 30">
+                </div>
+                <div style="flex:1;">
+                    <label>Window Start (hour, 24h)</label>
+                    <input type="number" id="schedulerStartHour" min="0" max="23" placeholder="8">
+                </div>
+                <div style="flex:1;">
+                    <label>Window End (hour, 24h)</label>
+                    <input type="number" id="schedulerEndHour" min="0" max="23" placeholder="18">
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn-save" onclick="saveScheduler()">💾 Save</button>
+                <button id="btnEnable"  style="background:#22c55e;color:#fff;padding:6px 16px;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;" onclick="toggleScheduler(true)">▶ Enable</button>
+                <button id="btnDisable" style="background:#ef4444;color:#fff;padding:6px 16px;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;" onclick="toggleScheduler(false)">⏹ Disable</button>
+            </div>
+
+            <div style="margin-top:8px;font-size:11px;color:#64748b;">
+                Runs pipeline: Barchart → TradingView → Options → Compute (sync history is part of Compute), only between start–end hour.<br>
+                If any step fails the scheduler auto-disables and the badge turns 🔴. Live pipeline status is shown on the <a href="index.html" style="color:#ffd700;">Dashboard</a>.
+            </div>
+
+            <div class="status" id="schedulerStatus"></div>
+        </div>
+
         <!-- Save All -->
         <div style="text-align: center; margin-top: 15px;">
             <button class="btn-save" style="padding: 8px 30px;" onclick="saveAll()">💾 Save All</button>
@@ -431,6 +483,82 @@
 
         // Load on page load
         loadCurrent();
+        loadScheduler();
+
+        // ── Scheduler ────────────────────────────────────────────────────────
+
+        async function loadScheduler() {
+            try {
+                const res = await fetch(`${API}/scheduler/config`);
+                if (!res.ok) return;
+                const cfg = await res.json();
+                renderSchedulerBadge(cfg);
+                document.getElementById('schedulerInterval').value  = cfg.intervalMinutes || 30;
+                document.getElementById('schedulerStartHour').value = cfg.windowStartHour !== undefined ? cfg.windowStartHour : 8;
+                document.getElementById('schedulerEndHour').value   = cfg.windowEndHour   !== undefined ? cfg.windowEndHour   : 18;
+            } catch (err) {
+                console.error('Error loading scheduler config:', err);
+            }
+        }
+
+        function renderSchedulerBadge(cfg) {
+            const dot      = document.getElementById('schedulerBadgeDot');
+            const text     = document.getElementById('schedulerBadgeText');
+            const badge    = document.getElementById('schedulerBadge');
+            const failInfo = document.getElementById('schedulerFailInfo');
+
+            if (cfg.running) {
+                dot.textContent  = '⏳';
+                text.textContent = 'RUNNING…';
+                badge.style.borderColor = '#facc15';
+                failInfo.style.display  = 'none';
+            } else if (cfg.enabled) {
+                dot.textContent  = '🟢';
+                text.textContent = `ON — every ${cfg.intervalMinutes}m | ${cfg.windowStartHour}:00 – ${cfg.windowEndHour}:00`;
+                badge.style.borderColor = '#22c55e';
+                failInfo.style.display  = 'none';
+            } else if (cfg.lastFailedStep) {
+                dot.textContent  = '🔴';
+                text.textContent = `OFF — failed at: ${cfg.lastFailedStep}`;
+                badge.style.borderColor = '#ef4444';
+                document.getElementById('failStepName').textContent  = cfg.lastFailedStep  || '—';
+                document.getElementById('failStepError').textContent = cfg.lastFailedError || '—';
+                const fmtTs = iso => { try { return new Date(iso).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'}); } catch(_){return iso;} };
+                document.getElementById('failStepAt').textContent    = cfg.lastFailedAt ? fmtTs(cfg.lastFailedAt) : '—';
+                failInfo.style.display = 'block';
+            } else {
+                dot.textContent  = '⚫';
+                text.textContent = 'OFF';
+                badge.style.borderColor = '#3f4a5f';
+                failInfo.style.display  = 'none';
+            }
+        }
+
+        async function saveScheduler() {
+            const interval  = parseInt(document.getElementById('schedulerInterval').value)  || 30;
+            const startHour = parseInt(document.getElementById('schedulerStartHour').value) || 8;
+            const endHour   = parseInt(document.getElementById('schedulerEndHour').value)   || 18;
+            const payload   = { intervalMinutes: interval, windowStartHour: startHour, windowEndHour: endHour };
+            try {
+                const cur = await fetch(`${API}/scheduler/config`);
+                if (cur.ok) { const ex = await cur.json(); payload.enabled = ex.enabled; }
+            } catch(_) {}
+            try {
+                const res = await fetch(`${API}/scheduler/config`, {
+                    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                });
+                if (res.ok) { renderSchedulerBadge(await res.json()); showStatus('schedulerStatus', 'Scheduler config saved!', 'success'); }
+                else showStatus('schedulerStatus', 'Failed to save', 'error');
+            } catch (err) { showStatus('schedulerStatus', 'Error: ' + err.message, 'error'); }
+        }
+
+        async function toggleScheduler(enable) {
+            try {
+                const res = await fetch(`${API}/scheduler/${enable ? 'enable' : 'disable'}`, { method: 'POST' });
+                if (res.ok) { renderSchedulerBadge(await res.json()); showStatus('schedulerStatus', enable ? '▶ Enabled' : '⏹ Disabled', enable ? 'success' : 'error'); }
+                else showStatus('schedulerStatus', 'Failed to toggle', 'error');
+            } catch (err) { showStatus('schedulerStatus', 'Error: ' + err.message, 'error'); }
+        }
     </script>
 </body>
 </html>

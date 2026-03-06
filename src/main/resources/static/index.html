@@ -995,6 +995,18 @@
             writing-mode: horizontal-tb !important;
             transform: none !important;
         }
+        /* Pipeline bar step chips */
+        .pb-chip {
+            display: inline-flex; align-items: center; gap: 3px;
+            padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 700;
+            white-space: nowrap;
+        }
+        .pb-chip .pb-dur { font-weight: 400; opacity: .75; margin-left:2px; }
+        .pb-PENDING { background:#1e293b; color:#475569; }
+        .pb-RUNNING { background:rgba(250,204,21,.15); color:#facc15; }
+        .pb-SUCCESS { background:rgba(34,197,94,.15);  color:#22c55e; }
+        .pb-FAILED  { background:rgba(239,68,68,.15);  color:#ef4444; }
+        .pb-sep { color:#334155; }
     </style>
 </head>
 <body>
@@ -1023,6 +1035,16 @@
             </nav>
         </div>
     </header>
+
+    <!-- Scheduler Pipeline Bar -->
+    <div id="pipelineBar" style="display:none; background:#0f172a; border-bottom:1px solid #1e293b; padding:4px 12px;">
+        <div style="display:flex; align-items:center; gap:6px; flex-wrap:nowrap; overflow-x:auto; white-space:nowrap; font-size:11px;">
+            <span id="pipelineBarBadge" style="font-size:12px; font-weight:700; margin-right:4px;"></span>
+            <span id="pipelineBarMeta" style="color:#64748b; margin-right:8px; font-size:10px;"></span>
+            <span id="pipelineBarSteps" style="display:flex; gap:4px; align-items:center;"></span>
+            <span id="pipelineBarRefreshLabel" style="color:#475569; font-size:10px; margin-left:auto; padding-left:12px; flex-shrink:0;"></span>
+        </div>
+    </div>
 
     <!-- Main Container -->
     <div class="container">
@@ -3010,6 +3032,112 @@
                 icon.style.transform = 'rotate(-90deg)';
             }
         }
+
+        // ── Scheduler Pipeline Bar ───────────────────────────────────────────
+        (function() {
+            const API_BASE = 'http://jpmaxtricks.com:8070/api';
+            let pbAutoTimer = null, pbCdTimer = null, pbCdSecs = 0;
+            let lastKnownSuccessAt = null;   // tracks last seen success timestamp
+
+            const ICONS = { PENDING:'⬜', RUNNING:'⏳', SUCCESS:'✅', FAILED:'❌' };
+
+            function fmtTs(iso) {
+                if (!iso) return '—';
+                try { return new Date(iso).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+                catch(_) { return iso; }
+            }
+
+            function stepDur(s) {
+                if (!s.startedAt) return '';
+                const ms = (s.finishedAt ? new Date(s.finishedAt) : new Date()) - new Date(s.startedAt);
+                const sec = Math.round(ms / 1000);
+                return s.finishedAt ? `${sec}s` : `${sec}s…`;
+            }
+
+            function render(cfg) {
+                const bar      = document.getElementById('pipelineBar');
+                const badge    = document.getElementById('pipelineBarBadge');
+                const meta     = document.getElementById('pipelineBarMeta');
+                const stepsEl  = document.getElementById('pipelineBarSteps');
+
+                // Only show bar if there has been at least one run or scheduler is on
+                if (!cfg.enabled && !cfg.lastRunStartedAt && !cfg.lastFailedStep) {
+                    bar.style.display = 'none';
+                    return;
+                }
+                bar.style.display = 'block';
+
+                // Badge
+                if (cfg.running) {
+                    badge.textContent = '⏳ RUNNING';
+                    badge.style.color = '#facc15';
+                } else if (cfg.enabled) {
+                    badge.textContent = '🟢 ON';
+                    badge.style.color = '#22c55e';
+                } else if (cfg.lastFailedStep) {
+                    badge.textContent = '🔴 FAILED';
+                    badge.style.color = '#ef4444';
+                } else {
+                    badge.textContent = '⚫ OFF';
+                    badge.style.color = '#64748b';
+                }
+
+                // Meta
+                const parts = [];
+                if (cfg.lastRunStartedAt) parts.push(fmtTs(cfg.lastRunStartedAt));
+                if (cfg.running)          parts.push('in progress…');
+                else if (cfg.lastSuccessAt) parts.push('done ' + fmtTs(cfg.lastSuccessAt));
+                else if (cfg.lastFailedAt)  parts.push('failed ' + fmtTs(cfg.lastFailedAt));
+                meta.textContent = parts.join(' · ');
+
+                // Step chips
+                const steps = cfg.stepStatuses || [];
+                if (steps.length === 0) {
+                    stepsEl.innerHTML = '<span style="color:#475569;font-style:italic;font-size:10px;">No run data</span>';
+                    return;
+                }
+                stepsEl.innerHTML = steps.map((s, i) => {
+                    const dur = stepDur(s);
+                    const sep = i < steps.length - 1 ? '<span class="pb-sep">›</span>' : '';
+                    const tooltip = s.error ? ` title="${s.error.replace(/"/g,'&quot;')}"` : '';
+                    return `<span class="pb-chip pb-${s.status || 'PENDING'}"${tooltip}>${ICONS[s.status]||'⬜'} ${s.name}${dur ? `<span class="pb-dur">${dur}</span>` : ''}</span>${sep}`;
+                }).join('');
+            }
+
+            function managePbAutoRefresh(cfg) {
+                const label = document.getElementById('pipelineBarRefreshLabel');
+                const sec   = cfg.running ? 5 : (cfg.enabled ? 15 : 0);
+                clearInterval(pbAutoTimer); clearInterval(pbCdTimer);
+                if (!sec) { label.textContent = ''; return; }
+                pbCdSecs = sec;
+                label.textContent = `↻ ${pbCdSecs}s`;
+                pbCdTimer  = setInterval(() => { pbCdSecs--; if(pbCdSecs<=0)pbCdSecs=sec; label.textContent=`↻ ${pbCdSecs}s`; }, 1000);
+                pbAutoTimer = setInterval(fetchPipeline, sec * 1000);
+            }
+
+            async function fetchPipeline() {
+                try {
+                    const r = await fetch(`${API_BASE}/scheduler/config`);
+                    if (!r.ok) return;
+                    const cfg = await r.json();
+                    render(cfg);
+                    managePbAutoRefresh(cfg);
+
+                    // Auto-refresh stock grid when a new pipeline run completes
+                    if (cfg.lastSuccessAt && cfg.lastSuccessAt !== lastKnownSuccessAt) {
+                        if (lastKnownSuccessAt !== null) {
+                            // A new success just landed – reload the grid silently
+                            console.debug('Pipeline completed, refreshing stocks grid…');
+                            if (typeof loadData === 'function') loadData();
+                        }
+                        lastKnownSuccessAt = cfg.lastSuccessAt;
+                    }
+                } catch(_) {}
+            }
+
+            // Kick off on page load
+            window.addEventListener('DOMContentLoaded', fetchPipeline);
+        })();
     </script>
 </body>
 </html>
