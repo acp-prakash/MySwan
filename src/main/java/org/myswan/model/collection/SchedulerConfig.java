@@ -51,6 +51,23 @@ public class SchedulerConfig {
     /** Per-step progress: written live as each step starts/ends */
     private List<StepStatus> stepStatuses = new ArrayList<>();
 
+    // ── Pattern scheduler (independent loop) ────────────────────────────────
+
+    /** Interval in minutes between pattern fetch runs – minimum enforced at 20 */
+    private int patternIntervalMinutes = 20;
+
+    /** true while a pattern fetch is actively executing */
+    private boolean patternRunning = false;
+
+    /** ISO timestamp when the last pattern run started */
+    private String patternLastRunAt;
+
+    /** Error message from the last failed pattern fetch (null if last run was OK) */
+    private String patternLastFailedError;
+
+    /** ISO timestamp of the last pattern fetch failure */
+    private String patternLastFailedAt;
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor

@@ -1036,13 +1036,45 @@
         </div>
     </header>
 
-    <!-- Scheduler Pipeline Bar -->
+    <!-- Scheduler Pipeline Bar + Pattern Fetch Bar (single row) -->
     <div id="pipelineBar" style="display:none; background:#0f172a; border-bottom:1px solid #1e293b; padding:4px 12px;">
         <div style="display:flex; align-items:center; gap:6px; flex-wrap:nowrap; overflow-x:auto; white-space:nowrap; font-size:11px;">
+
+            <!-- ── Pipeline section ── -->
             <span id="pipelineBarBadge" style="font-size:12px; font-weight:700; margin-right:4px;"></span>
-            <span id="pipelineBarMeta" style="color:#64748b; margin-right:8px; font-size:10px;"></span>
+            <span id="pipelineBarMeta" style="color:#64748b; margin-right:4px; font-size:10px;"></span>
             <span id="pipelineBarSteps" style="display:flex; gap:4px; align-items:center;"></span>
-            <span id="pipelineBarRefreshLabel" style="color:#475569; font-size:10px; margin-left:auto; padding-left:12px; flex-shrink:0;"></span>
+            <span id="pipelineBarRefreshLabel" style="color:#475569; font-size:10px; padding-left:8px; flex-shrink:0;"></span>
+
+            <!-- ── Divider ── -->
+            <span style="width:1px; height:16px; background:#1e293b; flex-shrink:0; margin:0 8px;"></span>
+
+            <!-- ── Pattern section ── -->
+            <span style="color:#475569; font-size:10px; font-weight:600; flex-shrink:0;">PATTERNS</span>
+            <span id="patternBarBadge" style="font-size:11px; font-weight:700; margin-right:4px;"></span>
+            <span id="patternBarMeta" style="color:#64748b; font-size:10px;"></span>
+            <span id="patternBarChip" style="display:flex; gap:4px; align-items:center;"></span>
+
+            <!-- ── Pattern interval editor ── -->
+            <span id="patternIntervalInline" style="display:inline-flex; align-items:center; gap:4px; margin-left:4px; flex-shrink:0;">
+                <button onclick="togglePatternIntervalEdit()" title="Change pattern fetch interval"
+                    style="background:none; border:none; cursor:pointer; color:#475569; font-size:11px; padding:0; line-height:1;">⚙</button>
+                <span id="patternIntervalEdit" style="display:none; align-items:center; gap:4px;">
+                    <input id="patternIntervalInput" type="number" min="20" max="120" step="5"
+                        aria-label="Pattern fetch interval in minutes"
+                        style="width:44px; background:#1e293b; border:1px solid #334155; border-radius:4px;
+                               color:#e2e8f0; font-size:10px; padding:1px 4px; text-align:center;"/>
+                    <span style="color:#475569; font-size:10px;">m</span>
+                    <button onclick="savePatternInterval()"
+                        style="background:#1e40af; border:none; border-radius:4px; color:#e2e8f0;
+                               font-size:10px; padding:1px 6px; cursor:pointer; font-weight:600;">Save</button>
+                    <button onclick="togglePatternIntervalEdit()"
+                        style="background:none; border:none; color:#475569; font-size:10px; cursor:pointer; padding:0;">✕</button>
+                </span>
+            </span>
+
+            <span id="patternBarRefreshLabel" style="color:#475569; font-size:10px; margin-left:auto; padding-left:12px; flex-shrink:0;"></span>
+
         </div>
     </div>
 
@@ -3104,6 +3136,79 @@
                 }).join('');
             }
 
+            function renderPattern(cfg) {
+                const badge  = document.getElementById('patternBarBadge');
+                const meta   = document.getElementById('patternBarMeta');
+                const chip   = document.getElementById('patternBarChip');
+
+                // Badge
+                if (cfg.patternRunning) {
+                    badge.textContent = '⏳ RUNNING';
+                    badge.style.color = '#facc15';
+                } else if (cfg.patternLastFailedError) {
+                    badge.textContent = '🔴 FAILED';
+                    badge.style.color = '#ef4444';
+                } else if (cfg.patternLastRunAt) {
+                    badge.textContent = '✅ OK';
+                    badge.style.color = '#22c55e';
+                } else {
+                    badge.textContent = '—';
+                    badge.style.color = '#64748b';
+                }
+
+                // Meta
+                const parts = [];
+                if (cfg.patternLastRunAt) parts.push(fmtTs(cfg.patternLastRunAt));
+                if (cfg.patternRunning)               parts.push('in progress…');
+                else if (cfg.patternLastFailedError)  parts.push('failed ' + fmtTs(cfg.patternLastFailedAt));
+                meta.textContent = parts.join(' · ');
+
+                // Single chip
+                let chipStatus = 'PENDING';
+                let chipErr    = '';
+                if (cfg.patternRunning)              chipStatus = 'RUNNING';
+                else if (cfg.patternLastFailedError) { chipStatus = 'FAILED'; chipErr = cfg.patternLastFailedError; }
+                else if (cfg.patternLastRunAt)        chipStatus = 'SUCCESS';
+
+                const tooltip  = chipErr ? ` title="${chipErr.replace(/"/g,'&quot;')}"` : '';
+                const interval = Math.max(20, cfg.patternIntervalMinutes || 20);
+                chip.innerHTML = `<span class="pb-chip pb-${chipStatus}"${tooltip}>${ICONS[chipStatus]||'⬜'} Fetch Patterns</span>`
+                               + `<span style="color:#334155; font-size:10px; margin-left:4px;">every ${interval}m</span>`;
+
+                // Seed the interval input with the current value (only when editor is closed)
+                const input = document.getElementById('patternIntervalInput');
+                const editPanel = document.getElementById('patternIntervalEdit');
+                if (input && editPanel.style.display === 'none') {
+                    input.value = interval;
+                }
+            }
+
+            // ── Pattern interval inline editor ───────────────────────────────
+            window.togglePatternIntervalEdit = function() {
+                const panel = document.getElementById('patternIntervalEdit');
+                const isOpen = panel.style.display !== 'none';
+                panel.style.display = isOpen ? 'none' : 'inline-flex';
+            };
+
+            window.savePatternInterval = async function() {
+                const input = document.getElementById('patternIntervalInput');
+                const val   = parseInt(input.value, 10);
+                if (isNaN(val) || val < 20) { input.style.borderColor = '#ef4444'; return; }
+                input.style.borderColor = '#334155';
+                try {
+                    const r = await fetch(`${API_BASE}/scheduler/config`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ patternIntervalMinutes: val })
+                    });
+                    if (!r.ok) throw new Error('Save failed');
+                    togglePatternIntervalEdit();
+                    fetchPipeline();
+                } catch(e) {
+                    input.style.borderColor = '#ef4444';
+                }
+            };
+
             function managePbAutoRefresh(cfg) {
                 const label = document.getElementById('pipelineBarRefreshLabel');
                 const sec   = cfg.running ? 5 : (cfg.enabled ? 15 : 0);
@@ -3115,13 +3220,26 @@
                 pbAutoTimer = setInterval(fetchPipeline, sec * 1000);
             }
 
+            function managePatternRefreshLabel(cfg) {
+                const label = document.getElementById('patternBarRefreshLabel');
+                if (!cfg.enabled) { label.textContent = ''; return; }
+                const interval = Math.max(20, cfg.patternIntervalMinutes || 20);
+                if (cfg.patternRunning) {
+                    label.textContent = `↻ 5s`;
+                } else {
+                    label.textContent = `next in ~${interval}m`;
+                }
+            }
+
             async function fetchPipeline() {
                 try {
                     const r = await fetch(`${API_BASE}/scheduler/config`);
                     if (!r.ok) return;
                     const cfg = await r.json();
                     render(cfg);
+                    renderPattern(cfg);
                     managePbAutoRefresh(cfg);
+                    managePatternRefreshLabel(cfg);
 
                     // Auto-refresh stock grid when a new pipeline run completes
                     if (cfg.lastSuccessAt && cfg.lastSuccessAt !== lastKnownSuccessAt) {

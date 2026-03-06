@@ -43,6 +43,9 @@ public class SchedulerConfigService {
             existing.setLastFailedError(incoming.getLastFailedError());
             existing.setLastFailedAt(incoming.getLastFailedAt());
         }
+        if (incoming.getPatternIntervalMinutes() > 0) {
+            existing.setPatternIntervalMinutes(incoming.getPatternIntervalMinutes());
+        }
         return repository.save(existing);
     }
 
@@ -116,6 +119,38 @@ public class SchedulerConfigService {
                 });
         repository.save(cfg);
         log.error("Scheduler auto-disabled. Failed step: {} | Error: {}", stepName, errorMessage);
+    }
+
+    // ── Pattern-scheduler lifecycle (never touches stepStatuses / enabled / running) ──
+
+    /** Called just before a pattern fetch starts */
+    public void markPatternRunning() {
+        SchedulerConfig cfg = get();
+        cfg.setPatternRunning(true);
+        cfg.setPatternLastRunAt(Instant.now().toString());
+        repository.save(cfg);
+    }
+
+    /** Called when a pattern fetch completes successfully */
+    public void markPatternSuccess() {
+        SchedulerConfig cfg = get();
+        cfg.setPatternRunning(false);
+        cfg.setPatternLastFailedError(null);
+        cfg.setPatternLastFailedAt(null);
+        repository.save(cfg);
+    }
+
+    /**
+     * Called when a pattern fetch fails.
+     * Records the error but does NOT disable the main scheduler.
+     */
+    public void markPatternFailure(String errorMessage) {
+        SchedulerConfig cfg = get();
+        cfg.setPatternRunning(false);
+        cfg.setPatternLastFailedError(errorMessage);
+        cfg.setPatternLastFailedAt(Instant.now().toString());
+        repository.save(cfg);
+        log.error("Pattern fetch failed (main scheduler unaffected): {}", errorMessage);
     }
 
     /** Re-enables the scheduler and clears failure state */

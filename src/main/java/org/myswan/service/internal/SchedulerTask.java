@@ -3,6 +3,7 @@ package org.myswan.service.internal;
 import lombok.extern.slf4j.Slf4j;
 import org.myswan.model.collection.SchedulerConfig;
 import org.myswan.service.external.BarchartClient;
+import org.myswan.service.external.EtradeClient;
 import org.myswan.service.external.RobinHoodClient;
 import org.myswan.service.external.TradingViewClient;
 import org.springframework.scheduling.TaskScheduler;
@@ -32,18 +33,26 @@ public class SchedulerTask implements SchedulingConfigurer {
     private static final String STEP_TRADINGVIEW  = "TradingView Update";
     private static final String STEP_OPTIONS      = "Refresh Options";
     private static final String STEP_COMPUTE      = "Compute & Score";
+    private static final String STEP_FETCH_PATTERNS = "Fetch Patterns";
 
     // ── fixed polling interval – checks every 60 s whether a real run is due ─
     private static final long POLL_MS = 60_000L;
+
+    /** Minimum allowed pattern interval – enforced even if Mongo says lower */
+    private static final int PATTERN_MIN_INTERVAL_MINUTES = 20;
 
     private final SchedulerConfigService schedulerConfigService;
     private final BarchartClient barchartClient;
     private final TradingViewClient tradingViewClient;
     private final RobinHoodClient robinHoodClient;
     private final ComputeService computeService;
+    private final EtradeClient etradeClient;
 
     /** Tracks the last time the full pipeline was actually executed */
     private volatile long lastRunEpochMs = 0L;
+
+    /** Tracks the last time the pattern fetch was actually executed */
+    private volatile long lastPatternRunEpochMs = 0L;
 
     /** Holds the currently scheduled polling task so we can cancel/replace it */
     private ScheduledFuture<?> currentTask;
@@ -54,12 +63,14 @@ public class SchedulerTask implements SchedulingConfigurer {
             BarchartClient barchartClient,
             TradingViewClient tradingViewClient,
             RobinHoodClient robinHoodClient,
-            ComputeService computeService) {
+            ComputeService computeService,
+            EtradeClient etradeClient) {
         this.schedulerConfigService = schedulerConfigService;
         this.barchartClient = barchartClient;
         this.tradingViewClient = tradingViewClient;
         this.robinHoodClient = robinHoodClient;
         this.computeService = computeService;
+        this.etradeClient = etradeClient;
     }
 
     // ── SchedulingConfigurer ─────────────────────────────────────────────────
@@ -95,7 +106,7 @@ public class SchedulerTask implements SchedulingConfigurer {
             SchedulerConfig cfg = schedulerConfigService.get();
 
             if (!cfg.isEnabled()) {
-                return; // scheduler is OFF – nothing to do
+                return; // scheduler is OFF – nothing to do (pattern fetch also skipped)
             }
 
             // Window check
@@ -106,17 +117,19 @@ public class SchedulerTask implements SchedulingConfigurer {
                 return;
             }
 
-            // Interval check
+            // ── Main pipeline interval check ─────────────────────────────────
             long intervalMs = (long) cfg.getIntervalMinutes() * 60_000L;
             long elapsed    = System.currentTimeMillis() - lastRunEpochMs;
-            if (elapsed < intervalMs) {
+            if (elapsed >= intervalMs) {
+                log.info("=== Scheduler firing (interval={}m, window={}-{}) ===",
+                        cfg.getIntervalMinutes(), cfg.getWindowStartHour(), cfg.getWindowEndHour());
+                runPipeline();
+            } else {
                 log.debug("Scheduler: {} ms until next run", intervalMs - elapsed);
-                return;
             }
 
-            log.info("=== Scheduler firing (interval={}m, window={}-{}) ===",
-                    cfg.getIntervalMinutes(), cfg.getWindowStartHour(), cfg.getWindowEndHour());
-            runPipeline();
+            // ── Pattern fetch interval check (independent) ───────────────────
+            tickPatterns(cfg);
 
         } catch (Exception e) {
             log.error("Scheduler tick error (unexpected)", e);
@@ -188,6 +201,34 @@ public class SchedulerTask implements SchedulingConfigurer {
         // All steps passed
         schedulerConfigService.markSuccess();
         log.info("=== Scheduler pipeline completed successfully ===");
+    }
+
+    // ── Pattern fetch (independent loop) ─────────────────────────────────────
+
+    private void tickPatterns(SchedulerConfig cfg) {
+        int effectiveIntervalMinutes = Math.max(PATTERN_MIN_INTERVAL_MINUTES, cfg.getPatternIntervalMinutes());
+        long patternIntervalMs = (long) effectiveIntervalMinutes * 60_000L;
+        long patternElapsed    = System.currentTimeMillis() - lastPatternRunEpochMs;
+
+        if (patternElapsed < patternIntervalMs) {
+            log.debug("Pattern fetch: {} ms until next run", patternIntervalMs - patternElapsed);
+            return;
+        }
+
+        log.info("=== Pattern fetch firing (interval={}m) ===", effectiveIntervalMinutes);
+        lastPatternRunEpochMs = System.currentTimeMillis();
+
+        try {
+            schedulerConfigService.markPatternRunning();
+            log.info("[Pattern] {} starting", STEP_FETCH_PATTERNS);
+            String result = etradeClient.fetchAndSaveAllPatterns(null);
+            schedulerConfigService.markPatternSuccess();
+            log.info("[Pattern] {} ✓ → {}", STEP_FETCH_PATTERNS, result);
+        } catch (Exception e) {
+            String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+            log.error("=== Pattern fetch FAILED: {} ===", msg, e);
+            schedulerConfigService.markPatternFailure(msg);
+        }
     }
 
     private void fail(String stepName, Exception e) {
