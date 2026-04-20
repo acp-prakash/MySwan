@@ -27,6 +27,7 @@ public class GuaranteedPick {
     private int factorsPassed;
     private int convergenceScore;
     private int confidenceLevel;
+    private String strategyPath;  // "OVERSOLD_BOUNCE" or "MOMENTUM_POP"
     private List<String> passedFactors;
     private List<String> failedFactors;
 

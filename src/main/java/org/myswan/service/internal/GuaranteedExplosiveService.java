@@ -7,6 +7,7 @@ import org.myswan.model.collection.Stock;
 import org.myswan.model.compute.ExplosiveScoreDTO;
 import org.myswan.model.compute.GuaranteedCandidateDTO;
 import org.myswan.repository.GuaranteedPickRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -15,28 +16,52 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Service for detecting guaranteed explosive stocks using multi-factor convergence
+ * Service for detecting guaranteed explosive stocks using two-path
+ * convergence scoring: Path A (Oversold Bounce) and Path B (Momentum Pop).
  */
 @Getter
 @Slf4j
 @Service
 public class GuaranteedExplosiveService {
 
-    /**
-     * -- GETTER --
-     *  Get stock service (for performance tracking service)
-     */
     private final StockService stockService;
     private final GuaranteedPickRepository guaranteedPickRepository;
 
-    // Thresholds for "guaranteed" status
-    private static final int MIN_CONVERGENCE_FACTORS = 7; // Out of 10
-    private static final int GUARANTEED_THRESHOLD = 80; // Percentage score
+    // -------------------------------------------------------
+    // Configurable thresholds — tuned via application.properties
+    // -------------------------------------------------------
+    @Value("${guaranteed.min.price:3.00}")
+    private double minPrice;
 
-    // Price range filters
-    private static final double MIN_PRICE = 2.00;
-    private static final double MAX_PRICE = 50.00;
-    private static final long MIN_VOLUME = 500_000;
+    @Value("${guaranteed.max.price:30.00}")
+    private double maxPrice;
+
+    @Value("${guaranteed.min.volume:1000000}")
+    private long minVolume;
+
+    /** Winning-path score (0-100) required to qualify */
+    @Value("${guaranteed.min.path.score:80}")
+    private int minPathScore;
+
+    /** Path A (Oversold Bounce): RSI must be <= this value */
+    @Value("${guaranteed.path.a.rsi.max:35}")
+    private double pathARsiMax;
+
+    /** Path B (Momentum Pop): RSI must be >= this value */
+    @Value("${guaranteed.path.b.rsi.min:45}")
+    private double pathBRsiMin;
+
+    /** Path B (Momentum Pop): RSI must be <= this value */
+    @Value("${guaranteed.path.b.rsi.max:65}")
+    private double pathBRsiMax;
+
+    /** Minimum factors passed in the winning path (max 5) */
+    @Value("${guaranteed.min.factors:4}")
+    private int minFactors;
+
+    /** Days after pick date before performance is checked */
+    @Value("${guaranteed.tracking.days:10}")
+    private int trackingDays;
 
     public GuaranteedExplosiveService(StockService stockService,
                                      GuaranteedPickRepository guaranteedPickRepository) {
@@ -44,130 +69,278 @@ public class GuaranteedExplosiveService {
         this.guaranteedPickRepository = guaranteedPickRepository;
     }
 
+    // -------------------------------------------------------
+    // Core: Find Top 3 Guaranteed Explosive Stocks
+    // -------------------------------------------------------
+
     /**
-     * Find top 3 GUARANTEED explosive stocks
+     * Find top 3 GUARANTEED explosive stocks using two-path convergence.
+     * No fallback threshold — quality over forced top-3.
      */
     public List<GuaranteedCandidateDTO> findTop3Guaranteed() {
         List<Stock> allStocks = stockService.list();
+        log.info("=== Guaranteed Explosive Analysis: {} total stocks ===", allStocks.size());
 
-        log.info("Analyzing {} stocks for guaranteed explosive moves", allStocks.size());
-
-        List<GuaranteedCandidateDTO> candidates = allStocks.parallelStream()
+        // Stage 1: Hard pre-filters
+        List<Stock> preFiltered = allStocks.stream()
             .filter(this::passesBasicFilters)
+            .collect(Collectors.toList());
+        log.info("Pre-filter passed: {}/{}", preFiltered.size(), allStocks.size());
+
+        // Stage 2: Two-path convergence scoring
+        List<GuaranteedCandidateDTO> analyzed = preFiltered.parallelStream()
             .map(this::analyzeConvergence)
-            .filter(c -> c.getConvergenceScore() >= GUARANTEED_THRESHOLD)
-            .filter(c -> c.getFactorsPassed() >= MIN_CONVERGENCE_FACTORS)
+            .collect(Collectors.toList());
+
+        long pathACount = analyzed.stream()
+            .filter(c -> "OVERSOLD_BOUNCE".equals(c.getStrategyPath())
+                && c.getConvergenceScore() >= minPathScore).count();
+        long pathBCount = analyzed.stream()
+            .filter(c -> "MOMENTUM_POP".equals(c.getStrategyPath())
+                && c.getConvergenceScore() >= minPathScore).count();
+        log.info("Path A (Oversold Bounce) qualifiers: {}", pathACount);
+        log.info("Path B (Momentum Pop) qualifiers:    {}", pathBCount);
+
+        // Stage 3: Apply score + factor thresholds, take best 3
+        List<GuaranteedCandidateDTO> candidates = analyzed.stream()
+            .filter(c -> c.getConvergenceScore() >= minPathScore)
+            .filter(c -> c.getFactorsPassed() >= minFactors)
             .sorted(Comparator
-                .comparingInt(GuaranteedCandidateDTO::getFactorsPassed)
-                .thenComparingInt(GuaranteedCandidateDTO::getConvergenceScore)
+                .comparingInt(GuaranteedCandidateDTO::getConvergenceScore)
                 .reversed())
             .limit(3)
             .collect(Collectors.toList());
 
-        log.info("Found {} guaranteed candidates meeting strict criteria", candidates.size());
-
-        // If less than 3, lower threshold slightly
-        if (candidates.size() < 3) {
-            log.warn("Only {} candidates met strict criteria, lowering threshold", candidates.size());
-            candidates = allStocks.parallelStream()
-                .filter(this::passesBasicFilters)
-                .map(this::analyzeConvergence)
-                .filter(c -> c.getConvergenceScore() >= 70) // Lower threshold
-                .sorted(Comparator
-                    .comparingInt(GuaranteedCandidateDTO::getConvergenceScore)
-                    .reversed())
-                .limit(3)
-                .collect(Collectors.toList());
-        }
-
+        log.info("Final guaranteed candidates: {}", candidates.size());
         return candidates;
     }
 
-    private boolean passesBasicFilters(Stock stock) {
-        double price = stock.getPrice();
-        double volume = stock.getVolume();
-        double change = stock.getChange();
+    // -------------------------------------------------------
+    // Filter: Hard exclusions before convergence scoring
+    // -------------------------------------------------------
 
-        // Basic quality filters
-        return price >= MIN_PRICE
-            && price <= MAX_PRICE
-            && volume >= MIN_VOLUME
-            && price > 0 && volume > 0;
+    private boolean passesBasicFilters(Stock stock) {
+        double price  = stock.getPrice();
+        double volume = stock.getVolume();
+        double avgVol = stock.getAvgVolume10D();
+
+        // Data validity + avgVolume10D null-safety (prevents divide-by-zero downstream)
+        if (price <= 0 || volume <= 0 || avgVol <= 0) return false;
+
+        // Price range
+        if (price < minPrice || price > maxPrice) return false;
+
+        // Minimum volume
+        if (volume < minVolume) return false;
+
+        // Hard exclusion: chasing — stock already moved > 7% today
+        double changePct = (stock.getChange() / price) * 100.0;
+        if (changePct > 7.0) return false;
+
+        // Hard exclusion: overbought RSI — no room to run
+        if (stock.getRsi14() > 65.0) return false;
+
+        // Hard exclusion: active bearish patterns
+        if (stock.getNoOfShortPatterns() > 0) return false;
+
+        // Hard exclusion: earnings within 10 days (gap-down risk)
+        if (stock.getEarningDays() > 0 && stock.getEarningDays() < 10) return false;
+
+        return true;
     }
 
+    // -------------------------------------------------------
+    // Convergence: Two-path scoring
+    // -------------------------------------------------------
+
     /**
-     * Analyze convergence of multiple factors
+     * Score stock on two independent paths. The winning path (higher score)
+     * determines the strategy and final convergenceScore.
+     *
+     * Tiered scoring on A1/B1 (spike) and A2/B2 (bounce/pop):
+     *   HIGH  (≥60) → full points, counts as a factor
+     *   MED   (≥40) → half points, counts as a factor
+     *   LOW   (<40) → 0 points, does NOT count as a factor
      */
     private GuaranteedCandidateDTO analyzeConvergence(Stock stock) {
         GuaranteedCandidateDTO candidate = new GuaranteedCandidateDTO(stock);
-        int factorsPassed = 0;
-        int totalPoints = 0;
-        List<String> passedFactors = new ArrayList<>();
-        List<String> failedFactors = new ArrayList<>();
 
-        // Get history for analysis
-        List<Stock> history = stockService.getStockHistory(
-            stock.getTicker(),
-            LocalDate.now().minusDays(10),
-            LocalDate.now()
-        );
+        double rsi        = stock.getRsi14();
+        double volRatio   = stock.getAvgVolume10D() > 0
+            ? stock.getVolume() / stock.getAvgVolume10D() : 0;
+        int bottomConds   = stock.getBottom() != null
+            ? stock.getBottom().getConditionsMet() : 0;
+        int spikeScore    = stock.getSpike()   != null ? stock.getSpike().getSpikeScore()    : 0;
+        int bounceScore   = stock.getOversold() != null ? stock.getOversold().getBounceScore() : 0;
+        int popScore      = stock.getMomPop()  != null ? stock.getMomPop().getPopScore()     : 0;
 
-        // Factor 1: PRICE ACTION (3 checks, 30 points)
-        int priceActionResult = analyzePriceAction(stock, history, passedFactors, failedFactors);
-        totalPoints += priceActionResult;
-        if (priceActionResult >= 20) factorsPassed++;
+        // ---- Path A: Oversold Bounce ----
+        int pathAScore   = 0;
+        int pathAFactors = 0;
+        List<String> pathAPassed = new ArrayList<>();
+        List<String> pathAFailed = new ArrayList<>();
 
-        // Factor 2: VOLUME (2 checks, 20 points)
-        int volumeResult = analyzeVolume(stock, history, passedFactors, failedFactors);
-        totalPoints += volumeResult;
-        if (volumeResult >= 10) factorsPassed++;
-
-        // Factor 3: PATTERNS (2 checks, 15 points)
-        int patternsResult = analyzePatterns(stock, passedFactors, failedFactors);
-        totalPoints += patternsResult;
-        if (patternsResult >= 8) factorsPassed++;
-
-        // Factor 4: TECHNICAL INDICATORS (2 checks, 15 points)
-        int technicalResult = analyzeTechnicals(stock, passedFactors, failedFactors);
-        totalPoints += technicalResult;
-        if (technicalResult >= 8) factorsPassed++;
-
-        // Factor 5: MARKET STRUCTURE (2 checks, 15 points)
-        int structureResult = analyzeMarketStructure(stock, passedFactors, failedFactors);
-        totalPoints += structureResult;
-        if (structureResult >= 8) factorsPassed++;
-
-        // Factor 6: SCORING (2 checks, 15 points)
-        int scoringResult = analyzeScoring(stock, passedFactors, failedFactors);
-        totalPoints += scoringResult;
-        if (scoringResult >= 8) factorsPassed++;
-
-        // Factor 7: SIGNALS (2 checks, 15 points)
-        int signalsResult = analyzeSignals(stock, passedFactors, failedFactors);
-        totalPoints += signalsResult;
-        if (signalsResult >= 8) factorsPassed++;
-
-        // Factor 8: FLOAT & LIQUIDITY (1 check, 5 points)
-        int liquidityResult = analyzeLiquidity(stock, passedFactors, failedFactors);
-        totalPoints += liquidityResult;
-        if (liquidityResult >= 5) factorsPassed++;
-
-        // Factor 9: TODAY'S MOMENTUM (bonus check, 10 points)
-        int momentumResult = analyzeTodaysMomentum(stock, passedFactors, failedFactors);
-        totalPoints += momentumResult;
-        if (momentumResult >= 5) factorsPassed++;
-
-        // Factor 10: CONFIRMATION (bonus - multiple factors align)
-        if (factorsPassed >= 6) {
-            totalPoints += 10;
-            passedFactors.add("✓ STRONG CONVERGENCE - Multiple factors aligned!");
+        // A1 — Spike score tiered: HIGH≥60→25pts | MED≥40→12pts | LOW→0
+        if (spikeScore >= 60) {
+            pathAScore += 25; pathAFactors++;
+            pathAPassed.add(String.format("✓ [A] Spike HIGH (score=%d)", spikeScore));
+        } else if (spikeScore >= 40) {
+            pathAScore += 12; pathAFactors++;
+            pathAPassed.add(String.format("~ [A] Spike MED (score=%d, partial)", spikeScore));
+        } else {
+            pathAFailed.add(String.format("✗ [A] Spike LOW (score=%d, need ≥40)", spikeScore));
         }
 
-        // Calculate final score (out of 100)
-        int convergenceScore = Math.min(totalPoints, 100);
+        // A2 — Oversold bounce tiered: HIGH≥60→25pts | MED≥40→12pts | LOW→0
+        if (bounceScore >= 60) {
+            pathAScore += 25; pathAFactors++;
+            pathAPassed.add(String.format("✓ [A] Oversold Bounce HIGH (score=%d)", bounceScore));
+        } else if (bounceScore >= 40) {
+            pathAScore += 12; pathAFactors++;
+            pathAPassed.add(String.format("~ [A] Oversold Bounce MED (score=%d, partial)", bounceScore));
+        } else {
+            pathAFailed.add(String.format("✗ [A] Oversold Bounce LOW (score=%d, need ≥40)", bounceScore));
+        }
 
-        candidate.setFactorsPassed(factorsPassed);
+        // A3 — Strong bottom reversal: conditionsMet >= 5 → 20pts | >=3 → 10pts
+        if (bottomConds >= 5) {
+            pathAScore += 20; pathAFactors++;
+            pathAPassed.add("✓ [A] Strong bottom: " + bottomConds + " conditions");
+        } else if (bottomConds >= 3) {
+            pathAScore += 10; pathAFactors++;
+            pathAPassed.add("~ [A] Moderate bottom: " + bottomConds + " conditions (partial)");
+        } else {
+            pathAFailed.add("✗ [A] Bottom weak (" + bottomConds + "/3 conditions)");
+        }
+
+        // A4 — RSI deeply oversold (15 pts)
+        if (rsi <= pathARsiMax) {
+            pathAScore += 15; pathAFactors++;
+            pathAPassed.add(String.format("✓ [A] RSI oversold: %.1f (≤%.0f)", rsi, pathARsiMax));
+        } else if (rsi <= pathARsiMax + 10) {
+            // Within 10 points of the threshold: partial (8 pts, counts as factor)
+            pathAScore += 8; pathAFactors++;
+            pathAPassed.add(String.format("~ [A] RSI near-oversold: %.1f (partial)", rsi));
+        } else {
+            pathAFailed.add(String.format("✗ [A] RSI not oversold: %.1f (need ≤%.0f)", rsi, pathARsiMax));
+        }
+
+        // A5 — Long patterns + volume surge (15 pts)
+        boolean a5full    = stock.getNoOfLongPatterns() >= 1 && volRatio >= 3.0;
+        boolean a5partial = stock.getNoOfLongPatterns() >= 1 && volRatio >= 1.5;
+        if (a5full) {
+            pathAScore += 15; pathAFactors++;
+            pathAPassed.add(String.format("✓ [A] Patterns(%d) + Volume %.1fX",
+                stock.getNoOfLongPatterns(), volRatio));
+        } else if (a5partial) {
+            pathAScore += 7; pathAFactors++;
+            pathAPassed.add(String.format("~ [A] Patterns(%d) + Volume %.1fX (partial)",
+                stock.getNoOfLongPatterns(), volRatio));
+        } else {
+            pathAFailed.add(String.format("✗ [A] Patterns(%d) / Volume %.1fX (need ≥1 pat + 1.5X vol)",
+                stock.getNoOfLongPatterns(), volRatio));
+        }
+
+        // ---- Path B: Momentum Pop ----
+        int pathBScore   = 0;
+        int pathBFactors = 0;
+        List<String> pathBPassed = new ArrayList<>();
+        List<String> pathBFailed = new ArrayList<>();
+
+        // B1 — Spike score tiered: HIGH≥60→25pts | MED≥40→12pts | LOW→0
+        if (spikeScore >= 60) {
+            pathBScore += 25; pathBFactors++;
+            pathBPassed.add(String.format("✓ [B] Spike HIGH (score=%d)", spikeScore));
+        } else if (spikeScore >= 40) {
+            pathBScore += 12; pathBFactors++;
+            pathBPassed.add(String.format("~ [B] Spike MED (score=%d, partial)", spikeScore));
+        } else {
+            pathBFailed.add(String.format("✗ [B] Spike LOW (score=%d, need ≥40)", spikeScore));
+        }
+
+        // B2 — Momentum pop tiered: HIGH≥60→25pts | MED≥40→12pts | LOW→0
+        if (popScore >= 60) {
+            pathBScore += 25; pathBFactors++;
+            pathBPassed.add(String.format("✓ [B] Momentum Pop HIGH (popScore=%d)", popScore));
+        } else if (popScore >= 40) {
+            pathBScore += 12; pathBFactors++;
+            pathBPassed.add(String.format("~ [B] Momentum Pop MED (popScore=%d, partial)", popScore));
+        } else {
+            pathBFailed.add(String.format("✗ [B] Momentum Pop LOW (popScore=%d, need ≥40)", popScore));
+        }
+
+        // B3 — >= 2 long patterns + BUY signal (20 pts) | 1 pattern + BUY (10 pts)
+        boolean b3full    = stock.getNoOfLongPatterns() >= 2
+            && stock.getScore() != null && "BUY".equals(stock.getScore().getSignal());
+        boolean b3partial = stock.getNoOfLongPatterns() >= 1
+            && stock.getScore() != null && "BUY".equals(stock.getScore().getSignal());
+        if (b3full) {
+            pathBScore += 20; pathBFactors++;
+            pathBPassed.add("✓ [B] " + stock.getNoOfLongPatterns() + " long patterns + BUY signal");
+        } else if (b3partial) {
+            pathBScore += 10; pathBFactors++;
+            pathBPassed.add("~ [B] 1 long pattern + BUY signal (partial)");
+        } else {
+            pathBFailed.add(String.format("✗ [B] Need ≥1 pattern + BUY (have %d, signal=%s)",
+                stock.getNoOfLongPatterns(),
+                stock.getScore() != null ? stock.getScore().getSignal() : "none"));
+        }
+
+        // B4 — RSI in momentum zone (15 pts)
+        boolean b4 = rsi >= pathBRsiMin && rsi <= pathBRsiMax;
+        if (b4) {
+            pathBScore += 15; pathBFactors++;
+            pathBPassed.add(String.format("✓ [B] RSI momentum zone: %.1f (%.0f–%.0f)",
+                rsi, pathBRsiMin, pathBRsiMax));
+        } else if (rsi >= pathBRsiMin - 5 && rsi <= pathBRsiMax + 5) {
+            // Within 5 points of zone edges: partial
+            pathBScore += 7; pathBFactors++;
+            pathBPassed.add(String.format("~ [B] RSI near-momentum zone: %.1f (partial)", rsi));
+        } else {
+            pathBFailed.add(String.format("✗ [B] RSI outside momentum zone: %.1f (need %.0f–%.0f)",
+                rsi, pathBRsiMin, pathBRsiMax));
+        }
+
+        // B5 — Moderate bottom + gate pass (15 pts) | bottom only (7 pts)
+        boolean gatePass = stock.getGateSignal() != null && stock.getGateSignal().isGatePass();
+        boolean b5full    = bottomConds >= 3 && gatePass;
+        boolean b5partial = bottomConds >= 2;
+        if (b5full) {
+            pathBScore += 15; pathBFactors++;
+            pathBPassed.add("✓ [B] Gate pass + bottom: " + bottomConds + " conditions");
+        } else if (b5partial) {
+            pathBScore += 7; pathBFactors++;
+            pathBPassed.add(String.format("~ [B] Bottom %d conditions (gate=%s, partial)",
+                bottomConds, gatePass ? "pass" : "fail"));
+        } else {
+            pathBFailed.add(String.format("✗ [B] Bottom too weak (%d conds, gate=%s)",
+                bottomConds, gatePass ? "pass" : "fail"));
+        }
+
+        // ---- Pick the winning path ----
+        String strategyPath;
+        int convergenceScore;
+        int factorsPassed;
+        List<String> passedFactors;
+        List<String> failedFactors;
+
+        if (pathAScore >= pathBScore) {
+            strategyPath   = "OVERSOLD_BOUNCE";
+            convergenceScore = pathAScore;
+            factorsPassed  = pathAFactors;
+            passedFactors  = pathAPassed;
+            failedFactors  = pathAFailed;
+        } else {
+            strategyPath   = "MOMENTUM_POP";
+            convergenceScore = pathBScore;
+            factorsPassed  = pathBFactors;
+            passedFactors  = pathBPassed;
+            failedFactors  = pathBFailed;
+        }
+
+        candidate.setStrategyPath(strategyPath);
         candidate.setConvergenceScore(convergenceScore);
+        candidate.setFactorsPassed(factorsPassed);
         candidate.setPassedFactors(passedFactors);
         candidate.setFailedFactors(failedFactors);
         candidate.calculateConfidence();
@@ -175,236 +348,12 @@ public class GuaranteedExplosiveService {
         return candidate;
     }
 
-    private int analyzePriceAction(Stock stock, List<Stock> history,
-                                   List<String> passed, List<String> failed) {
-        int points = 0;
-        double changePct = (stock.getChange() / stock.getPrice()) * 100;
-
-        // Check 1: Already moving up in last 2 days
-        if (history != null && history.size() >= 2) {
-            history.sort(Comparator.comparing(Stock::getHistDate));
-            double price2DaysAgo = history.get(history.size() - 2).getPrice();
-            double change2Day = ((stock.getPrice() - price2DaysAgo) / price2DaysAgo) * 100;
-
-            if (change2Day >= 5.0) {
-                passed.add(String.format("✓ Up %.1f%% in 2 days (momentum confirmed)", change2Day));
-                points += 10;
-            } else {
-                failed.add("✗ Not up 5%+ in 2 days");
-            }
-        }
-
-        // Check 2: Breaking resistance
-        if (history != null && history.size() >= 5) {
-            double recentHigh = history.stream()
-                .limit(5)
-                .mapToDouble(Stock::getHigh)
-                .max()
-                .orElse(0);
-
-            if (stock.getPrice() > recentHigh * 1.02) {
-                double breakoutPct = ((stock.getPrice() - recentHigh) / recentHigh) * 100;
-                passed.add(String.format("✓ Breaking resistance (+%.1f%%)", breakoutPct));
-                points += 10;
-            } else {
-                failed.add("✗ Not breaking resistance");
-            }
-        }
-
-        // Check 3: Uptrend structure
-        Integer upDays = stock.getUpDays();
-        if (upDays != null && upDays >= 2) {
-            passed.add("✓ " + upDays + " consecutive up days");
-            points += 10;
-        } else {
-            failed.add("✗ No uptrend structure");
-        }
-
-        return points;
-    }
-
-    private int analyzeVolume(Stock stock, List<Stock> history,
-                             List<String> passed, List<String> failed) {
-        int points = 0;
-
-        if (history != null && history.size() >= 3) {
-            double avgVolume = history.stream()
-                .limit(5)
-                .mapToDouble(Stock::getVolume)
-                .average()
-                .orElse(1.0);
-
-            double volumeRatio = stock.getVolume() / avgVolume;
-
-            if (volumeRatio >= 3.0) {
-                passed.add(String.format("✓ %.1fX volume surge (institutional interest)", volumeRatio));
-                points += 10;
-            } else if (volumeRatio >= 2.0) {
-                passed.add(String.format("✓ Above avg volume (%.1fX)", volumeRatio));
-                points += 5;
-            } else {
-                failed.add("✗ Volume not 3X average");
-            }
-
-            // Check volume is increasing
-            if (history.size() >= 3) {
-                history.sort(Comparator.comparing(Stock::getHistDate));
-                double vol1 = history.get(history.size() - 1).getVolume();
-                double vol2 = history.get(history.size() - 2).getVolume();
-
-                if (stock.getVolume() > vol1 && vol1 > vol2) {
-                    passed.add("✓ Volume increasing daily");
-                    points += 10;
-                } else {
-                    failed.add("✗ Volume not increasing");
-                }
-            }
-        }
-
-        return points;
-    }
-
-    private int analyzePatterns(Stock stock, List<String> passed, List<String> failed) {
-        int points = 0;
-
-        Integer longPatterns = stock.getNoOfLongPatterns();
-        Integer shortPatterns = stock.getNoOfShortPatterns();
-
-        if (longPatterns != null && longPatterns >= 2) {
-            passed.add("✓ " + longPatterns + " bullish patterns");
-            points += 10;
-        } else {
-            failed.add("✗ Less than 2 bullish patterns");
-        }
-
-        if (shortPatterns != null && shortPatterns.intValue() == 0) {
-            passed.add("✓ No bearish patterns");
-            points += 5;
-        } else {
-            failed.add("✗ Bearish patterns present");
-        }
-
-        return points;
-    }
-
-    private int analyzeTechnicals(Stock stock, List<String> passed, List<String> failed) {
-        int points = 0;
-        double changePct = (stock.getChange() / stock.getPrice()) * 100;
-
-        if (stock.getScore() != null) {
-            int overallScore = stock.getScore().getOverallScore();
-            if (overallScore >= 70) {
-                passed.add("✓ High overall score: " + overallScore);
-                points += 10;
-            } else {
-                failed.add("✗ Overall score < 70");
-            }
-        }
-
-        // Check if not overbought (healthy momentum)
-        if (changePct > 0 && changePct < 15) {
-            passed.add("✓ Healthy momentum (not overbought)");
-            points += 5;
-        } else if (changePct >= 15) {
-            failed.add(String.format("✗ Overbought (up %.1f%% today)", changePct));
-        }
-
-        return points;
-    }
-
-    private int analyzeMarketStructure(Stock stock, List<String> passed, List<String> failed) {
-        int points = 0;
-
-        if (stock.getBottom() != null) {
-            Integer bottomConditions = stock.getBottom().getConditionsMet();
-            if (bottomConditions != null && bottomConditions >= 5) {
-                passed.add("✓ Bottom formed (" + bottomConditions + " conditions)");
-                points += 10;
-            } else {
-                failed.add("✗ No strong bottom");
-            }
-        }
-
-        Integer upDays = stock.getUpDays();
-        if (upDays != null && upDays >= 2) {
-            points += 5;
-        }
-
-        return points;
-    }
-
-    private int analyzeScoring(Stock stock, List<String> passed, List<String> failed) {
-        int points = 0;
-
-        if (stock.getSpike() != null) {
-            int spikeScore = stock.getSpike().getSpikeScore();
-            if (spikeScore >= 60) {
-                passed.add("✓ Spike score: " + spikeScore);
-                points += 10;
-            } else {
-                failed.add("✗ Spike score < 60");
-            }
-        }
-
-        if (stock.getScore() != null) {
-            int overallScore = stock.getScore().getOverallScore();
-            if (overallScore >= 70) {
-                points += 5;
-            }
-        }
-
-        return points;
-    }
-
-    private int analyzeSignals(Stock stock, List<String> passed, List<String> failed) {
-        int points = 0;
-
-        if (stock.getScore() != null && stock.getScore().getSignal() != null) {
-            String signal = stock.getScore().getSignal();
-            if ("BUY".equals(signal)) {
-                passed.add("✓ BUY signal active");
-                points += 10;
-            } else if (!"SELL".equals(signal)) {
-                passed.add("✓ HOLD signal (not SELL)");
-                points += 5;
-            } else {
-                failed.add("✗ SELL signal");
-            }
-        }
-
-        return points;
-    }
-
-    private int analyzeLiquidity(Stock stock, List<String> passed, List<String> failed) {
-        double price = stock.getPrice();
-        double volume = stock.getVolume();
-
-        if (price >= MIN_PRICE && price <= MAX_PRICE && volume >= 1_000_000.0) {
-            passed.add("✓ Optimal price/volume range");
-            return 5;
-        } else {
-            failed.add("✗ Not in optimal range");
-            return 0;
-        }
-    }
-
-    private int analyzeTodaysMomentum(Stock stock, List<String> passed, List<String> failed) {
-        double changePct = (stock.getChange() / stock.getPrice()) * 100;
-
-        if (changePct >= 3.0 && changePct <= 12.0) {
-            passed.add(String.format("✓ Strong today: +%.1f%%", changePct));
-            return 10;
-        } else if (changePct > 0) {
-            passed.add(String.format("✓ Up today: +%.1f%%", changePct));
-            return 5;
-        } else {
-            failed.add("✗ Down today");
-            return 0;
-        }
-    }
+    // -------------------------------------------------------
+    // Persistence: Save picks to DB
+    // -------------------------------------------------------
 
     /**
-     * Save top 3 picks to database for tracking (ONLY if not already saved today)
+     * Save top 3 picks to database (ONLY if not already saved today).
      */
     public void saveTop3Picks(List<GuaranteedCandidateDTO> candidates) {
         if (candidates == null || candidates.isEmpty()) {
@@ -413,97 +362,85 @@ public class GuaranteedExplosiveService {
         }
 
         String today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE);
-
-        // Check if picks already exist for today
         List<GuaranteedPick> existingPicks = guaranteedPickRepository.findByDate(today);
         if (!existingPicks.isEmpty()) {
             log.info("Picks already saved for {}. Skipping to prevent duplicates.", today);
-            return; // Don't save again - prevents duplicates on every page refresh
+            return;
         }
 
-        // Only save if no picks exist for today
         log.info("Saving {} picks for {} (first time today)", candidates.size(), today);
-
         int rank = 1;
         for (GuaranteedCandidateDTO candidate : candidates) {
-            GuaranteedPick pick = new GuaranteedPick();
-            pick.setDate(today);
-            pick.setTicker(candidate.getStock().getTicker());
-            pick.setRank(rank++);
-            pick.setEntryPrice(candidate.getStock().getPrice());
-            pick.setFactorsPassed(candidate.getFactorsPassed());
-            pick.setConvergenceScore(candidate.getConvergenceScore());
-            pick.setConfidenceLevel(candidate.getConfidenceLevel());
-            pick.setPassedFactors(candidate.getPassedFactors());
-            pick.setFailedFactors(candidate.getFailedFactors());
-            pick.setTrackingDate(LocalDate.now().plusDays(5)); // Check in 5 days
-
-            guaranteedPickRepository.save(pick);
-            log.info("✓ Saved guaranteed pick: {} (rank {}) with {} factors passed, entry price: ${}",
-                     pick.getTicker(), pick.getRank(), pick.getFactorsPassed(),
-                     String.format("%.2f", pick.getEntryPrice()));
+            guaranteedPickRepository.save(buildPick(candidate, today, rank++));
         }
     }
 
     /**
-     * Force save new picks for today (overwrites existing)
-     * Use this if you want to manually refresh today's picks
+     * Force-save new picks for today (overwrites existing).
      */
     public void forceSaveTop3Picks(List<GuaranteedCandidateDTO> candidates) {
         String today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE);
-
-        // Delete existing picks for today
         List<GuaranteedPick> existingPicks = guaranteedPickRepository.findByDate(today);
         if (!existingPicks.isEmpty()) {
             guaranteedPickRepository.deleteAll(existingPicks);
             log.info("Deleted {} existing picks for {} (force refresh)", existingPicks.size(), today);
         }
 
-        // Save new picks
         int rank = 1;
         for (GuaranteedCandidateDTO candidate : candidates) {
-            GuaranteedPick pick = new GuaranteedPick();
-            pick.setDate(today);
-            pick.setTicker(candidate.getStock().getTicker());
-            pick.setRank(rank++);
-            pick.setEntryPrice(candidate.getStock().getPrice());
-            pick.setFactorsPassed(candidate.getFactorsPassed());
-            pick.setConvergenceScore(candidate.getConvergenceScore());
-            pick.setConfidenceLevel(candidate.getConfidenceLevel());
-            pick.setPassedFactors(candidate.getPassedFactors());
-            pick.setFailedFactors(candidate.getFailedFactors());
-            pick.setTrackingDate(LocalDate.now().plusDays(5));
-
+            GuaranteedPick pick = buildPick(candidate, today, rank++);
             guaranteedPickRepository.save(pick);
-            log.info("✓ Force saved pick: {} (rank {})", pick.getTicker(), pick.getRank());
+            log.info("✓ Force saved: {} (rank {}, strategy={})", pick.getTicker(), pick.getRank(), pick.getStrategyPath());
         }
     }
+
+    private GuaranteedPick buildPick(GuaranteedCandidateDTO candidate, String date, int rank) {
+        GuaranteedPick pick = new GuaranteedPick();
+        pick.setDate(date);
+        pick.setTicker(candidate.getStock().getTicker());
+        pick.setRank(rank);
+        pick.setEntryPrice(candidate.getStock().getPrice());
+        pick.setFactorsPassed(candidate.getFactorsPassed());
+        pick.setConvergenceScore(candidate.getConvergenceScore());
+        pick.setConfidenceLevel(candidate.getConfidenceLevel());
+        pick.setStrategyPath(candidate.getStrategyPath());
+        pick.setPassedFactors(candidate.getPassedFactors());
+        pick.setFailedFactors(candidate.getFailedFactors());
+        pick.setTrackingDate(LocalDate.now().plusDays(trackingDays));
+        log.info("✓ Saved: {} (rank {}, strategy={}, score={}, factors={}, entry=${})",
+            pick.getTicker(), pick.getRank(), pick.getStrategyPath(),
+            pick.getConvergenceScore(), pick.getFactorsPassed(),
+            String.format("%.2f", pick.getEntryPrice()));
+        return pick;
+    }
+
+    // -------------------------------------------------------
+    // Statistics & Queries (unchanged from original)
+    // -------------------------------------------------------
 
     /**
      * Get historical performance statistics
      */
     public Map<String, Object> getPerformanceStats() {
         Map<String, Object> stats = new HashMap<>();
+        long totalPicks      = guaranteedPickRepository.count();
+        long maxSuccessCount = guaranteedPickRepository.countByOutcome("MAX_SUCCESS");
+        long successCount    = guaranteedPickRepository.countByOutcome("SUCCESS");
+        long failCount       = guaranteedPickRepository.countByOutcome("FAIL");
+        long pendingCount    = guaranteedPickRepository.countByOutcome("PENDING");
+        // backward-compat: old PARTIAL (≥5%) counts as success in headline rate
+        long legacyPartial   = guaranteedPickRepository.countByOutcome("PARTIAL");
 
-        long totalPicks = guaranteedPickRepository.count();
-        long successCount = guaranteedPickRepository.countByOutcome("SUCCESS");
-        long partialCount = guaranteedPickRepository.countByOutcome("PARTIAL");
-        long failCount = guaranteedPickRepository.countByOutcome("FAIL");
-        long pendingCount = guaranteedPickRepository.countByOutcome("PENDING");
+        stats.put("totalPicks",      totalPicks);
+        stats.put("maxSuccessCount", maxSuccessCount);
+        stats.put("successCount",    successCount);
+        stats.put("failCount",       failCount);
+        stats.put("pendingCount",    pendingCount);
 
-        stats.put("totalPicks", totalPicks);
-        stats.put("successCount", successCount);
-        stats.put("partialCount", partialCount);
-        stats.put("failCount", failCount);
-        stats.put("pendingCount", pendingCount);
-
-        if (totalPicks > 0) {
-            double successRate = (double) successCount / (totalPicks - pendingCount) * 100;
-            stats.put("successRate", Math.round(successRate * 10) / 10.0);
-        } else {
-            stats.put("successRate", 0.0);
-        }
-
+        long tracked = totalPicks - pendingCount;
+        long totalSuccess = maxSuccessCount + successCount + legacyPartial;
+        double successRate = tracked > 0 ? (double) totalSuccess / tracked * 100 : 0.0;
+        stats.put("successRate", Math.round(successRate * 10) / 10.0);
         return stats;
     }
 
@@ -519,8 +456,8 @@ public class GuaranteedExplosiveService {
      */
     public List<GuaranteedPick> getPicksNeedingTracking() {
         return guaranteedPickRepository.findByTrackedFalse().stream()
-            .filter(pick -> pick.getTrackingDate() != null &&
-                          !pick.getTrackingDate().isAfter(LocalDate.now()))
+            .filter(pick -> pick.getTrackingDate() != null
+                && !pick.getTrackingDate().isAfter(LocalDate.now()))
             .collect(Collectors.toList());
     }
 
@@ -530,9 +467,9 @@ public class GuaranteedExplosiveService {
     public List<GuaranteedPick> getGuaranteedPicks() {
         List<Stock> stocks = stockService.list();
         List<GuaranteedPick> list = guaranteedPickRepository.findAll();
-        for( GuaranteedPick pick : list){
+        for (GuaranteedPick pick : list) {
             for (Stock stock : stocks) {
-                if(pick.getTicker().equals(stock.getTicker())){
+                if (pick.getTicker().equals(stock.getTicker())) {
                     pick.setStock(stock);
                     break;
                 }
@@ -541,20 +478,21 @@ public class GuaranteedExplosiveService {
         return list;
     }
 
+    // -------------------------------------------------------
+    // Explosive Scores Grid (all stocks)
+    // -------------------------------------------------------
+
     /**
      * Get ALL stocks with explosive scores for grid display
      */
     public List<ExplosiveScoreDTO> getAllExplosiveScores() {
         List<Stock> allStocks = stockService.list();
-
         log.info("Calculating explosive scores for {} stocks", allStocks.size());
 
         List<ExplosiveScoreDTO> scores = allStocks.parallelStream()
             .filter(this::passesBasicFilters)
             .map(this::calculateExplosiveScore)
-            .sorted(Comparator
-                .comparingInt(ExplosiveScoreDTO::getConvergenceScore)
-                .reversed())
+            .sorted(Comparator.comparingInt(ExplosiveScoreDTO::getConvergenceScore).reversed())
             .collect(Collectors.toList());
 
         log.info("Calculated explosive scores for {} qualifying stocks", scores.size());
@@ -566,45 +504,33 @@ public class GuaranteedExplosiveService {
      */
     private ExplosiveScoreDTO calculateExplosiveScore(Stock stock) {
         ExplosiveScoreDTO dto = new ExplosiveScoreDTO();
-
-        // Basic info
         dto.setTicker(stock.getTicker());
         dto.setPrice(stock.getPrice());
         dto.setChange(stock.getChange());
         dto.setChangePct((stock.getChange() / stock.getPrice()) * 100);
         dto.setVolume(stock.getVolume());
         dto.setVolumeM(stock.getVolume() / 1_000_000.0);
-
-        // Metrics
         dto.setUpDays(stock.getUpDays());
         dto.setNoOfLongPatterns(stock.getNoOfLongPatterns());
         dto.setNoOfShortPatterns(stock.getNoOfShortPatterns());
 
-        if (stock.getSpike() != null) {
-            dto.setSpikeScore(stock.getSpike().getSpikeScore());
-        }
-
+        if (stock.getSpike() != null)  dto.setSpikeScore(stock.getSpike().getSpikeScore());
         if (stock.getScore() != null) {
             dto.setOverallScore(stock.getScore().getOverallScore());
             dto.setSignal(stock.getScore().getSignal());
         }
 
-        // Calculate convergence
         GuaranteedCandidateDTO candidate = analyzeConvergence(stock);
         dto.setFactorsPassed(candidate.getFactorsPassed());
         dto.setConvergenceScore(candidate.getConvergenceScore());
         dto.setConfidenceLevel(candidate.getConfidenceLevel());
         dto.setConfidenceText(candidate.getConfidenceText());
+        dto.setStrategyPath(candidate.getStrategyPath());
 
-        // Top 3 reasons (comma separated)
-        if (candidate.getPassedFactors().size() > 0) {
-            String topReasons = candidate.getPassedFactors().stream()
-                .limit(3)
-                .collect(Collectors.joining("; "));
-            dto.setTopReasons(topReasons);
+        if (!candidate.getPassedFactors().isEmpty()) {
+            dto.setTopReasons(candidate.getPassedFactors().stream()
+                .limit(3).collect(Collectors.joining("; ")));
         }
-
-        // Store full factor lists for detailed modal view
         dto.setPassedFactors(candidate.getPassedFactors());
         dto.setFailedFactors(candidate.getFailedFactors());
 

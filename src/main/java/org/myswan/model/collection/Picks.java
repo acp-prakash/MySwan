@@ -1,5 +1,6 @@
 package org.myswan.model.collection;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -17,13 +18,17 @@ public class Picks {
     private String id;
     private String ticker;
     private String reason;
+    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "UTC")
     private LocalDate addedDate;
     private double addedPrice;
     private double entry;
     private double target;
     private double stopLoss;
+    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "UTC")
     private LocalDate targetDate;
+    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "UTC")
     private LocalDate targetMetDate;
+    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "UTC")
     private LocalDate stopLossMetDate;
     private boolean targetMet;
     private boolean stopLossMet;

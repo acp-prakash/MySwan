@@ -39,8 +39,13 @@ public class PicksService {
     public Picks save(Picks pick) {
         if (pick == null) return null;
 
+        // Only set addedDate to today if it's not already provided
+        // This prevents timezone issues when frontend sends a date
         if (pick.getAddedDate() == null) {
             pick.setAddedDate(LocalDate.now());
+            log.info("Setting addedDate to today for new pick: {}", pick.getTicker());
+        } else {
+            log.info("Preserving provided addedDate {} for pick: {}", pick.getAddedDate(), pick.getTicker());
         }
 
         if (pick.getTicker() != null && !pick.getTicker().isBlank()) {
@@ -114,27 +119,49 @@ public class PicksService {
                     if (stock != null) {
                         pick.setStock(stock);
 
-                        // Initialize min/max if not set (first time)
-                        if (pick.getMin() == 0) {
-                            pick.setMin(stock.getLow());
-                        }
-                        if (pick.getMax() == 0) {
-                            pick.setMax(stock.getHigh());
-                        }
+                        // Don't update min/max for picks added today - they need at least one day of trading
+                        LocalDate today = LocalDate.now();
+                        boolean isAddedToday = pick.getAddedDate() != null && pick.getAddedDate().equals(today);
 
-                        // Update min/max with today's values
-                        pick.setMin(Math.min(pick.getMin(), stock.getLow()));
-                        pick.setMax(Math.max(pick.getMax(), stock.getHigh()));
+                        log.info("Processing pick {}: addedDate={}, today={}, isAddedToday={}",
+                                pick.getTicker(), pick.getAddedDate(), today, isAddedToday);
 
-                        // Update min/max with historical values
-                        Picks histPick = historyPicksMap.get(pick.getTicker().toUpperCase());
-                        if (histPick != null) {
-                            if (histPick.getMin() != 0) {
-                                pick.setMin(Math.min(pick.getMin(), histPick.getMin()));
+                        if (!isAddedToday) {
+                            // Initialize min/max if not set (first time)
+                            if (pick.getMin() == 0) {
+                                pick.setMin(stock.getLow());
+                                log.info("Initializing min for {}: {}", pick.getTicker(), stock.getLow());
                             }
-                            if (histPick.getMax() != 0) {
-                                pick.setMax(Math.max(pick.getMax(), histPick.getMax()));
+                            if (pick.getMax() == 0) {
+                                pick.setMax(stock.getHigh());
+                                log.info("Initializing max for {}: {}", pick.getTicker(), stock.getHigh());
                             }
+
+                            // Update min/max with today's values
+                            double oldMin = pick.getMin();
+                            double oldMax = pick.getMax();
+                            pick.setMin(Math.min(pick.getMin(), stock.getLow()));
+                            pick.setMax(Math.max(pick.getMax(), stock.getHigh()));
+                            log.info("Updated min/max for {}: min {} -> {}, max {} -> {}",
+                                    pick.getTicker(), oldMin, pick.getMin(), oldMax, pick.getMax());
+
+                            // Update min/max with historical values
+                            Picks histPick = historyPicksMap.get(pick.getTicker().toUpperCase());
+                            if (histPick != null) {
+                                if (histPick.getMin() != 0) {
+                                    pick.setMin(Math.min(pick.getMin(), histPick.getMin()));
+                                }
+                                if (histPick.getMax() != 0) {
+                                    pick.setMax(Math.max(pick.getMax(), histPick.getMax()));
+                                }
+                                log.info("After history merge for {}: min={}, max={}",
+                                        pick.getTicker(), pick.getMin(), pick.getMax());
+                            }
+                        } else {
+                            // For picks added today, ensure min/max remain null/zero
+                            pick.setMin(0);
+                            pick.setMax(0);
+                            log.info("Skipping min/max update for today's pick: {} (setting to 0)", pick.getTicker());
                         }
                     }
                     if (pick.getTicker() == null || "CLOSED".equalsIgnoreCase(pick.getStatus())) continue;
@@ -235,5 +262,28 @@ public class PicksService {
             log.error("Error fetching latest picks history: {}", e.getMessage(), e);
             return List.of();
         }
+    }
+
+    public int fixAllPickDates() {
+        log.info("Fixing all pick dates by subtracting one day...");
+        List<Picks> allPicks = list();
+        int fixedCount = 0;
+
+        for (Picks pick : allPicks) {
+            if (pick.getAddedDate() != null) {
+                LocalDate oldDate = pick.getAddedDate();
+                LocalDate newDate = oldDate.minusDays(1);
+                pick.setAddedDate(newDate);
+                log.info("Fixed pick {}: {} -> {}", pick.getTicker(), oldDate, newDate);
+                fixedCount++;
+            }
+        }
+
+        if (!allPicks.isEmpty()) {
+            picksRepository.saveAll(allPicks);
+        }
+
+        log.info("Fixed {} pick dates successfully", fixedCount);
+        return fixedCount;
     }
 }

@@ -13,12 +13,13 @@ import java.util.List;
 public class GuaranteedCandidateDTO {
 
     private Stock stock;
-    private int factorsPassed; // Out of 10
+    private int factorsPassed; // Out of 5 per path
     private int convergenceScore; // Out of 100
     private List<String> passedFactors;
     private List<String> failedFactors;
     private int confidenceLevel; // 1-5 stars
     private String confidenceText;
+    private String strategyPath; // "OVERSOLD_BOUNCE" or "MOMENTUM_POP"
 
     public GuaranteedCandidateDTO() {
         this.passedFactors = new ArrayList<>();
@@ -31,22 +32,23 @@ public class GuaranteedCandidateDTO {
     }
 
     public void calculateConfidence() {
-        // 5-star confidence rating
-        if (factorsPassed >= 9) {
+        // Strategy label shown in confidence text
+        String pathLabel = "OVERSOLD_BOUNCE".equals(strategyPath)
+            ? "⬇️ Bounce Setup" : "📈 Momentum Pop";
+
+        // 5-star confidence rating based on factors out of 5 per path
+        if (factorsPassed >= 5) {
             confidenceLevel = 5;
-            confidenceText = "EXTREMELY HIGH - Near Guaranteed";
-        } else if (factorsPassed >= 8) {
+            confidenceText = "EXTREMELY HIGH - " + pathLabel;
+        } else if (factorsPassed >= 4) {
             confidenceLevel = 5;
-            confidenceText = "VERY HIGH - High Probability";
-        } else if (factorsPassed >= 7) {
+            confidenceText = "VERY HIGH - " + pathLabel;
+        } else if (factorsPassed >= 3) {
             confidenceLevel = 4;
-            confidenceText = "HIGH - Strong Conviction";
-        } else if (factorsPassed >= 6) {
-            confidenceLevel = 4;
-            confidenceText = "GOOD - Likely to Move";
-        } else if (factorsPassed >= 5) {
+            confidenceText = "HIGH - " + pathLabel;
+        } else if (factorsPassed >= 2) {
             confidenceLevel = 3;
-            confidenceText = "MODERATE - Watch Closely";
+            confidenceText = "MODERATE - " + pathLabel;
         } else {
             confidenceLevel = 2;
             confidenceText = "LOW - Speculative";

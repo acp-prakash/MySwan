@@ -20,6 +20,7 @@ public class ExplosiveScoreDTO {
     private int convergenceScore;
     private int confidenceLevel;
     private String confidenceText;
+    private String strategyPath; // "OVERSOLD_BOUNCE" or "MOMENTUM_POP"
 
     // Key metrics
     private int upDays;

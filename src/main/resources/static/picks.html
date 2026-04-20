@@ -319,6 +319,9 @@
             <button class="btn btn-success" onclick="reloadPicks()">
                 <i class="fas fa-sync"></i> Reload
             </button>
+            <button class="btn btn-danger" onclick="fixPickDates()" title="Fix timezone issue - subtract 1 day from all pick dates">
+                <i class="fas fa-wrench"></i> Fix Dates
+            </button>
             <button class="btn btn-secondary" onclick="exportToExcel()">
                 <i class="fas fa-file-excel"></i> Export Excel
             </button>
@@ -328,6 +331,38 @@
             <button class="btn btn-secondary" onclick="clearAllFilters()">
                 <i class="fas fa-filter-circle-xmark"></i> Clear All Filters
             </button>
+        </div>
+
+        <!-- Statistics Section -->
+        <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 4px 8px; border-radius: 4px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); border: 1px solid #334155;">
+            <div style="display: flex; flex-wrap: wrap; justify-content: space-around; gap: 6px; align-items: center;">
+                <!-- Total Picks -->
+                <div style="flex: 1; min-width: 80px; background: rgba(59, 130, 246, 0.1); padding: 3px 6px; border-radius: 3px; text-align: center; border: 1px solid rgba(59, 130, 246, 0.3);">
+                    <span style="font-size: 9px; color: #94a3b8; font-weight: 600;">TOTAL</span>
+                    <span id="totalPicksCount" style="font-size: 13px; font-weight: 700; color: #3b82f6; margin-left: 4px;">0</span>
+                </div>
+
+                <!-- Success -->
+                <div style="flex: 1; min-width: 90px; background: rgba(16, 185, 129, 0.1); padding: 3px 6px; border-radius: 3px; text-align: center; border: 1px solid rgba(16, 185, 129, 0.3);">
+                    <span style="font-size: 9px; color: #94a3b8; font-weight: 600;">SUCCESS</span>
+                    <span id="successCount" style="font-size: 13px; font-weight: 700; color: #10b981; margin: 0 3px;">0</span>
+                    <span id="successPercent" style="font-size: 10px; color: #10b981; font-weight: 600;">0%</span>
+                </div>
+
+                <!-- Failed -->
+                <div style="flex: 1; min-width: 90px; background: rgba(239, 68, 68, 0.1); padding: 3px 6px; border-radius: 3px; text-align: center; border: 1px solid rgba(239, 68, 68, 0.3);">
+                    <span style="font-size: 9px; color: #94a3b8; font-weight: 600;">FAILED</span>
+                    <span id="failedCount" style="font-size: 13px; font-weight: 700; color: #ef4444; margin: 0 3px;">0</span>
+                    <span id="failedPercent" style="font-size: 10px; color: #ef4444; font-weight: 600;">0%</span>
+                </div>
+
+                <!-- Pending -->
+                <div style="flex: 1; min-width: 90px; background: rgba(234, 179, 8, 0.1); padding: 3px 6px; border-radius: 3px; text-align: center; border: 1px solid rgba(234, 179, 8, 0.3);">
+                    <span style="font-size: 9px; color: #94a3b8; font-weight: 600;">PENDING</span>
+                    <span id="pendingCount" style="font-size: 13px; font-weight: 700; color: #eab308; margin: 0 3px;">0</span>
+                    <span id="pendingPercent" style="font-size: 10px; color: #eab308; font-weight: 600;">0%</span>
+                </div>
+            </div>
         </div>
 
         <!-- Slider Filters -->
@@ -749,11 +784,44 @@
                         field: "min",
                         width: 80,
                         editor: "number",
+                        editable: function(cell) {
+                            // Don't allow editing if pick was added today (current day only)
+                            const rowData = cell.getRow().getData();
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+
+                            let pickAddedDate = rowData.addedDate;
+                            if (pickAddedDate) {
+                                if (pickAddedDate.includes('T')) pickAddedDate = pickAddedDate.split('T')[0];
+                                else if (pickAddedDate.includes(' ')) pickAddedDate = pickAddedDate.split(' ')[0];
+
+                                const pickDate = new Date(pickAddedDate);
+                                pickDate.setHours(0, 0, 0, 0);
+
+                                return pickDate.getTime() !== today.getTime();
+                            }
+                            return true;
+                        },
                         headerFilter: "input",
                         headerFilterPlaceholder: ">50",
                         headerFilterFunc: customNumberFilter,
                         formatter: function(cell) {
                             const v = cell.getValue();
+                            const rowData = cell.getRow().getData();
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+
+                            let pickAddedDate = rowData.addedDate;
+                            if (pickAddedDate) {
+                                if (pickAddedDate.includes('T')) pickAddedDate = pickAddedDate.split('T')[0];
+                                else if (pickAddedDate.includes(' ')) pickAddedDate = pickAddedDate.split(' ')[0];
+
+                                const pickDate = new Date(pickAddedDate);
+                                pickDate.setHours(0, 0, 0, 0);
+
+                                // Don't show min if added today (current day only)
+                                if (pickDate.getTime() === today.getTime()) return '-';
+                            }
                             return v ? v.toFixed(2) : '-';
                         }
                     },
@@ -763,11 +831,44 @@
                         field: "max",
                         width: 80,
                         editor: "number",
+                        editable: function(cell) {
+                            // Don't allow editing if pick was added today (current day only)
+                            const rowData = cell.getRow().getData();
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+
+                            let pickAddedDate = rowData.addedDate;
+                            if (pickAddedDate) {
+                                if (pickAddedDate.includes('T')) pickAddedDate = pickAddedDate.split('T')[0];
+                                else if (pickAddedDate.includes(' ')) pickAddedDate = pickAddedDate.split(' ')[0];
+
+                                const pickDate = new Date(pickAddedDate);
+                                pickDate.setHours(0, 0, 0, 0);
+
+                                return pickDate.getTime() !== today.getTime();
+                            }
+                            return true;
+                        },
                         headerFilter: "input",
                         headerFilterPlaceholder: ">50",
                         headerFilterFunc: customNumberFilter,
                         formatter: function(cell) {
                             const v = cell.getValue();
+                            const rowData = cell.getRow().getData();
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+
+                            let pickAddedDate = rowData.addedDate;
+                            if (pickAddedDate) {
+                                if (pickAddedDate.includes('T')) pickAddedDate = pickAddedDate.split('T')[0];
+                                else if (pickAddedDate.includes(' ')) pickAddedDate = pickAddedDate.split(' ')[0];
+
+                                const pickDate = new Date(pickAddedDate);
+                                pickDate.setHours(0, 0, 0, 0);
+
+                                // Don't show max if added today
+                                if (pickDate.getTime() === today.getTime()) return '-';
+                            }
                             return v ? v.toFixed(2) : '-';
                         }
                     },
@@ -1229,6 +1330,24 @@
                 const row = cell.getRow();
                 const data = row.getData();
 
+                // Clear min/max if pick was added today (current day only)
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                let pickAddedDate = data.addedDate;
+                if (pickAddedDate) {
+                    if (pickAddedDate.includes('T')) pickAddedDate = pickAddedDate.split('T')[0];
+                    else if (pickAddedDate.includes(' ')) pickAddedDate = pickAddedDate.split(' ')[0];
+
+                    const pickDate = new Date(pickAddedDate);
+                    pickDate.setHours(0, 0, 0, 0);
+
+                    if (pickDate.getTime() === today.getTime()) {
+                        data.min = null;
+                        data.max = null;
+                    }
+                }
+
                 // Auto-save the row (update)
                 savePick(data);
             });
@@ -1260,7 +1379,13 @@
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
+            const result = `${year}-${month}-${day}`;
+            console.log('getLocalDateString called:', {
+                browserTime: date.toString(),
+                year, month, day,
+                result
+            });
+            return result;
         }
 
         async function loadPicks() {
@@ -1278,9 +1403,13 @@
                     })));
                 }
 
-                // Pre-calculate daysLeft for each pick
+                // Pre-calculate daysLeft for each pick and clear min/max if added today
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
+                const todayStr = getLocalDateString();
+
+                console.log('Today date string:', todayStr); // Debug
+
                 data.forEach(pick => {
                     if (pick.targetDate) {
                         const target = new Date(pick.targetDate);
@@ -1289,6 +1418,38 @@
                         pick.daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                     } else {
                         pick.daysLeft = null;
+                    }
+
+                    // Don't populate min and max if pick was added today (current day only)
+                    // Normalize both dates to YYYY-MM-DD format for comparison
+                    let pickAddedDate = pick.addedDate;
+                    if (pickAddedDate) {
+                        // Handle ISO format, timestamp, or plain date
+                        if (pickAddedDate.includes('T')) {
+                            pickAddedDate = pickAddedDate.split('T')[0];
+                        } else if (pickAddedDate.includes(' ')) {
+                            pickAddedDate = pickAddedDate.split(' ')[0];
+                        }
+                        // Ensure it's in YYYY-MM-DD format
+                        const pickDate = new Date(pickAddedDate);
+                        pickDate.setHours(0, 0, 0, 0);
+
+                        // Compare timestamps
+                        const isToday = pickDate.getTime() === today.getTime();
+
+                        console.log(`Pick ${pick.ticker}: addedDate=${pickAddedDate}, pickDate=${pickDate.toISOString()}, today=${today.toISOString()}, isToday=${isToday}, currentMin=${pick.min}, currentMax=${pick.max}`); // Debug
+
+                        // ONLY clear min/max if it's today's pick AND backend set them to 0 (or they're not set)
+                        // This prevents accidentally clearing values that backend has calculated for yesterday's picks
+                        if (isToday) {
+                            // For today's picks, backend should set min/max to 0, so we clear them
+                            if (pick.min === 0 || pick.min == null) pick.min = null;
+                            if (pick.max === 0 || pick.max == null) pick.max = null;
+                            console.log(`✓ Cleared min/max for TODAY's pick: ${pick.ticker} (min=${pick.min}, max=${pick.max})`); // Debug
+                        } else {
+                            // For past picks, keep whatever the backend calculated
+                            console.log(`✗ Keeping min/max for PAST pick: ${pick.ticker} (min=${pick.min}, max=${pick.max})`); // Debug
+                        }
                     }
                 });
 
@@ -1316,9 +1477,40 @@
 
         function updateInfo() {
             const info = document.getElementById('info');
-            const total = table.getData().length;
+            const allData = table.getData();
+            const total = allData.length;
             const filtered = table.getDataCount("active");
             info.textContent = `Total Picks: ${total} | Filtered: ${filtered}`;
+
+            // Update statistics
+            updateStatistics(allData);
+        }
+
+        function updateStatistics(data) {
+            const total = data.length;
+
+            // Count success (targetMet = true and stopLossMet = false)
+            const success = data.filter(pick => pick.targetMet === true && pick.stopLossMet !== true).length;
+
+            // Count failed (stopLossMet = true)
+            const failed = data.filter(pick => pick.stopLossMet === true).length;
+
+            // Count pending (neither targetMet nor stopLossMet)
+            const pending = data.filter(pick => pick.targetMet !== true && pick.stopLossMet !== true).length;
+
+            // Calculate percentages
+            const successPercent = total > 0 ? ((success / total) * 100).toFixed(1) : 0;
+            const failedPercent = total > 0 ? ((failed / total) * 100).toFixed(1) : 0;
+            const pendingPercent = total > 0 ? ((pending / total) * 100).toFixed(1) : 0;
+
+            // Update DOM
+            document.getElementById('totalPicksCount').textContent = total;
+            document.getElementById('successCount').textContent = success;
+            document.getElementById('successPercent').textContent = successPercent + '%';
+            document.getElementById('failedCount').textContent = failed;
+            document.getElementById('failedPercent').textContent = failedPercent + '%';
+            document.getElementById('pendingCount').textContent = pending;
+            document.getElementById('pendingPercent').textContent = pendingPercent + '%';
         }
 
         function reloadPicks() {
@@ -1350,6 +1542,37 @@
             } catch (error) {
                 console.error('Error syncing picks:', error);
                 alert('Failed to sync picks: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        async function fixPickDates() {
+            if (!confirm('This will subtract 1 day from all pick dates to fix timezone issues. Continue?')) {
+                return;
+            }
+
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fixing...';
+
+            try {
+                const response = await fetch(`${API_BASE}/picks/fix-dates`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    const result = await response.text();
+                    alert('✓ ' + result);
+                    await loadPicks(); // Reload to show updated data
+                } else {
+                    throw new Error('Failed to fix dates');
+                }
+            } catch (error) {
+                console.error('Error fixing dates:', error);
+                alert('Failed to fix dates: ' + error.message);
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = originalText;
@@ -1388,7 +1611,9 @@
                 addedPrice: parseFloat(document.getElementById('entry').value), // Default to entry price
                 targetMet: false,
                 stopLossMet: false,
-                monitor: "N" // Default monitor to N
+                monitor: "N", // Default monitor to N
+                min: null, // Don't set min for same-day picks
+                max: null  // Don't set max for same-day picks
             };
 
             // Try to enrich pick with current stock details

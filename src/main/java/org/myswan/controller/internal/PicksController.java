@@ -93,5 +93,18 @@ public class PicksController {
         log.info("Getting picks history for ticker: {}", ticker);
         return ResponseEntity.ok(picksService.getPicksHistory(ticker));
     }
+
+    @PostMapping("/picks/fix-dates")
+    public ResponseEntity<String> fixPickDates() {
+        log.info("Fixing pick dates - subtracting one day from all addedDates...");
+        try {
+            int fixed = picksService.fixAllPickDates();
+            return ResponseEntity.ok("Fixed " + fixed + " pick dates successfully");
+        } catch (Exception e) {
+            log.error("Error fixing pick dates", e);
+            return ResponseEntity.internalServerError()
+                    .body("Failed to fix pick dates: " + e.getMessage());
+        }
+    }
 }
 
